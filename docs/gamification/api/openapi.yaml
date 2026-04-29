@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: AppEcchio Gamification API
+  version: 0.1.0
+servers:
+  - url: https://api.appecchio.example
+paths:
+  /v1/checkins/scan:
+    post:
+      summary: Valida QR e registra check-in evento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventId, qrToken]
+              properties:
+                eventId: { type: string, format: uuid }
+                qrToken: { type: string }
+      responses:
+        '200':
+          description: Check-in registrato
+        '409':
+          description: Doppio check-in
+        '401':
+          description: Staff non autorizzato
+  /v1/users/me/points:
+    get:
+      summary: Saldo punti e progressione soglia
+      responses:
+        '200':
+          description: Stato wallet
+  /v1/users/me/points/ledger:
+    get:
+      summary: Storico movimenti punti
+      responses:
+        '200':
+          description: Lista movimenti
+  /v1/users/me/vouchers:
+    get:
+      summary: Voucher utente
+      responses:
+        '200':
+          description: Voucher emessi
+  /v1/vouchers/{code}/redeem:
+    post:
+      summary: Riscatto voucher presso locale
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [merchantId]
+              properties:
+                merchantId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Voucher riscattato
+        '409':
+          description: Voucher già usato o non valido
+  /v1/admin/reward-tiers:
+    post:
+      summary: Crea nuova soglia premio
+      responses:
+        '201':
+          description: Soglia creata
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
