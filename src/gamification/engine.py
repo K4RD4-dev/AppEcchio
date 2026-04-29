@@ -96,6 +96,18 @@ class GamificationEngine:
         self._issue_vouchers_if_threshold_met(user_id)
         return CheckinResult(status="valid", points_awarded=points, message="Check-in valido")
 
+
+    def award_activity_points(self, *, user_id: str, points: int, source_type: str, source_id: str, idempotency_key: str) -> int:
+        awarded = self._award_points(
+            user_id=user_id,
+            points=points,
+            source_type=source_type,
+            source_id=source_id,
+            idempotency_key=idempotency_key,
+        )
+        self._issue_vouchers_if_threshold_met(user_id)
+        return awarded
+
     def _award_points(self, *, user_id: str, points: int, source_type: str, source_id: str, idempotency_key: str) -> int:
         if idempotency_key in self.idempotency_keys:
             return 0
