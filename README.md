@@ -23,5 +23,11 @@ Benvenuto nella Knowledge Base di APPecchio, la guida tecnica e di conformità p
   - [index.md](docs/compliance/index.md)
   - [rules.json](docs/compliance/rules.json)
 
+
+### Proposte funzionali
+- [Piano area gamification](docs/gamification-plan.md)
+- [Implementazione gamification](docs/gamification/)
+- [Mockup UI gamification](mockup/index.html)
+
 ## Avvertenze
 Questa documentazione è una guida tecnica. Non sostituisce in alcun modo il parere di consulenti legali, DPO o specialisti di settore.
