@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AppEcchio Gamification Mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>AppEcchio</h1>
+      <div class="points-pill">Token: <span id="headerPoints">0</span></div>
+    </header>
+
+    <nav class="tabs">
+      <button data-tab="home" class="tab active">Home</button>
+      <button data-tab="profile" class="tab">Profilo</button>
+      <button data-tab="discounts" class="tab">Sconti</button>
+      <button data-tab="supervisor" class="tab">Supervisore</button>
+    </nav>
+
+    <main>
+      <section id="home" class="panel active">
+        <h2>Pagina principale</h2>
+        <p>I token sono visibili anche qui, con avanzamento verso la prossima soglia.</p>
+        <div class="card">
+          <p>Saldo token: <strong id="homePoints">0</strong></p>
+          <p>Prossima soglia: <strong id="nextThreshold">500</strong></p>
+          <progress id="thresholdProgress" max="500" value="0"></progress>
+        </div>
+
+        <div class="card">
+          <h3>Eventi</h3>
+          <p>Simula check-in evento (click sul codice invece di scansione reale):</p>
+          <button id="simulateCheckin">Clicca il codice (simula scansione)</button>
+        </div>
+      </section>
+
+      <section id="profile" class="panel">
+        <h2>Profilo</h2>
+        <div class="card">
+          <p>Token attuali: <strong id="profilePoints">0</strong></p>
+          <p>Storico movimenti:</p>
+          <ul id="ledgerList"></ul>
+        </div>
+      </section>
+
+      <section id="discounts" class="panel">
+        <h2>Sconti e token</h2>
+        <div class="card">
+          <p>Puoi “comprare” (riscattare) sconti con i token accumulati.</p>
+          <button id="buy5" data-cost="500">Compra sconto 5% (500 token)</button>
+          <button id="buy10" data-cost="1000">Compra sconto 10% (1000 token)</button>
+        </div>
+        <div class="card">
+          <h3>I tuoi voucher</h3>
+          <ul id="voucherList"></ul>
+        </div>
+      </section>
+
+      <section id="supervisor" class="panel">
+        <h2>Dashboard supervisore</h2>
+        <div class="card">
+          <p>Notifiche scansione/click codice:</p>
+          <ul id="notifications"></ul>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
