@@ -14,6 +14,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Calendario eventi'), findsOneWidget);
-    expect(find.text('In evidenza'), findsOneWidget);
+    expect(find.text('Lun'), findsOneWidget);
+    expect(find.text('Mar'), findsOneWidget);
   });
 }

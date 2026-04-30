@@ -120,8 +120,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sentieri e percorsi naturalistici'), findsOneWidget);
-    expect(find.text("Territorio dall'alto"), findsOneWidget);
+    expect(find.text("Mappa reale online"), findsOneWidget);
     expect(find.text('Apecchio - Bivio Sentiero Italia'), findsWidgets);
+  });
+
+  testWidgets('selecting a trail opens its full-screen map',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(home: TrailsScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const ValueKey("trail-map-button-sentiero_39")));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sentiero 39'), findsOneWidget);
+    expect(find.text('Apecchio -> Bivio Sentiero Italia'), findsOneWidget);
+    expect(find.text('Apri scheda sentiero'), findsOneWidget);
   });
 
   testWidgets('trails screen filters and opens a trail detail',

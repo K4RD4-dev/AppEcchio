@@ -2,6 +2,10 @@ import "dart:math" as math;
 import "dart:ui";
 
 import "package:flutter/material.dart";
+import "package:flutter/services.dart" show NetworkAssetBundle;
+import "package:flutter_map/flutter_map.dart";
+import "package:latlong2/latlong.dart" show LatLng;
+import "package:xml/xml.dart";
 
 void main() {
   runApp(const AppEcchioApp());
@@ -67,6 +71,359 @@ class UserSettings {
   final bool locationEnabled;
   final bool analyticsEnabled;
   final bool marketingEnabled;
+}
+
+final GamificationController appGamification = GamificationController.demo();
+final EventParticipationController appEventParticipation =
+    EventParticipationController();
+final SportReservationController appSportReservations =
+    SportReservationController();
+
+class SportReservationController extends ChangeNotifier {
+  final Set<String> _reservedSlotIds = {};
+
+  Set<String> get reservedSlotIds => Set.unmodifiable(_reservedSlotIds);
+
+  bool isReserved(SportBookingSlot slot) => _reservedSlotIds.contains(slot.id);
+
+  bool reserve(SportBookingSlot slot) {
+    final changed = _reservedSlotIds.add(slot.id);
+    if (changed) {
+      notifyListeners();
+    }
+    return changed;
+  }
+}
+
+class EventParticipationController extends ChangeNotifier {
+  final Set<String> _joinedEventIds = {};
+
+  Set<String> get joinedEventIds => Set.unmodifiable(_joinedEventIds);
+
+  bool isJoined(AppEvent event) => _joinedEventIds.contains(event.id);
+
+  void setJoined(AppEvent event, bool joined) {
+    final changed = joined
+        ? _joinedEventIds.add(event.id)
+        : _joinedEventIds.remove(event.id);
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  void toggle(AppEvent event) {
+    setJoined(event, !isJoined(event));
+  }
+}
+
+class RewardTier {
+  const RewardTier({
+    required this.threshold,
+    required this.label,
+    required this.discountPercentage,
+  });
+
+  final int threshold;
+  final String label;
+  final int discountPercentage;
+}
+
+class RewardLevel {
+  const RewardLevel({
+    required this.name,
+    required this.minPoints,
+    required this.icon,
+  });
+
+  final String name;
+  final int minPoints;
+  final IconData icon;
+}
+
+class RewardMedal {
+  const RewardMedal({
+    required this.label,
+    required this.threshold,
+    required this.icon,
+  });
+
+  final String label;
+  final int threshold;
+  final IconData icon;
+}
+
+class RewardVoucher {
+  const RewardVoucher({
+    required this.code,
+    required this.label,
+    required this.discountPercentage,
+    required this.threshold,
+    required this.status,
+    required this.issuedAt,
+    this.redeemedAt,
+    this.merchantName,
+  });
+
+  final String code;
+  final String label;
+  final int discountPercentage;
+  final int threshold;
+  final String status;
+  final DateTime issuedAt;
+  final DateTime? redeemedAt;
+  final String? merchantName;
+
+  bool get isActive => status == "attivo";
+
+  RewardVoucher redeem(String merchantName) {
+    return RewardVoucher(
+      code: code,
+      label: label,
+      discountPercentage: discountPercentage,
+      threshold: threshold,
+      status: "usato",
+      issuedAt: issuedAt,
+      redeemedAt: DateTime.now(),
+      merchantName: merchantName,
+    );
+  }
+}
+
+class RewardLedgerEntry {
+  const RewardLedgerEntry({
+    required this.label,
+    required this.points,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String label;
+  final int points;
+  final String status;
+  final DateTime createdAt;
+}
+
+class GamificationController extends ChangeNotifier {
+  GamificationController.demo()
+      : rewardTiers = const [
+          RewardTier(
+            threshold: 500,
+            label: "Sconto 5%",
+            discountPercentage: 5,
+          ),
+          RewardTier(
+            threshold: 1000,
+            label: "Sconto 10%",
+            discountPercentage: 10,
+          ),
+        ];
+
+  static const List<RewardLevel> levels = [
+    RewardLevel(
+      name: "Esploratore",
+      minPoints: 0,
+      icon: Icons.explore_rounded,
+    ),
+    RewardLevel(
+      name: "Amico del borgo",
+      minPoints: 300,
+      icon: Icons.volunteer_activism_rounded,
+    ),
+    RewardLevel(
+      name: "Custode locale",
+      minPoints: 700,
+      icon: Icons.workspace_premium_rounded,
+    ),
+    RewardLevel(
+      name: "Ambasciatore",
+      minPoints: 1200,
+      icon: Icons.military_tech_rounded,
+    ),
+  ];
+
+  static const List<RewardMedal> medals = [
+    RewardMedal(
+      label: "Primo check-in",
+      threshold: 120,
+      icon: Icons.qr_code_scanner_rounded,
+    ),
+    RewardMedal(
+      label: "Vita in paese",
+      threshold: 500,
+      icon: Icons.emoji_events_rounded,
+    ),
+    RewardMedal(
+      label: "Patron locale",
+      threshold: 1000,
+      icon: Icons.local_activity_rounded,
+    ),
+  ];
+
+  final List<RewardTier> rewardTiers;
+  final List<RewardLedgerEntry> _ledger = [];
+  final List<RewardVoucher> _vouchers = [];
+  final Set<String> _idempotencyKeys = {};
+  final Set<int> _issuedThresholds = {};
+  int _balance = 360;
+  int _voucherCounter = 1;
+
+  int get balance => _balance;
+  List<RewardLedgerEntry> get ledger => List.unmodifiable(_ledger);
+  List<RewardVoucher> get vouchers => List.unmodifiable(_vouchers);
+  List<RewardVoucher> get activeVouchers =>
+      _vouchers.where((voucher) => voucher.isActive).toList(growable: false);
+
+  RewardLevel get currentLevel {
+    return levels.lastWhere((level) => _balance >= level.minPoints);
+  }
+
+  RewardLevel? get nextLevel {
+    for (final level in levels) {
+      if (level.minPoints > _balance) {
+        return level;
+      }
+    }
+    return null;
+  }
+
+  double get progressToNextLevel {
+    final next = nextLevel;
+    if (next == null) {
+      return 1;
+    }
+    final current = currentLevel;
+    final span = math.max(next.minPoints - current.minPoints, 1);
+    return ((_balance - current.minPoints) / span).clamp(0, 1).toDouble();
+  }
+
+  int get unlockedMedalCount {
+    return medals.where((medal) => _balance >= medal.threshold).length;
+  }
+
+  RewardTier? get nextTier {
+    for (final tier in rewardTiers) {
+      if (tier.threshold > _balance) {
+        return tier;
+      }
+    }
+    return null;
+  }
+
+  double get progressToNextTier {
+    final tier = nextTier;
+    if (tier == null) {
+      return 1;
+    }
+    return (_balance / tier.threshold).clamp(0, 1).toDouble();
+  }
+
+  int get missingPoints {
+    final tier = nextTier;
+    if (tier == null) {
+      return 0;
+    }
+    return math.max(tier.threshold - _balance, 0);
+  }
+
+  bool awardPoints({
+    required int points,
+    required String label,
+    required String idempotencyKey,
+  }) {
+    if (_idempotencyKeys.contains(idempotencyKey)) {
+      return false;
+    }
+    _idempotencyKeys.add(idempotencyKey);
+    _balance += points;
+    _ledger.insert(
+      0,
+      RewardLedgerEntry(
+        label: label,
+        points: points,
+        status: "confirmed",
+        createdAt: DateTime.now(),
+      ),
+    );
+    _issueVouchersIfNeeded();
+    notifyListeners();
+    return true;
+  }
+
+  bool recordEventCheckin(AppEvent event) {
+    return awardPoints(
+      points: 120,
+      label: "Check-in evento: ${event.title}",
+      idempotencyKey: "event:${event.id}",
+    );
+  }
+
+  bool recordBooking({
+    required String sourceId,
+    required String label,
+    int points = 40,
+  }) {
+    return awardPoints(
+      points: points,
+      label: label,
+      idempotencyKey: "booking:$sourceId",
+    );
+  }
+
+  bool redeemVoucher({
+    required String code,
+    required String merchantName,
+  }) {
+    final index = _vouchers.indexWhere(
+      (voucher) => voucher.code == code && voucher.isActive,
+    );
+    if (index == -1) {
+      return false;
+    }
+    _vouchers[index] = _vouchers[index].redeem(merchantName);
+    _ledger.insert(
+      0,
+      RewardLedgerEntry(
+        label: "Voucher ${_vouchers[index].label} usato da $merchantName",
+        points: 0,
+        status: "redeemed",
+        createdAt: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+    return true;
+  }
+
+  void _issueVouchersIfNeeded() {
+    for (final tier in rewardTiers) {
+      if (_balance < tier.threshold ||
+          _issuedThresholds.contains(tier.threshold)) {
+        continue;
+      }
+      _issuedThresholds.add(tier.threshold);
+      final code = "APE-${_voucherCounter.toString().padLeft(4, "0")}";
+      _voucherCounter += 1;
+      _vouchers.insert(
+        0,
+        RewardVoucher(
+          code: code,
+          label: tier.label,
+          discountPercentage: tier.discountPercentage,
+          threshold: tier.threshold,
+          status: "attivo",
+          issuedAt: DateTime.now(),
+        ),
+      );
+      _ledger.insert(
+        0,
+        RewardLedgerEntry(
+          label: "Voucher ${tier.label} sbloccato",
+          points: 0,
+          status: "issued",
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+  }
 }
 
 class LoginScreen extends StatefulWidget {
@@ -373,9 +730,14 @@ class _HomeScreenState extends State<HomeScreen> {
               label: "Feste e tradizioni",
               icon: Icons.celebration_rounded),
           MenuNode(
+              id: "eventi_gastronomici",
+              label: "Eventi gastronomici",
+              icon: Icons.restaurant_menu_rounded),
+          MenuNode(
               id: "cultura_spettacoli",
               label: "Cultura e spettacoli",
               icon: Icons.theater_comedy_rounded),
+          MenuNode(id: "mostre", label: "Mostre", icon: Icons.museum_rounded),
           MenuNode(
               id: "sport_outdoor",
               label: "Sport e outdoor",
@@ -401,21 +763,30 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.park_rounded),
           MenuNode(id: "bar", label: "Bar", icon: Icons.local_cafe_rounded),
           MenuNode(
-              id: "enogastronomia",
-              label: "Eventi enogastronomici",
-              icon: Icons.wine_bar_rounded),
+              id: "locali", label: "Locali", icon: Icons.storefront_rounded),
           MenuNode(
-              id: "tipicita_deco",
-              label: "Tipicita De.C.O.",
-              icon: Icons.verified_rounded),
-          MenuNode(
-              id: "tartufo_birra",
-              label: "Tartufo e birra",
-              icon: Icons.local_bar_rounded),
-          MenuNode(
-              id: "prodotti_locali",
-              label: "Prodotti locali",
-              icon: Icons.shopping_basket_rounded),
+            id: "prodotti_locali",
+            label: "Prodotti locali",
+            icon: Icons.shopping_basket_rounded,
+            children: <MenuNode>[
+              MenuNode(
+                  id: "prodotto_tartufo",
+                  label: "Tartufo",
+                  icon: Icons.spa_rounded),
+              MenuNode(
+                  id: "prodotto_birra",
+                  label: "Birra artigianale",
+                  icon: Icons.sports_bar_rounded),
+              MenuNode(
+                  id: "tartufo_birra",
+                  label: "Alogastronomia",
+                  icon: Icons.local_bar_rounded),
+              MenuNode(
+                  id: "tipicita_deco",
+                  label: "Tipicita De.C.O.",
+                  icon: Icons.verified_rounded),
+            ],
+          ),
         ],
       ),
       MenuNode(
@@ -439,24 +810,40 @@ class _HomeScreenState extends State<HomeScreen> {
           MenuNode(
               id: "musei", label: "Musei e mostre", icon: Icons.museum_rounded),
           MenuNode(
-              id: "borghi", label: "Borghi", icon: Icons.location_city_rounded),
-          MenuNode(id: "arte", label: "Arte", icon: Icons.palette_rounded),
+            id: "arte_storia",
+            label: "Arte e storia",
+            icon: Icons.history_edu_rounded,
+            children: <MenuNode>[
+              MenuNode(id: "arte", label: "Arte", icon: Icons.palette_rounded),
+              MenuNode(
+                  id: "storia",
+                  label: "Percorsi storici",
+                  icon: Icons.history_edu_rounded),
+              MenuNode(
+                  id: "vicolo_ebrei",
+                  label: "Vicolo degli Ebrei",
+                  icon: Icons.signpost_rounded),
+            ],
+          ),
           MenuNode(
-              id: "storia",
-              label: "Percorsi storici",
-              icon: Icons.history_edu_rounded),
-          MenuNode(
-              id: "vicolo_ebrei",
-              label: "Vicolo degli Ebrei",
-              icon: Icons.signpost_rounded),
-          MenuNode(
-              id: "teatro_perugini",
-              label: "Teatro G. Perugini",
-              icon: Icons.theaters_rounded),
-          MenuNode(
-              id: "globo_pace",
-              label: "Globo della Pace",
-              icon: Icons.public_rounded),
+            id: "borgo_simboli",
+            label: "Borgo e simboli",
+            icon: Icons.location_city_rounded,
+            children: <MenuNode>[
+              MenuNode(
+                  id: "borghi",
+                  label: "Borghi",
+                  icon: Icons.location_city_rounded),
+              MenuNode(
+                  id: "teatro_perugini",
+                  label: "Teatro G. Perugini",
+                  icon: Icons.theaters_rounded),
+              MenuNode(
+                  id: "globo_pace",
+                  label: "Globo della Pace",
+                  icon: Icons.public_rounded),
+            ],
+          ),
           MenuNode(
             id: "territorio",
             label: "Territorio",
@@ -748,33 +1135,54 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: "Difficolta e tempi",
                   icon: Icons.hiking_rounded),
               MenuNode(
-                  id: "prenota_guida",
-                  label: "Prenota guida ambientale",
-                  icon: Icons.support_agent_rounded),
+                id: "guide_noleggi",
+                label: "Guide e noleggi",
+                icon: Icons.support_agent_rounded,
+                children: <MenuNode>[
+                  MenuNode(
+                      id: "prenota_guida",
+                      label: "Prenota guida ambientale",
+                      icon: Icons.support_agent_rounded),
+                  MenuNode(
+                      id: "prenota_istruttore",
+                      label: "Prenota istruttore outdoor",
+                      icon: Icons.fitness_center_rounded),
+                  MenuNode(
+                      id: "noleggio_ebike",
+                      label: "Noleggio bici elettriche",
+                      icon: Icons.electric_bike_rounded),
+                ],
+              ),
               MenuNode(
-                  id: "prenota_istruttore",
-                  label: "Prenota istruttore outdoor",
-                  icon: Icons.fitness_center_rounded),
+                id: "tour_natura",
+                label: "Tour e natura",
+                icon: Icons.family_restroom_rounded,
+                children: <MenuNode>[
+                  MenuNode(
+                      id: "tour_famiglie",
+                      label: "Tour famiglie e scuole",
+                      icon: Icons.family_restroom_rounded),
+                  MenuNode(
+                      id: "canoa_trekking",
+                      label: "Canoa e trekking guidato",
+                      icon: Icons.kayaking_rounded),
+                  MenuNode(
+                      id: "birdwatching",
+                      label: "Birdwatching",
+                      icon: Icons.visibility_rounded),
+                ],
+              ),
               MenuNode(
-                  id: "noleggio_ebike",
-                  label: "Noleggio bici elettriche",
-                  icon: Icons.electric_bike_rounded),
-              MenuNode(
-                  id: "tour_famiglie",
-                  label: "Tour famiglie e scuole",
-                  icon: Icons.family_restroom_rounded),
-              MenuNode(
-                  id: "canoa_trekking",
-                  label: "Canoa e trekking guidato",
-                  icon: Icons.kayaking_rounded),
-              MenuNode(
-                  id: "parco_avventura",
-                  label: "Parco Avventura Furlo",
-                  icon: Icons.forest_rounded),
-              MenuNode(
-                  id: "birdwatching",
-                  label: "Birdwatching",
-                  icon: Icons.visibility_rounded),
+                id: "parchi_avventura",
+                label: "Parchi e avventura",
+                icon: Icons.forest_rounded,
+                children: <MenuNode>[
+                  MenuNode(
+                      id: "parco_avventura",
+                      label: "Parco Avventura Furlo",
+                      icon: Icons.forest_rounded),
+                ],
+              ),
             ],
           ),
         ],
@@ -831,7 +1239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onLogout: _logout,
                       ),
                       const SizedBox(height: 12),
-                      const _SearchGlassBar(),
+                      _RewardCenterPanel(onTap: _openRewards),
                       const SizedBox(height: 12),
                       _QuickActionRow(
                         selected: _activeQuickFilter,
@@ -902,6 +1310,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openRewards() {
+    setState(() => _showRadialMenu = false);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RewardsScreen(controller: appGamification),
+      ),
+    );
+  }
+
   void _onNodeTap(MenuNode node) {
     if (node.isLeaf) {
       setState(() => _showRadialMenu = false);
@@ -911,6 +1328,10 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         if (_isEventNode(node)) {
           _openEvents(initialFilter: node.id == "calendario" ? null : node.id);
+          return;
+        }
+        if (_isLocalProductNode(node)) {
+          _openLocalProducts(initialProductId: node.id);
           return;
         }
         if (_isDiningNode(node)) {
@@ -954,7 +1375,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return const {
       "calendario",
       "feste_tradizioni",
+      "eventi_gastronomici",
       "cultura_spettacoli",
+      "mostre",
       "sport_outdoor",
       "comunita_spiritualita",
     }.contains(node.id);
@@ -964,6 +1387,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return const {
       "ristoranti",
       "agriturismi",
+      "bar",
+      "bnb",
+      "agriturismi_dormire",
+      "hotel",
+      "locali",
+      "musei",
+    }.contains(node.id);
+  }
+
+  bool _isLocalProductNode(MenuNode node) {
+    return const {
+      "prodotto_tartufo",
+      "prodotto_birra",
+      "tartufo_birra",
+      "tipicita_deco",
     }.contains(node.id);
   }
 
@@ -992,6 +1430,9 @@ class _HomeScreenState extends State<HomeScreen> {
       "prenota_istruttore",
       "noleggio_ebike",
       "tour_famiglie",
+      "canoa_trekking",
+      "parco_avventura",
+      "birdwatching",
     }.contains(node.id);
   }
 
@@ -1065,9 +1506,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openDining({required String nodeId}) {
-    final initialKind = nodeId == "agriturismi"
-        ? DiningKind.agriturismo
-        : DiningKind.restaurant;
+    final initialKind = switch (nodeId) {
+      "agriturismi" || "agriturismi_dormire" => DiningKind.agriturismo,
+      "bar" => DiningKind.bar,
+      "bnb" || "hotel" => DiningKind.bnb,
+      "locali" => DiningKind.locale,
+      "musei" => DiningKind.mostra,
+      _ => DiningKind.restaurant,
+    };
     Navigator.of(context).push(
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
@@ -1082,6 +1528,28 @@ class _HomeScreenState extends State<HomeScreen> {
             child: FadeTransition(
               opacity: curved,
               child: DiningScreen(initialKind: initialKind),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openLocalProducts({required String initialProductId}) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 280),
+        pageBuilder: (_, animation, __) {
+          final curved =
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.15, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: FadeTransition(
+              opacity: curved,
+              child: LocalProductsScreen(initialProductId: initialProductId),
             ),
           );
         },
@@ -1297,18 +1765,15 @@ class _WelcomePanel extends StatelessWidget {
           height: 74,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           color: Colors.black.withValues(alpha: 0.32),
-          child: Stack(
-            alignment: Alignment.center,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  tooltip: "Impostazioni",
-                  onPressed: onSettings,
-                  icon: const Icon(Icons.settings_rounded, color: Colors.white),
-                ),
+              IconButton(
+                tooltip: "Impostazioni",
+                onPressed: onSettings,
+                icon: const Icon(Icons.settings_rounded, color: Colors.white),
               ),
-              Center(
+              Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1336,13 +1801,10 @@ class _WelcomePanel extends StatelessWidget {
                   ],
                 ),
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  tooltip: "Logout",
-                  onPressed: onLogout,
-                  icon: const Icon(Icons.logout_rounded, color: Colors.white),
-                ),
+              IconButton(
+                tooltip: "Logout",
+                onPressed: onLogout,
+                icon: const Icon(Icons.logout_rounded, color: Colors.white),
               ),
             ],
           ),
@@ -1352,33 +1814,143 @@ class _WelcomePanel extends StatelessWidget {
   }
 }
 
-class _SearchGlassBar extends StatelessWidget {
-  const _SearchGlassBar();
+class _RewardCenterPanel extends StatelessWidget {
+  const _RewardCenterPanel({required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          color: Colors.white.withValues(alpha: 0.22),
-          child: const Row(
-            children: [
-              Icon(Icons.search, color: Colors.white),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Cerca luoghi, eventi, servizi...",
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600),
+    return AnimatedBuilder(
+      animation: appGamification,
+      builder: (context, _) {
+        final nextLevel = appGamification.nextLevel;
+        final level = appGamification.currentLevel;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.92),
+              child: InkWell(
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: const Color(0xFFFFE8A8),
+                            child: Icon(
+                              level.icon,
+                              color: const Color(0xFF8A6400),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Token totali",
+                                  style: TextStyle(
+                                    color: Color(0xFF526055),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                Text(
+                                  "${appGamification.balance}",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFF17251D),
+                                    fontSize: 34,
+                                    height: 1,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                level.name,
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  color: Color(0xFF2E7D57),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.workspace_premium_rounded,
+                                    size: 16,
+                                    color: Color(0xFF8A6400),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "${appGamification.unlockedMedalCount}/${GamificationController.medals.length}",
+                                    style: const TextStyle(
+                                      color: Color(0xFF526055),
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: appGamification.progressToNextLevel,
+                          minHeight: 8,
+                          backgroundColor: const Color(0xFFE1E8DD),
+                          color: const Color(0xFF2E7D57),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              nextLevel == null
+                                  ? "Livello massimo raggiunto"
+                                  : "Prossimo livello: ${nextLevel.name} a ${nextLevel.minPoints} token",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF526055),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFF2E7D57),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -1654,7 +2226,7 @@ class _TodayOverview extends StatelessWidget {
         _InsightTile(
           icon: Icons.restaurant_rounded,
           title: "Cena consigliata",
-          subtitle: "Civico 14+5 e Dal Greco hanno slot liberi stasera.",
+          subtitle: "Civico 14+5 e Monte Nerone hanno slot liberi stasera.",
           onTap: onOpenDining,
         ),
         _InsightTile(
@@ -1698,7 +2270,7 @@ class _OpenNowOverview extends StatelessWidget {
         _InsightTile(
           icon: Icons.restaurant_menu_rounded,
           title: "Cucine con disponibilita",
-          subtitle: "Dal Greco e Le Ciocche accettano prenotazioni per cena.",
+          subtitle: "Il Greco, SP257 e Le Ciocche accettano prenotazioni.",
           onTap: onOpenDining,
         ),
         const _InsightTile(
@@ -3119,6 +3691,328 @@ class _ReadonlySettingsTile extends StatelessWidget {
   }
 }
 
+class RewardsScreen extends StatelessWidget {
+  const RewardsScreen({
+    super.key,
+    required this.controller,
+  });
+
+  final GamificationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final nextTier = controller.nextTier;
+        return Scaffold(
+          backgroundColor: const Color(0xFFF4F7F1),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFF4F7F1),
+            title: const Text("Premi APPecchio"),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF203B2C),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Wallet token",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${controller.balance}",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 42,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      nextTier == null
+                          ? "Hai sbloccato tutte le soglie disponibili nel mockup."
+                          : "Mancano ${controller.missingPoints} token per ${nextTier.label}.",
+                      style: const TextStyle(
+                        color: Color(0xFFDCE9DD),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: controller.progressToNextTier,
+                        minHeight: 10,
+                        backgroundColor: Colors.white24,
+                        color: const Color(0xFFFFD166),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              _TrailDetailCard(
+                title: "Livelli",
+                child: Column(
+                  children: [
+                    for (final level in GamificationController.levels)
+                      _RewardLevelRow(
+                        level: level,
+                        unlocked: controller.balance >= level.minPoints,
+                        current: level == controller.currentLevel,
+                      ),
+                  ],
+                ),
+              ),
+              _TrailDetailCard(
+                title: "Medaglie",
+                child: Column(
+                  children: [
+                    for (final medal in GamificationController.medals)
+                      _RewardMedalRow(
+                        medal: medal,
+                        unlocked: controller.balance >= medal.threshold,
+                      ),
+                  ],
+                ),
+              ),
+              _TrailDetailCard(
+                title: "Soglie ricompensa",
+                child: Column(
+                  children: [
+                    for (final tier in controller.rewardTiers)
+                      _RewardTierRow(
+                        tier: tier,
+                        unlocked: controller.balance >= tier.threshold,
+                      ),
+                  ],
+                ),
+              ),
+              _TrailDetailCard(
+                title: "Voucher",
+                child: controller.vouchers.isEmpty
+                    ? const Text("Nessun voucher ancora sbloccato.")
+                    : Column(
+                        children: [
+                          for (final voucher in controller.vouchers)
+                            _VoucherTile(voucher: voucher),
+                        ],
+                      ),
+              ),
+              _TrailDetailCard(
+                title: "Movimenti",
+                child: controller.ledger.isEmpty
+                    ? const Text("Nessun movimento registrato.")
+                    : Column(
+                        children: [
+                          for (final entry in controller.ledger)
+                            _LedgerTile(entry: entry),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RewardTierRow extends StatelessWidget {
+  const _RewardTierRow({
+    required this.tier,
+    required this.unlocked,
+  });
+
+  final RewardTier tier;
+  final bool unlocked;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor:
+            unlocked ? const Color(0xFFDCF1E5) : const Color(0xFFE8ECE4),
+        child: Icon(
+          unlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
+          color: unlocked ? const Color(0xFF2E7D57) : const Color(0xFF7A847B),
+        ),
+      ),
+      title: Text(
+        tier.label,
+        style: const TextStyle(fontWeight: FontWeight.w900),
+      ),
+      subtitle: Text("${tier.threshold} token"),
+      trailing: Text(
+        "${tier.discountPercentage}%",
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+      ),
+    );
+  }
+}
+
+class _RewardLevelRow extends StatelessWidget {
+  const _RewardLevelRow({
+    required this.level,
+    required this.unlocked,
+    required this.current,
+  });
+
+  final RewardLevel level;
+  final bool unlocked;
+  final bool current;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor:
+            unlocked ? const Color(0xFFDCF1E5) : const Color(0xFFE8ECE4),
+        child: Icon(
+          level.icon,
+          color: unlocked ? const Color(0xFF2E7D57) : const Color(0xFF7A847B),
+        ),
+      ),
+      title: Text(
+        level.name,
+        style: const TextStyle(fontWeight: FontWeight.w900),
+      ),
+      subtitle: Text("Da ${level.minPoints} token"),
+      trailing: current
+          ? const Text(
+              "attuale",
+              style: TextStyle(
+                color: Color(0xFF2E7D57),
+                fontWeight: FontWeight.w900,
+              ),
+            )
+          : Icon(
+              unlocked ? Icons.check_circle_rounded : Icons.lock_rounded,
+              color:
+                  unlocked ? const Color(0xFF2E7D57) : const Color(0xFF7A847B),
+            ),
+    );
+  }
+}
+
+class _RewardMedalRow extends StatelessWidget {
+  const _RewardMedalRow({
+    required this.medal,
+    required this.unlocked,
+  });
+
+  final RewardMedal medal;
+  final bool unlocked;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor:
+            unlocked ? const Color(0xFFFFE8A8) : const Color(0xFFE8ECE4),
+        child: Icon(
+          medal.icon,
+          color: unlocked ? const Color(0xFF8A6400) : const Color(0xFF7A847B),
+        ),
+      ),
+      title: Text(
+        medal.label,
+        style: const TextStyle(fontWeight: FontWeight.w900),
+      ),
+      subtitle: Text("${medal.threshold} token"),
+      trailing: Icon(
+        unlocked ? Icons.verified_rounded : Icons.radio_button_unchecked,
+        color: unlocked ? const Color(0xFF2E7D57) : const Color(0xFF7A847B),
+      ),
+    );
+  }
+}
+
+class _VoucherTile extends StatelessWidget {
+  const _VoucherTile({required this.voucher});
+
+  final RewardVoucher voucher;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = voucher.isActive;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor:
+            active ? const Color(0xFFFFE8A8) : const Color(0xFFE8ECE4),
+        child: Icon(
+          active
+              ? Icons.confirmation_number_rounded
+              : Icons.check_circle_rounded,
+          color: active ? const Color(0xFF8A6400) : const Color(0xFF526055),
+        ),
+      ),
+      title: Text(
+        "${voucher.label} · ${voucher.code}",
+        style: const TextStyle(fontWeight: FontWeight.w900),
+      ),
+      subtitle: Text(
+        active
+            ? "Attivo nei locali aderenti"
+            : "Usato da ${voucher.merchantName ?? "locale aderente"}",
+      ),
+      trailing: Text(
+        voucher.status,
+        style: TextStyle(
+          color: active ? const Color(0xFF2E7D57) : const Color(0xFF526055),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _LedgerTile extends StatelessWidget {
+  const _LedgerTile({required this.entry});
+
+  final RewardLedgerEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final positive = entry.points > 0;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        positive ? Icons.add_circle_rounded : Icons.receipt_long_rounded,
+        color: positive ? const Color(0xFF2E7D57) : const Color(0xFF526055),
+      ),
+      title: Text(
+        entry.label,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+      subtitle: Text(entry.status),
+      trailing: Text(
+        entry.points == 0 ? "0" : "+${entry.points}",
+        style: TextStyle(
+          color: positive ? const Color(0xFF2E7D57) : const Color(0xFF526055),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
 class _DropdownSettingsTile extends StatelessWidget {
   const _DropdownSettingsTile({
     required this.icon,
@@ -3181,7 +4075,7 @@ class TrailRoute {
     required this.sourceLabel,
     required this.sourceUrl,
     required this.gpxUrl,
-    required this.mapPoints,
+    required this.geoPoints,
     required this.color,
     required this.tags,
   });
@@ -3206,7 +4100,7 @@ class TrailRoute {
   final String sourceLabel;
   final String sourceUrl;
   final String gpxUrl;
-  final List<Offset> mapPoints;
+  final List<LatLng> geoPoints;
   final Color color;
   final Set<String> tags;
 
@@ -3215,6 +4109,79 @@ class TrailRoute {
   String get elevationLabel => "+$elevationGainM m";
   bool get hasGpx => gpxUrl.isNotEmpty;
 }
+
+const List<LatLng> _apecchioBoundary = [
+  LatLng(43.544200, 12.312759),
+  LatLng(43.539687, 12.318197),
+  LatLng(43.532742, 12.324767),
+  LatLng(43.525839, 12.330716),
+  LatLng(43.522623, 12.338894),
+  LatLng(43.521804, 12.348587),
+  LatLng(43.528154, 12.356083),
+  LatLng(43.534103, 12.366728),
+  LatLng(43.527322, 12.376457),
+  LatLng(43.521541, 12.387044),
+  LatLng(43.513980, 12.384799),
+  LatLng(43.509133, 12.396100),
+  LatLng(43.517571, 12.402468),
+  LatLng(43.527149, 12.409268),
+  LatLng(43.533944, 12.416780),
+  LatLng(43.534393, 12.427439),
+  LatLng(43.537604, 12.437909),
+  LatLng(43.529330, 12.447338),
+  LatLng(43.519549, 12.455338),
+  LatLng(43.518583, 12.464040),
+  LatLng(43.516751, 12.474991),
+  LatLng(43.525750, 12.477958),
+  LatLng(43.524337, 12.489895),
+  LatLng(43.521296, 12.499066),
+  LatLng(43.522012, 12.507575),
+  LatLng(43.527602, 12.517145),
+  LatLng(43.529461, 12.521807),
+  LatLng(43.537599, 12.514382),
+  LatLng(43.546257, 12.513766),
+  LatLng(43.551497, 12.520347),
+  LatLng(43.557779, 12.518005),
+  LatLng(43.556138, 12.507306),
+  LatLng(43.562858, 12.499711),
+  LatLng(43.567056, 12.489804),
+  LatLng(43.573963, 12.491661),
+  LatLng(43.580661, 12.490343),
+  LatLng(43.584058, 12.486709),
+  LatLng(43.578454, 12.482134),
+  LatLng(43.578292, 12.477980),
+  LatLng(43.579364, 12.470282),
+  LatLng(43.577769, 12.462163),
+  LatLng(43.580112, 12.456888),
+  LatLng(43.584930, 12.451498),
+  LatLng(43.590376, 12.443916),
+  LatLng(43.599655, 12.447902),
+  LatLng(43.610001, 12.449953),
+  LatLng(43.615190, 12.445823),
+  LatLng(43.609127, 12.439690),
+  LatLng(43.605878, 12.430810),
+  LatLng(43.598420, 12.434529),
+  LatLng(43.591364, 12.431213),
+  LatLng(43.596611, 12.420664),
+  LatLng(43.600313, 12.411286),
+  LatLng(43.601093, 12.405555),
+  LatLng(43.607161, 12.399824),
+  LatLng(43.614796, 12.394365),
+  LatLng(43.612558, 12.386197),
+  LatLng(43.612054, 12.373118),
+  LatLng(43.606131, 12.365934),
+  LatLng(43.598810, 12.361997),
+  LatLng(43.593425, 12.364876),
+  LatLng(43.588000, 12.367918),
+  LatLng(43.581800, 12.371592),
+  LatLng(43.574309, 12.361500),
+  LatLng(43.564095, 12.354270),
+  LatLng(43.555258, 12.345956),
+  LatLng(43.553968, 12.334050),
+  LatLng(43.552184, 12.323602),
+  LatLng(43.546950, 12.314041),
+  LatLng(43.544200, 12.312759),
+];
 
 const List<TrailRoute> _trailRoutes = [
   TrailRoute(
@@ -3244,17 +4211,19 @@ const List<TrailRoute> _trailRoutes = [
     ],
     sourceLabel: "Pesaro Trekking - Sentiero 39 Monte Nerone",
     sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-39.html",
-    gpxUrl: "",
-    mapPoints: [
-      Offset(0.29, 0.63),
-      Offset(0.35, 0.58),
-      Offset(0.43, 0.53),
-      Offset(0.53, 0.47),
-      Offset(0.62, 0.39),
-      Offset(0.72, 0.32),
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero39.gpx",
+    geoPoints: [
+      LatLng(43.556816, 12.417131),
+      LatLng(43.553386, 12.406115),
+      LatLng(43.547758, 12.403106),
+      LatLng(43.541278, 12.406712),
+      LatLng(43.535027, 12.404131),
+      LatLng(43.529801, 12.398012),
+      LatLng(43.524223, 12.390209),
+      LatLng(43.515078, 12.369435),
     ],
     color: Color(0xFF1D8A6A),
-    tags: {"e", "panoramici"},
+    tags: {"apecchio", "e", "panoramici"},
   ),
   TrailRoute(
     id: "sentiero_20",
@@ -3279,16 +4248,18 @@ const List<TrailRoute> _trailRoutes = [
     sourceLabel: "Pesaro Trekking - Sentiero 20 Monte Nerone",
     sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-20.html",
     gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero20.gpx",
-    mapPoints: [
-      Offset(0.19, 0.77),
-      Offset(0.28, 0.72),
-      Offset(0.39, 0.69),
-      Offset(0.49, 0.62),
-      Offset(0.58, 0.56),
-      Offset(0.68, 0.49),
+    geoPoints: [
+      LatLng(43.515252, 12.555896),
+      LatLng(43.519101, 12.554781),
+      LatLng(43.522628, 12.555207),
+      LatLng(43.525851, 12.553039),
+      LatLng(43.529206, 12.547878),
+      LatLng(43.534691, 12.548692),
+      LatLng(43.537877, 12.541163),
+      LatLng(43.535546, 12.534354),
     ],
     color: Color(0xFFD6802B),
-    tags: {"e", "famiglie", "panoramici"},
+    tags: {"e", "famiglie", "nerone", "panoramici"},
   ),
   TrailRoute(
     id: "sentiero_13",
@@ -3313,15 +4284,18 @@ const List<TrailRoute> _trailRoutes = [
     sourceLabel: "Pesaro Trekking - Sentiero 13 Monte Nerone",
     sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-13.html",
     gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero13.gpx",
-    mapPoints: [
-      Offset(0.42, 0.79),
-      Offset(0.47, 0.71),
-      Offset(0.51, 0.62),
-      Offset(0.56, 0.54),
-      Offset(0.61, 0.46),
+    geoPoints: [
+      LatLng(43.577647, 12.538453),
+      LatLng(43.575280, 12.540569),
+      LatLng(43.572910, 12.540327),
+      LatLng(43.571429, 12.538035),
+      LatLng(43.569502, 12.538635),
+      LatLng(43.567690, 12.537159),
+      LatLng(43.567517, 12.538937),
+      LatLng(43.565961, 12.540487),
     ],
     color: Color(0xFF6B5BA8),
-    tags: {"e"},
+    tags: {"e", "nerone"},
   ),
   TrailRoute(
     id: "sentiero_1",
@@ -3346,16 +4320,270 @@ const List<TrailRoute> _trailRoutes = [
     sourceLabel: "Pesaro Trekking - Sentiero 1 Monte Nerone",
     sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-1.html",
     gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero1.gpx",
-    mapPoints: [
-      Offset(0.18, 0.31),
-      Offset(0.27, 0.36),
-      Offset(0.37, 0.32),
-      Offset(0.49, 0.27),
-      Offset(0.62, 0.22),
-      Offset(0.78, 0.19),
+    geoPoints: [
+      LatLng(43.584948, 12.516473),
+      LatLng(43.579493, 12.516894),
+      LatLng(43.574388, 12.512858),
+      LatLng(43.572437, 12.514571),
+      LatLng(43.569556, 12.516685),
+      LatLng(43.563579, 12.514894),
+      LatLng(43.560736, 12.513891),
+      LatLng(43.557734, 12.517663),
     ],
     color: Color(0xFFC83E4D),
-    tags: {"ee", "panoramici"},
+    tags: {"apecchio", "ee", "nerone", "panoramici"},
+  ),
+  TrailRoute(
+    id: "sentiero_30",
+    name: "Le Porte - Colluccio",
+    caiNumber: "30",
+    newNumber: "230",
+    start: "Le Porte",
+    end: "Colluccio",
+    lengthKm: 5.3,
+    elevationGainM: 727,
+    elevationLossM: 339,
+    startAltitudeM: 362,
+    endAltitudeM: 749,
+    maxAltitudeM: 788,
+    timeLabel: "2:45 - 3:30",
+    difficulty: "E",
+    summary:
+        "Tracciato sul versante di Apecchio che collega l'area de Le Porte con Colluccio, utile per leggere la valle e i raccordi verso il Nerone.",
+    safetyNote:
+        "Percorso con dislivello sensibile: pianificare il rientro e verificare fondo e segnaletica.",
+    highlights: ["Le Porte", "Colluccio", "Apecchio", "Monte Nerone"],
+    sourceLabel: "Pesaro Trekking - Sentiero 30 Monte Nerone",
+    sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-30.html",
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero30.gpx",
+    geoPoints: [
+      LatLng(43.582891, 12.491079),
+      LatLng(43.578574, 12.489989),
+      LatLng(43.573009, 12.494194),
+      LatLng(43.567667, 12.493610),
+      LatLng(43.564575, 12.496820),
+      LatLng(43.560539, 12.489830),
+      LatLng(43.555166, 12.487645),
+      LatLng(43.550504, 12.486048),
+    ],
+    color: Color(0xFF3B8EA5),
+    tags: {"apecchio", "e", "nerone", "panoramici"},
+  ),
+  TrailRoute(
+    id: "sentiero_25",
+    name: "Serravalle di Carda - Pieia",
+    caiNumber: "25",
+    newNumber: "225",
+    start: "Serravalle di Carda",
+    end: "Pieia",
+    lengthKm: 4.2,
+    elevationGainM: 396,
+    elevationLossM: 323,
+    startAltitudeM: 687,
+    endAltitudeM: 760,
+    maxAltitudeM: 849,
+    timeLabel: "2:00 - 2:40",
+    difficulty: "E",
+    summary:
+        "Connessione tra Serravalle di Carda e Pieia, al margine del territorio comunale e della rete naturalistica del Nerone.",
+    safetyNote:
+        "Sentiero di collegamento: controllare i raccordi con gli itinerari limitrofi prima della partenza.",
+    highlights: ["Serravalle di Carda", "Pieia", "Monte Nerone"],
+    sourceLabel: "Pesaro Trekking - Sentiero 25 Monte Nerone",
+    sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-25.html",
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero25.gpx",
+    geoPoints: [
+      LatLng(43.535539, 12.534359),
+      LatLng(43.531633, 12.529705),
+      LatLng(43.534718, 12.527794),
+      LatLng(43.535228, 12.524404),
+      LatLng(43.534699, 12.518810),
+      LatLng(43.535053, 12.512774),
+      LatLng(43.537467, 12.507423),
+      LatLng(43.539848, 12.501404),
+    ],
+    color: Color(0xFF9B5DE5),
+    tags: {"e", "nerone"},
+  ),
+  TrailRoute(
+    id: "sentiero_8",
+    name: "Fosso dell'Eremo",
+    caiNumber: "8",
+    newNumber: "208",
+    start: "Fosso dell'Eremo",
+    end: "Bacciardi",
+    lengthKm: 3.3,
+    elevationGainM: 391,
+    elevationLossM: 185,
+    startAltitudeM: 320,
+    endAltitudeM: 526,
+    maxAltitudeM: 526,
+    timeLabel: "1:45 - 2:20",
+    difficulty: "E",
+    summary:
+        "Percorso breve e ripido nel sistema del Fosso dell'Eremo, utile come collegamento di versante nel comprensorio del Nerone.",
+    safetyNote:
+        "Prestare attenzione nei tratti umidi e nei passaggi incassati del fosso.",
+    highlights: ["Fosso dell'Eremo", "Bacciardi", "Monte Nerone"],
+    sourceLabel: "Pesaro Trekking - Sentiero 8 Monte Nerone",
+    sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-8.html",
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero8.gpx",
+    geoPoints: [
+      LatLng(43.588065, 12.531353),
+      LatLng(43.587553, 12.534811),
+      LatLng(43.584206, 12.536684),
+      LatLng(43.582350, 12.541280),
+      LatLng(43.579948, 12.546201),
+      LatLng(43.577565, 12.548650),
+      LatLng(43.574999, 12.547485),
+      LatLng(43.572444, 12.549249),
+    ],
+    color: Color(0xFF0077B6),
+    tags: {"e", "nerone"},
+  ),
+  TrailRoute(
+    id: "sentiero_12",
+    name: "Bacciardi - La Montagnola",
+    caiNumber: "12",
+    newNumber: "212",
+    start: "Bacciardi",
+    end: "La Montagnola",
+    lengthKm: 4.1,
+    elevationGainM: 938,
+    elevationLossM: 105,
+    startAltitudeM: 526,
+    endAltitudeM: 1358,
+    maxAltitudeM: 1395,
+    timeLabel: "3:15 - 4:00",
+    difficulty: "EE",
+    summary:
+        "Salita decisa verso le quote alte del Nerone, pensata per chi cerca un percorso fisico e panoramico.",
+    safetyNote:
+        "Percorso impegnativo: partire con meteo stabile e dotazione da escursionismo.",
+    highlights: ["Bacciardi", "La Montagnola", "Monte Nerone"],
+    sourceLabel: "Pesaro Trekking - Sentiero 12 Monte Nerone",
+    sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-12.html",
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero12.gpx",
+    geoPoints: [
+      LatLng(43.572444, 12.549249),
+      LatLng(43.568866, 12.550264),
+      LatLng(43.568559, 12.546937),
+      LatLng(43.566159, 12.545581),
+      LatLng(43.563497, 12.542957),
+      LatLng(43.558792, 12.540300),
+      LatLng(43.554433, 12.537074),
+      LatLng(43.553954, 12.530912),
+    ],
+    color: Color(0xFFB5179E),
+    tags: {"ee", "nerone", "panoramici"},
+  ),
+  TrailRoute(
+    id: "sentiero_21",
+    name: "Pieia - Monte del Pantano",
+    caiNumber: "21",
+    newNumber: "221",
+    start: "Pieia",
+    end: "Monte del Pantano",
+    lengthKm: 4.0,
+    elevationGainM: 894,
+    elevationLossM: 193,
+    startAltitudeM: 657,
+    endAltitudeM: 1358,
+    maxAltitudeM: 1480,
+    timeLabel: "3:00 - 3:45",
+    difficulty: "EE",
+    summary:
+        "Da Pieia il sentiero sale verso il Monte del Pantano e le quote piu alte del comprensorio.",
+    safetyNote:
+        "Dislivello importante: evitare con nebbia, vento forte o temporali in quota.",
+    highlights: ["Pieia", "Monte del Pantano", "Monte Nerone"],
+    sourceLabel: "Pesaro Trekking - Sentiero 21 Monte Nerone",
+    sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-21.html",
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero21.gpx",
+    geoPoints: [
+      LatLng(43.535546, 12.534354),
+      LatLng(43.540176, 12.536477),
+      LatLng(43.541270, 12.542609),
+      LatLng(43.545144, 12.540211),
+      LatLng(43.546037, 12.535778),
+      LatLng(43.549959, 12.538551),
+      LatLng(43.552701, 12.536632),
+      LatLng(43.553954, 12.530912),
+    ],
+    color: Color(0xFFE85D04),
+    tags: {"ee", "nerone", "panoramici"},
+  ),
+  TrailRoute(
+    id: "sentiero_22",
+    name: "Fonte dei Ranchetti - Pian del Sasso",
+    caiNumber: "22",
+    newNumber: "222",
+    start: "Fonte dei Ranchetti",
+    end: "Pian del Sasso",
+    lengthKm: 1.1,
+    elevationGainM: 212,
+    elevationLossM: 20,
+    startAltitudeM: 1126,
+    endAltitudeM: 1318,
+    maxAltitudeM: 1318,
+    timeLabel: "0:45 - 1:10",
+    difficulty: "E",
+    summary:
+        "Breve raccordo in quota tra Fonte dei Ranchetti e Pian del Sasso, utile per comporre anelli piu lunghi.",
+    safetyNote:
+        "Anche se breve, resta un tratto di quota: controllare visibilita e vento.",
+    highlights: ["Fonte dei Ranchetti", "Pian del Sasso"],
+    sourceLabel: "Pesaro Trekking - Sentiero 22 Monte Nerone",
+    sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-22.html",
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero22.gpx",
+    geoPoints: [
+      LatLng(43.547258, 12.531435),
+      LatLng(43.547694, 12.531681),
+      LatLng(43.549389, 12.531315),
+      LatLng(43.548846, 12.532266),
+      LatLng(43.547349, 12.533476),
+      LatLng(43.545601, 12.532481),
+      LatLng(43.545122, 12.533427),
+      LatLng(43.545928, 12.535406),
+    ],
+    color: Color(0xFF588157),
+    tags: {"e", "famiglie", "nerone"},
+  ),
+  TrailRoute(
+    id: "sentiero_24",
+    name: "Cerreto - Casciaia Mochi",
+    caiNumber: "24",
+    newNumber: "224",
+    start: "Cerreto",
+    end: "Casciaia Mochi",
+    lengthKm: 2.2,
+    elevationGainM: 526,
+    elevationLossM: 3,
+    startAltitudeM: 672,
+    endAltitudeM: 1195,
+    maxAltitudeM: 1195,
+    timeLabel: "1:45 - 2:20",
+    difficulty: "E",
+    summary:
+        "Salita compatta dal Cerreto verso Casciaia Mochi, con forte lettura del versante orientale del Nerone.",
+    safetyNote:
+        "Tratto breve ma ripido: gestire bene ritmo, acqua e calzature.",
+    highlights: ["Cerreto", "Casciaia Mochi", "Monte Nerone"],
+    sourceLabel: "Pesaro Trekking - Sentiero 24 Monte Nerone",
+    sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-24.html",
+    gpxUrl: "https://www.pesarotrekking.it/images/tracce/Sentiero24.gpx",
+    geoPoints: [
+      LatLng(43.529590, 12.547163),
+      LatLng(43.530580, 12.549486),
+      LatLng(43.532601, 12.551443),
+      LatLng(43.534214, 12.553429),
+      LatLng(43.536013, 12.553794),
+      LatLng(43.538151, 12.553622),
+      LatLng(43.540114, 12.553807),
+      LatLng(43.546098, 12.554111),
+    ],
+    color: Color(0xFFBC6C25),
+    tags: {"e", "nerone"},
   ),
 ];
 
@@ -3369,12 +4597,14 @@ class TrailsScreen extends StatefulWidget {
 class _TrailsScreenState extends State<TrailsScreen> {
   String _selectedFilter = "tutti";
   TrailRoute _selectedTrail = _trailRoutes.first;
+  bool _reliefMode = false;
 
   static const Map<String, String> _filters = {
     "tutti": "Tutti",
-    "facili": "Facili",
     "e": "E",
     "ee": "EE",
+    "apecchio": "Apecchio",
+    "facili": "Facili",
     "famiglie": "Famiglie",
     "panoramici": "Panoramici",
   };
@@ -3398,7 +4628,8 @@ class _TrailsScreenState extends State<TrailsScreen> {
           _TrailsHero(
             trails: trails,
             selectedTrail: visibleSelected,
-            onTrailSelected: (trail) => setState(() => _selectedTrail = trail),
+            onTrailSelected: _selectTrailOnMap,
+            reliefMode: _reliefMode,
           ),
           const SizedBox(height: 16),
           _TrailFilterBar(
@@ -3411,6 +4642,18 @@ class _TrailsScreenState extends State<TrailsScreen> {
                 _selectedTrail = nextTrails.first;
               }
             }),
+          ),
+          const SizedBox(height: 10),
+          _TrailMapModeSwitch(
+            reliefMode: _reliefMode,
+            onChanged: (value) => setState(() => _reliefMode = value),
+          ),
+          const SizedBox(height: 12),
+          _TrailQuickOpenRow(
+            trails: _trailRoutes
+                .where((trail) => trail.tags.contains("apecchio"))
+                .toList(growable: false),
+            onTrailSelected: _selectTrailOnMap,
           ),
           const SizedBox(height: 14),
           _TrailSelectedPanel(
@@ -3427,7 +4670,7 @@ class _TrailsScreenState extends State<TrailsScreen> {
             _TrailListCard(
               trail: trail,
               selected: trail.id == visibleSelected.id,
-              onTap: () => setState(() => _selectedTrail = trail),
+              onTap: () => _selectTrailOnMap(trail),
               onOpenDetail: () => _openTrailDetail(trail),
             ),
         ],
@@ -3456,6 +4699,18 @@ class _TrailsScreenState extends State<TrailsScreen> {
       ),
     );
   }
+
+  void _selectTrailOnMap(TrailRoute trail) {
+    setState(() => _selectedTrail = trail);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TrailMapScreen(
+          trail: trail,
+          reliefMode: _reliefMode,
+        ),
+      ),
+    );
+  }
 }
 
 class _TrailsHero extends StatelessWidget {
@@ -3463,11 +4718,13 @@ class _TrailsHero extends StatelessWidget {
     required this.trails,
     required this.selectedTrail,
     required this.onTrailSelected,
+    required this.reliefMode,
   });
 
   final List<TrailRoute> trails;
   final TrailRoute selectedTrail;
   final ValueChanged<TrailRoute> onTrailSelected;
+  final bool reliefMode;
 
   @override
   Widget build(BuildContext context) {
@@ -3478,42 +4735,32 @@ class _TrailsHero extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
-                "assets/images/appecchio_bg.png",
-                fit: BoxFit.cover,
+              child: _TrailOnlineMap(
+                trails: trails,
+                selectedTrail: selectedTrail,
+                showOnlySelected: false,
+                onTrailSelected: onTrailSelected,
+                fitPadding: const EdgeInsets.fromLTRB(34, 52, 34, 100),
+                reliefMode: reliefMode,
               ),
             ),
             Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.16),
-                      Colors.black.withValues(alpha: 0.08),
-                      Colors.black.withValues(alpha: 0.42),
-                    ],
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.05),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.28),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _TrailMapPainter(
-                  trails: trails,
-                  selectedTrail: selectedTrail,
-                  showOnlySelected: false,
-                ),
-              ),
-            ),
-            for (final pin in _trailMapPins) _TrailMapPin(pin: pin),
-            for (final trail in trails)
-              _TrailMapButton(
-                trail: trail,
-                selected: trail.id == selectedTrail.id,
-                onTap: () => onTrailSelected(trail),
-              ),
             Positioned(
               left: 16,
               right: 16,
@@ -3546,10 +4793,10 @@ class _TrailMapBadge extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.terrain_rounded, color: Color(0xFF2E7D57), size: 18),
+          Icon(Icons.map_rounded, color: Color(0xFF2E7D57), size: 18),
           SizedBox(width: 7),
           Text(
-            "Territorio dall'alto",
+            "Mappa reale online",
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
         ],
@@ -3611,76 +4858,79 @@ class _TrailMapLegend extends StatelessWidget {
   }
 }
 
-class TrailMapPin {
-  const TrailMapPin(this.label, this.position, this.icon);
+class TrailMapGeometry {
+  const TrailMapGeometry({
+    required this.trail,
+    required this.points,
+    required this.loadedFromGpx,
+  });
 
-  final String label;
-  final Offset position;
-  final IconData icon;
+  final TrailRoute trail;
+  final List<LatLng> points;
+  final bool loadedFromGpx;
+
+  LatLng get midPoint => points[points.length ~/ 2];
 }
 
-const List<TrailMapPin> _trailMapPins = [
-  TrailMapPin("Apecchio", Offset(0.29, 0.63), Icons.location_city_rounded),
-  TrailMapPin("Pianello", Offset(0.19, 0.77), Icons.home_work_rounded),
-  TrailMapPin("Pieia", Offset(0.68, 0.49), Icons.church_rounded),
-  TrailMapPin("San Lorenzo", Offset(0.42, 0.79), Icons.place_rounded),
-  TrailMapPin("Valcellone", Offset(0.61, 0.46), Icons.terrain_rounded),
-  TrailMapPin("Monte Nerone", Offset(0.78, 0.19), Icons.filter_hdr_rounded),
-  TrailMapPin("Fondarca", Offset(0.58, 0.56), Icons.landscape_rounded),
-  TrailMapPin("Gorgaccia", Offset(0.43, 0.53), Icons.water_rounded),
-];
+class TrailGeometryRepository {
+  static final Map<String, Future<TrailMapGeometry>> _cache = {};
 
-class _TrailMapPin extends StatelessWidget {
-  const _TrailMapPin({required this.pin});
-
-  final TrailMapPin pin;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final dx = pin.position.dx * constraints.maxWidth;
-          final dy = pin.position.dy * constraints.maxHeight;
-          return Stack(
-            children: [
-              Positioned(
-                left: (dx - 54).clamp(4.0, constraints.maxWidth - 108),
-                top: (dy - 15).clamp(42.0, constraints.maxHeight - 44),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.52),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(pin.icon, color: Colors.white, size: 13),
-                      const SizedBox(width: 4),
-                      Text(
-                        pin.label,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+  static TrailMapGeometry fallback(TrailRoute trail) {
+    return TrailMapGeometry(
+      trail: trail,
+      points: trail.geoPoints,
+      loadedFromGpx: false,
     );
+  }
+
+  static Future<List<TrailMapGeometry>> loadAll(List<TrailRoute> trails) {
+    return Future.wait(trails.map(load));
+  }
+
+  static Future<TrailMapGeometry> load(TrailRoute trail) {
+    return _cache.putIfAbsent(trail.id, () async {
+      if (!trail.hasGpx) {
+        return fallback(trail);
+      }
+      try {
+        final source =
+            await NetworkAssetBundle(Uri.parse(trail.gpxUrl)).loadString("");
+        final points = _parseGpxTrack(source);
+        if (points.length >= 2) {
+          return TrailMapGeometry(
+            trail: trail,
+            points: points,
+            loadedFromGpx: true,
+          );
+        }
+      } catch (_) {
+        // The map must stay usable when a GPX host is offline or blocked.
+      }
+      return fallback(trail);
+    });
+  }
+
+  static List<LatLng> _parseGpxTrack(String source) {
+    final document = XmlDocument.parse(source);
+    final points = <LatLng>[];
+    for (final element in document.descendants.whereType<XmlElement>()) {
+      final name = element.name.local;
+      if (name != "trkpt" && name != "rtept") {
+        continue;
+      }
+      final lat = double.tryParse(element.getAttribute("lat") ?? "");
+      final lon = double.tryParse(element.getAttribute("lon") ?? "");
+      if (lat != null && lon != null) {
+        points.add(LatLng(lat, lon));
+      }
+    }
+    return points;
   }
 }
 
 class _TrailMapButton extends StatelessWidget {
   const _TrailMapButton({
+    super.key,
     required this.trail,
     required this.selected,
     required this.onTap,
@@ -3688,113 +4938,304 @@ class _TrailMapButton extends StatelessWidget {
 
   final TrailRoute trail;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final midPoint = trail.mapPoints[trail.mapPoints.length ~/ 2];
-    return Positioned.fill(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final size = selected ? 46.0 : 38.0;
-          return Stack(
-            children: [
-              Positioned(
-                left: (midPoint.dx * constraints.maxWidth) - (size / 2),
-                top: (midPoint.dy * constraints.maxHeight) - (size / 2),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onTap,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      width: size,
-                      height: size,
-                      decoration: BoxDecoration(
-                        color: trail.color,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: trail.color.withValues(alpha: 0.38),
-                            blurRadius: selected ? 20 : 12,
-                            spreadRadius: selected ? 3 : 0,
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        trail.caiNumber,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+    final size = selected ? 46.0 : 38.0;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: trail.color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: trail.color.withValues(alpha: 0.38),
+                blurRadius: selected ? 20 : 12,
+                spreadRadius: selected ? 3 : 0,
               ),
             ],
-          );
-        },
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            trail.caiNumber,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _TrailMapPainter extends CustomPainter {
-  const _TrailMapPainter({
+class _TrailOnlineMap extends StatelessWidget {
+  const _TrailOnlineMap({
     required this.trails,
     required this.selectedTrail,
     required this.showOnlySelected,
+    required this.fitPadding,
+    required this.reliefMode,
+    this.onTrailSelected,
   });
 
   final List<TrailRoute> trails;
   final TrailRoute selectedTrail;
   final bool showOnlySelected;
+  final EdgeInsets fitPadding;
+  final bool reliefMode;
+  final ValueChanged<TrailRoute>? onTrailSelected;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  Widget build(BuildContext context) {
     final visibleTrails = showOnlySelected ? [selectedTrail] : trails;
-    for (final trail in visibleTrails) {
-      final selected = trail.id == selectedTrail.id;
-      final path = Path();
-      for (var i = 0; i < trail.mapPoints.length; i++) {
-        final point = Offset(
-          trail.mapPoints[i].dx * size.width,
-          trail.mapPoints[i].dy * size.height,
+    final fallbackGeometries =
+        visibleTrails.map(TrailGeometryRepository.fallback).toList();
+    return FutureBuilder<List<TrailMapGeometry>>(
+      future: TrailGeometryRepository.loadAll(visibleTrails),
+      builder: (context, snapshot) {
+        final geometries = snapshot.data ?? fallbackGeometries;
+        final loaded = snapshot.connectionState == ConnectionState.done;
+        final anyRemote =
+            geometries.any((geometry) => geometry.loadedFromGpx) || !loaded;
+        final bounds = _boundsFor(geometries);
+        final mapKey = ValueKey(
+          "${showOnlySelected ? "single" : "all"}-"
+          "${visibleTrails.map((trail) => trail.id).join("-")}-"
+          "${snapshot.hasData ? "gpx" : "fallback"}-"
+          "${reliefMode ? "relief" : "map"}",
         );
-        if (i == 0) {
-          path.moveTo(point.dx, point.dy);
-        } else {
-          path.lineTo(point.dx, point.dy);
-        }
-      }
-      final shadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: selected ? 0.38 : 0.18)
-        ..strokeWidth = selected ? 9 : 6
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..style = PaintingStyle.stroke;
-      canvas.drawPath(path, shadowPaint);
+        return Stack(
+          children: [
+            FlutterMap(
+              key: mapKey,
+              options: MapOptions(
+                initialCameraFit: CameraFit.bounds(
+                  bounds: bounds,
+                  padding: fitPadding,
+                  maxZoom: showOnlySelected ? 15 : 13,
+                ),
+                minZoom: 9,
+                maxZoom: 17,
+                backgroundColor: const Color(0xFFDCE7D9),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: reliefMode
+                      ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"
+                      : "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+                  fallbackUrl: reliefMode
+                      ? "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+                      : "https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+                  userAgentPackageName: "appecchio_mockup",
+                ),
+                if (reliefMode) const _TrailReliefOverlay(),
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: _apecchioBoundary,
+                      color: const Color(0xFF2E7D57).withValues(alpha: 0.08),
+                      borderStrokeWidth: 3.2,
+                      borderColor:
+                          const Color(0xFF0F5C43).withValues(alpha: 0.92),
+                      label: "Comune di Apecchio",
+                      labelStyle: const TextStyle(
+                        color: Color(0xFF173B2B),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                PolylineLayer(polylines: _buildPolylines(geometries)),
+                MarkerLayer(markers: _buildMarkers(geometries)),
+                RichAttributionWidget(
+                  attributions: [
+                    const TextSourceAttribution("OpenStreetMap contributors"),
+                    if (reliefMode)
+                      const TextSourceAttribution("Esri World Topographic Map")
+                    else
+                      const TextSourceAttribution("CARTO"),
+                  ],
+                  showFlutterMapAttribution: false,
+                ),
+              ],
+            ),
+            Positioned(
+              right: 12,
+              top: 12,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: loaded
+                    ? _TrailSourcePill(
+                        key: const ValueKey("loaded"),
+                        label: anyRemote ? "GPX online" : "Traccia reale",
+                        icon: anyRemote
+                            ? Icons.cloud_done_rounded
+                            : Icons.route_rounded,
+                      )
+                    : const _TrailSourcePill(
+                        key: ValueKey("loading"),
+                        label: "Carico GPX",
+                        icon: Icons.cloud_download_rounded,
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-      final paint = Paint()
-        ..color = trail.color.withValues(alpha: selected ? 1 : 0.66)
-        ..strokeWidth = selected ? 5.4 : 3.4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..style = PaintingStyle.stroke;
+  List<Polyline> _buildPolylines(List<TrailMapGeometry> geometries) {
+    final ordered = [
+      ...geometries.where((geometry) => geometry.trail.id != selectedTrail.id),
+      ...geometries.where((geometry) => geometry.trail.id == selectedTrail.id),
+    ];
+    return [
+      for (final geometry in ordered)
+        if (geometry.points.length >= 2)
+          Polyline(
+            points: geometry.points,
+            strokeWidth: geometry.trail.id == selectedTrail.id ? 5.8 : 3.8,
+            color: geometry.trail.color.withValues(
+              alpha: geometry.trail.id == selectedTrail.id ? 1 : 0.62,
+            ),
+            borderStrokeWidth:
+                geometry.trail.id == selectedTrail.id ? 5.5 : 4.2,
+            borderColor: Colors.white.withValues(
+              alpha: geometry.trail.id == selectedTrail.id ? 0.88 : 0.58,
+            ),
+          ),
+    ];
+  }
+
+  List<Marker> _buildMarkers(List<TrailMapGeometry> geometries) {
+    return [
+      for (final geometry in geometries)
+        Marker(
+          point: geometry.midPoint,
+          width: geometry.trail.id == selectedTrail.id ? 58 : 50,
+          height: geometry.trail.id == selectedTrail.id ? 58 : 50,
+          child: _TrailMapButton(
+            key: ValueKey("trail-map-button-${geometry.trail.id}"),
+            trail: geometry.trail,
+            selected: geometry.trail.id == selectedTrail.id,
+            onTap: onTrailSelected == null
+                ? null
+                : () => onTrailSelected!(geometry.trail),
+          ),
+        ),
+    ];
+  }
+
+  LatLngBounds _boundsFor(List<TrailMapGeometry> geometries) {
+    final points = [
+      if (!showOnlySelected) ..._apecchioBoundary,
+      for (final geometry in geometries) ...geometry.points,
+    ];
+    if (points.isEmpty) {
+      return LatLngBounds(
+        const LatLng(43.50, 12.35),
+        const LatLng(43.60, 12.57),
+      );
+    }
+    return LatLngBounds.fromPoints(points);
+  }
+}
+
+class _TrailReliefOverlay extends StatelessWidget {
+  const _TrailReliefOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.18),
+              Colors.transparent,
+              Colors.black.withValues(alpha: 0.16),
+            ],
+            stops: const [0, 0.48, 1],
+          ),
+        ),
+        child: CustomPaint(painter: _ReliefLinePainter()),
+      ),
+    );
+  }
+}
+
+class _ReliefLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.16)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    for (var y = -size.height * 0.15; y < size.height; y += 36) {
+      final path = Path()..moveTo(0, y);
+      for (var x = 0.0; x <= size.width; x += 32) {
+        final wave = math.sin((x / size.width * math.pi * 3) + y / 52) * 9;
+        path.lineTo(x, y + wave + x * 0.10);
+      }
       canvas.drawPath(path, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _TrailMapPainter oldDelegate) {
-    return oldDelegate.trails != trails ||
-        oldDelegate.selectedTrail != selectedTrail ||
-        oldDelegate.showOnlySelected != showOnlySelected;
+  bool shouldRepaint(covariant _ReliefLinePainter oldDelegate) => false;
+}
+
+class _TrailSourcePill extends StatelessWidget {
+  const _TrailSourcePill({
+    super.key,
+    required this.label,
+    required this.icon,
+  });
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF2E7D57)),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -3827,6 +5268,122 @@ class _TrailFilterBar extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
               onSelected: (_) => onChanged(entry.key),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TrailMapModeSwitch extends StatelessWidget {
+  const _TrailMapModeSwitch({
+    required this.reliefMode,
+    required this.onChanged,
+  });
+
+  final bool reliefMode;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<bool>(
+      segments: const [
+        ButtonSegment<bool>(
+          value: false,
+          icon: Icon(Icons.map_rounded),
+          label: Text("Mappa"),
+        ),
+        ButtonSegment<bool>(
+          value: true,
+          icon: Icon(Icons.terrain_rounded),
+          label: Text("Rilievo 3D"),
+        ),
+      ],
+      selected: {reliefMode},
+      onSelectionChanged: (values) => onChanged(values.first),
+      style: ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        textStyle: WidgetStateProperty.all(
+          const TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrailMapModeChip extends StatelessWidget {
+  const _TrailMapModeChip({
+    required this.reliefMode,
+    required this.onTap,
+  });
+
+  final bool reliefMode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.94),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                reliefMode ? Icons.terrain_rounded : Icons.map_rounded,
+                size: 18,
+                color: const Color(0xFF2E7D57),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                reliefMode ? "Rilievo 3D" : "Mappa",
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrailQuickOpenRow extends StatelessWidget {
+  const _TrailQuickOpenRow({
+    required this.trails,
+    required this.onTrailSelected,
+  });
+
+  final List<TrailRoute> trails;
+  final ValueChanged<TrailRoute> onTrailSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final trail in trails) ...[
+            ActionChip(
+              key: ValueKey("trail-card-${trail.id}"),
+              avatar: CircleAvatar(
+                backgroundColor: trail.color,
+                child: Text(
+                  trail.caiNumber,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              label: Text(trail.name),
+              onPressed: () => onTrailSelected(trail),
             ),
             const SizedBox(width: 8),
           ],
@@ -4059,6 +5616,178 @@ class _TrailListCard extends StatelessWidget {
   }
 }
 
+class TrailMapScreen extends StatefulWidget {
+  const TrailMapScreen({
+    super.key,
+    required this.trail,
+    required this.reliefMode,
+  });
+
+  final TrailRoute trail;
+  final bool reliefMode;
+
+  @override
+  State<TrailMapScreen> createState() => _TrailMapScreenState();
+}
+
+class _TrailMapScreenState extends State<TrailMapScreen> {
+  late bool _reliefMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _reliefMode = widget.reliefMode;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: const Color(0xFF1B2E21),
+        elevation: 0,
+        title: Text("Sentiero ${widget.trail.caiNumber}"),
+      ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: _TrailOnlineMap(
+              trails: [widget.trail],
+              selectedTrail: widget.trail,
+              showOnlySelected: true,
+              fitPadding: const EdgeInsets.fromLTRB(44, 100, 44, 210),
+              reliefMode: _reliefMode,
+            ),
+          ),
+          Positioned(
+            top: 94,
+            left: 16,
+            right: 16,
+            child: SafeArea(
+              bottom: false,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _TrailMapModeChip(
+                  reliefMode: _reliefMode,
+                  onTap: () => setState(() => _reliefMode = !_reliefMode),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: widget.trail.color,
+                          child: Text(
+                            widget.trail.caiNumber,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.trail.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                "${widget.trail.start} -> ${widget.trail.end}",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF526055),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _TrailStatChip(
+                          icon: Icons.straighten_rounded,
+                          label: widget.trail.distanceLabel,
+                        ),
+                        _TrailStatChip(
+                          icon: Icons.trending_up_rounded,
+                          label: widget.trail.elevationLabel,
+                        ),
+                        _TrailStatChip(
+                          icon: Icons.schedule_rounded,
+                          label: widget.trail.timeLabel,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  TrailDetailScreen(trail: widget.trail),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.info_outline_rounded),
+                        label: const Text("Apri scheda sentiero"),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E7D57),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class TrailDetailScreen extends StatelessWidget {
   const TrailDetailScreen({super.key, required this.trail});
 
@@ -4079,46 +5808,12 @@ class TrailDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             child: SizedBox(
               height: 300,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset(
-                      "assets/images/appecchio_bg.png",
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.08),
-                      ),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _TrailMapPainter(
-                        trails: _trailRoutes,
-                        selectedTrail: trail,
-                        showOnlySelected: true,
-                      ),
-                    ),
-                  ),
-                  for (final pin in _trailMapPins)
-                    if (trail.highlights.any((highlight) =>
-                        highlight
-                            .toLowerCase()
-                            .contains(pin.label.toLowerCase()) ||
-                        pin.label
-                            .toLowerCase()
-                            .contains(highlight.toLowerCase())))
-                      _TrailMapPin(pin: pin),
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 16,
-                    child: _TrailMapLegend(selectedTrail: trail),
-                  ),
-                ],
+              child: _TrailOnlineMap(
+                trails: [trail],
+                selectedTrail: trail,
+                showOnlySelected: true,
+                fitPadding: const EdgeInsets.all(48),
+                reliefMode: true,
               ),
             ),
           ),
@@ -4335,6 +6030,23 @@ class SportFacility {
   final IconData icon;
 }
 
+class SportBookingSlot {
+  const SportBookingSlot({
+    required this.facility,
+    required this.date,
+    required this.timeLabel,
+  });
+
+  final SportFacility facility;
+  final DateTime date;
+  final String timeLabel;
+
+  String get id =>
+      "${facility.id}:${_formatSportSlotDate(date)}:$timeLabel";
+
+  String get dayLabel => _formatSportSlotDay(date);
+}
+
 const List<SportFacility> _sportFacilities = [
   SportFacility(
     id: "campetto_del_prete",
@@ -4434,7 +6146,9 @@ class SportBookingScreen extends StatefulWidget {
 
 class _SportBookingScreenState extends State<SportBookingScreen> {
   late SportFacility _selectedFacility;
-  String? _selectedSlot;
+  late DateTime _focusedMonth;
+  late DateTime _selectedDay;
+  SportBookingSlot? _selectedSlot;
 
   @override
   void initState() {
@@ -4443,11 +6157,17 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
       (facility) => facility.id == widget.initialFacilityId,
       orElse: () => _sportFacilities.first,
     );
-    _selectedSlot = _selectedFacility.nextSlots.first;
+    final slots = _sportBookingSlotsForFacility(_selectedFacility);
+    _selectedSlot = slots.first;
+    _selectedDay = _selectedSlot!.date;
+    _focusedMonth = DateTime(_selectedDay.year, _selectedDay.month);
   }
 
   @override
   Widget build(BuildContext context) {
+    final allSlots = _sportBookingSlots();
+    final selectedDaySlots = _sportSlotsForDay(_selectedDay, allSlots);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF3F6F0),
       appBar: AppBar(
@@ -4463,31 +6183,105 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
             selectedFacility: _selectedFacility,
             onChanged: (facility) => setState(() {
               _selectedFacility = facility;
-              _selectedSlot = facility.nextSlots.first;
+              final facilitySlots = _sportBookingSlotsForFacility(facility);
+              final daySlots =
+                  _sportSlotsForDay(_selectedDay, facilitySlots);
+              _selectedSlot =
+                  daySlots.isNotEmpty ? daySlots.first : facilitySlots.first;
+              _selectedDay = _selectedSlot!.date;
+              _focusedMonth = DateTime(_selectedDay.year, _selectedDay.month);
             }),
           ),
           const SizedBox(height: 16),
-          _TrailDetailCard(
-            title: "Disponibilita rapide",
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final slot in _selectedFacility.nextSlots)
-                  ChoiceChip(
-                    label: Text(slot),
-                    selected: _selectedSlot == slot,
-                    selectedColor: _selectedFacility.color,
-                    labelStyle: TextStyle(
-                      color:
-                          _selectedSlot == slot ? Colors.white : Colors.black,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    onSelected: (_) => setState(() => _selectedSlot = slot),
-                  ),
-              ],
+          AnimatedBuilder(
+            animation: appSportReservations,
+            builder: (context, _) {
+              return _SportBookingCalendar(
+                focusedMonth: _focusedMonth,
+                selectedDay: _selectedDay,
+                slots: allSlots,
+                reservations: appSportReservations,
+                onPreviousMonth: () => setState(
+                  () => _focusedMonth =
+                      DateTime(_focusedMonth.year, _focusedMonth.month - 1),
+                ),
+                onNextMonth: () => setState(
+                  () => _focusedMonth =
+                      DateTime(_focusedMonth.year, _focusedMonth.month + 1),
+                ),
+                onDaySelected: (day) => setState(() {
+                  _selectedDay = day;
+                  _focusedMonth = DateTime(day.year, day.month);
+                  final daySlots = _sportSlotsForDay(day, allSlots);
+                  final preferred = daySlots
+                      .where(
+                    (slot) => slot.facility.id == _selectedFacility.id,
+                      )
+                      .toList(growable: false);
+                  _selectedSlot =
+                      preferred.isNotEmpty
+                          ? preferred.first
+                          : daySlots.isNotEmpty
+                              ? daySlots.first
+                              : null;
+                  if (_selectedSlot != null) {
+                    _selectedFacility = _selectedSlot!.facility;
+                  }
+                }),
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+          AnimatedBuilder(
+            animation: appSportReservations,
+            builder: (context, _) {
+              return _SportDaySlotsPanel(
+                day: _selectedDay,
+                slots: selectedDaySlots,
+                selectedSlot: _selectedSlot,
+                reservations: appSportReservations,
+                onSlotSelected: (slot) => setState(() {
+                  _selectedSlot = slot;
+                  _selectedFacility = slot.facility;
+                  _selectedDay = slot.date;
+                }),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _selectedSlot == null
+                ? null
+                : () {
+                    final slot = _selectedSlot!;
+                    final reserved = appSportReservations.reserve(slot);
+                    final awarded = reserved
+                        ? appGamification.recordBooking(
+                            sourceId: slot.id,
+                            label:
+                                "Prenotazione sport: ${slot.facility.activity} · ${slot.dayLabel} ${slot.timeLabel}",
+                          )
+                        : false;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          reserved
+                              ? awarded
+                                  ? "Prenotazione inviata: +40 token accreditati."
+                                  : "Prenotazione inviata: slot gia premiato in precedenza."
+                              : "Prenotazione gia presente nel calendario.",
+                        ),
+                      ),
+                    );
+                  },
+            icon: const Icon(Icons.event_available_rounded),
+            label: const Text("Conferma prenotazione"),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D57),
+              padding: const EdgeInsets.symmetric(vertical: 15),
             ),
           ),
+          const SizedBox(height: 16),
           _TrailDetailCard(
             title: "Dettagli impianto",
             child: Column(
@@ -4519,23 +6313,6 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
                 for (final rule in _selectedFacility.rules)
                   _SportBullet(text: rule),
               ],
-            ),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    "Mockup: richiesta inviata per ${_selectedFacility.activity} · $_selectedSlot.",
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.event_available_rounded),
-            label: const Text("Conferma prenotazione"),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF2E7D57),
-              padding: const EdgeInsets.symmetric(vertical: 15),
             ),
           ),
         ],
@@ -5000,6 +6777,51 @@ const List<OutdoorService> _outdoorServices = [
     color: Color(0xFF7A5AA6),
     icon: Icons.family_restroom_rounded,
   ),
+  OutdoorService(
+    id: "canoa_trekking",
+    title: "Canoa e trekking guidato",
+    subtitle: "Uscite combinate tra acqua, bosco e sentieri",
+    duration: "Mezza giornata",
+    priceLabel: "Su disponibilita",
+    bestFor: "Gruppi attivi, weekend outdoor, team piccoli",
+    includes: [
+      "Verifica meteo e livello del gruppo",
+      "Abbinamento con guida locale o accompagnatore",
+      "Punto di ritrovo e rientro coordinati",
+    ],
+    color: Color(0xFF2A7F9E),
+    icon: Icons.kayaking_rounded,
+  ),
+  OutdoorService(
+    id: "parco_avventura",
+    title: "Parco Avventura Furlo",
+    subtitle: "Giornata outdoor collegata agli itinerari dell'entroterra",
+    duration: "Giornata",
+    priceLabel: "Biglietto/parco",
+    bestFor: "Famiglie, ragazzi, gruppi scuola",
+    includes: [
+      "Scheda logistica per raggiungere il parco",
+      "Suggerimenti per abbinare pranzo e rientro",
+      "Controllo stagionalita e aperture prima della partenza",
+    ],
+    color: Color(0xFF426B3F),
+    icon: Icons.forest_rounded,
+  ),
+  OutdoorService(
+    id: "birdwatching",
+    title: "Birdwatching",
+    subtitle: "Osservazione naturalistica nei punti panoramici",
+    duration: "2 ore",
+    priceLabel: "Formula libera o guidata",
+    bestFor: "Fotografia, natura lenta, piccoli gruppi",
+    includes: [
+      "Suggerimenti su orari con luce migliore",
+      "Punti panoramici e comportamento rispettoso",
+      "Alternativa breve in caso di vento o pioggia",
+    ],
+    color: Color(0xFF8A6B24),
+    icon: Icons.visibility_rounded,
+  ),
 ];
 
 class OutdoorServicesScreen extends StatefulWidget {
@@ -5265,6 +7087,8 @@ class AppEvent {
     required this.posterSubtitle,
     required this.posterColors,
     required this.icon,
+    this.bookingRewardPoints = 0,
+    this.bookingActionLabel = "Prenota posto",
   });
 
   final String id;
@@ -5280,13 +7104,15 @@ class AppEvent {
   final String posterSubtitle;
   final List<Color> posterColors;
   final IconData icon;
+  final int bookingRewardPoints;
+  final String bookingActionLabel;
 }
 
 const List<AppEvent> _mockEvents = [
   AppEvent(
     id: "tartufo_birra_osterie",
     title: "Tartufo e Birra - Andar per osterie",
-    category: "feste_tradizioni",
+    category: "eventi_gastronomici",
     dateLabel: "3-5 ottobre",
     timeLabel: "Centro storico diffuso",
     place: "Apecchio, centro storico",
@@ -5298,22 +7124,44 @@ const List<AppEvent> _mockEvents = [
     posterSubtitle: "Andar per osterie",
     posterColors: [Color(0xFF2E3A24), Color(0xFFD0A441)],
     icon: Icons.celebration_rounded,
+    bookingRewardPoints: 25,
+    bookingActionLabel: "Prenota osteria",
   ),
   AppEvent(
     id: "rembrandt_barocci",
     title: "Rembrandt e Barocci, incidere la luce",
-    category: "cultura_spettacoli",
-    dateLabel: "8 giugno - 7 settembre",
-    timeLabel: "Orari mostra",
-    place: "Palazzo Ubaldini",
+    category: "mostre",
+    dateLabel: "8 giugno - 7 settembre 2025",
+    timeLabel: "Sale espositive",
+    place: "Palazzo Ubaldini, piazza S. Martino",
     description:
-        "Mostra culturale segnalata nel calendario estivo, con Palazzo Ubaldini come sede naturale per arte e storia del territorio.",
-    contacts: "Comune di Apecchio - Ufficio Turistico",
-    website: "www.vivereapecchio.it/eventi",
+        "Mostra d'arte grafica con oltre quaranta incisioni originali, in dialogo tra Rembrandt e Federico Barocci. Scheda mantenuta come archivio mostra e modello di prenotazione visita.",
+    contacts: "Ufficio IAT - +39 0722 99279 - WhatsApecchio +39 366 1377489",
+    website: "www.vivereapecchio.it/rembrandt-e-barocci",
     posterTitle: "Incidere la luce",
     posterSubtitle: "Rembrandt e Barocci",
     posterColors: [Color(0xFF493548), Color(0xFFE6C17A)],
     icon: Icons.image_rounded,
+    bookingRewardPoints: 45,
+    bookingActionLabel: "Prenota visita",
+  ),
+  AppEvent(
+    id: "museo_fossili_minerali",
+    title: "Museo dei Fossili e Minerali del Monte Nerone",
+    category: "mostre",
+    dateLabel: "Tutto l'anno",
+    timeLabel: "Prenotazione visite",
+    place: "Sotterranei di Palazzo Ubaldini",
+    description:
+        "Percorso museale interattivo con fossili, minerali, ammoniti e reperti legati al Monte Nerone, ospitato nei sotterranei di Palazzo Ubaldini.",
+    contacts: "Ufficio Turistico - +39 0722 99249 - prenotazioni@lamacina.it",
+    website: "www.vivereapecchio.it/cultura",
+    posterTitle: "Museo Fossili",
+    posterSubtitle: "Monte Nerone",
+    posterColors: [Color(0xFF1B4332), Color(0xFF74C69D)],
+    icon: Icons.museum_rounded,
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota visita",
   ),
   AppEvent(
     id: "torneo_tennis_birra",
@@ -5362,6 +7210,8 @@ const List<AppEvent> _mockEvents = [
     posterSubtitle: "Storia e fede",
     posterColors: [Color(0xFF3C2F2F), Color(0xFFC9A46A)],
     icon: Icons.church_rounded,
+    bookingRewardPoints: 20,
+    bookingActionLabel: "Segna partecipazione",
   ),
   AppEvent(
     id: "fiera_ss_crocifisso",
@@ -5398,7 +7248,7 @@ const List<AppEvent> _mockEvents = [
   AppEvent(
     id: "sagra_coradella",
     title: "Sagra della coradella d'agnello De.C.O.",
-    category: "feste_tradizioni",
+    category: "eventi_gastronomici",
     dateLabel: "19-20 luglio",
     timeLabel: "Weekend",
     place: "Serravalle di Carda",
@@ -5410,6 +7260,8 @@ const List<AppEvent> _mockEvents = [
     posterSubtitle: "Ricetta De.C.O.",
     posterColors: [Color(0xFF6B4F3A), Color(0xFFE4B56A)],
     icon: Icons.restaurant_rounded,
+    bookingRewardPoints: 25,
+    bookingActionLabel: "Prenota tavolo",
   ),
   AppEvent(
     id: "tank_fotografia",
@@ -5442,6 +7294,8 @@ const List<AppEvent> _mockEvents = [
     posterSubtitle: "Territorio in corsa",
     posterColors: [Color(0xFFD81B60), Color(0xFFFFD166)],
     icon: Icons.directions_bike_rounded,
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota esperienza",
   ),
   AppEvent(
     id: "foraging_retreat",
@@ -5504,11 +7358,15 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> {
   late String _selectedFilter;
+  late DateTime _focusedMonth;
+  late DateTime _selectedDay;
 
   static const Map<String, String> _filters = {
     "tutti": "Tutti",
     "feste_tradizioni": "Feste e tradizioni",
+    "eventi_gastronomici": "Eventi gastronomici",
     "cultura_spettacoli": "Cultura e spettacoli",
+    "mostre": "Mostre",
     "sport_outdoor": "Sport e outdoor",
     "comunita_spiritualita": "Comunita e spiritualita",
   };
@@ -5519,6 +7377,9 @@ class _EventsScreenState extends State<EventsScreen> {
     _selectedFilter = _filters.containsKey(widget.initialFilter)
         ? widget.initialFilter!
         : "tutti";
+    final now = DateTime.now();
+    _focusedMonth = DateTime(now.year, now.month);
+    _selectedDay = _dateOnly(now);
   }
 
   @override
@@ -5528,6 +7389,7 @@ class _EventsScreenState extends State<EventsScreen> {
         : _mockEvents
             .where((event) => event.category == _selectedFilter)
             .toList(growable: false);
+    final selectedDayEvents = _eventsForDay(_selectedDay, events);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F1),
@@ -5546,7 +7408,43 @@ class _EventsScreenState extends State<EventsScreen> {
             onChanged: (value) => setState(() => _selectedFilter = value),
           ),
           const SizedBox(height: 18),
-          _EventCalendarStrip(events: events),
+          AnimatedBuilder(
+            animation: appEventParticipation,
+            builder: (context, _) {
+              return _EventMonthCalendar(
+                focusedMonth: _focusedMonth,
+                selectedDay: _selectedDay,
+                events: events,
+                participation: appEventParticipation,
+                onPreviousMonth: () => setState(
+                  () => _focusedMonth =
+                      DateTime(_focusedMonth.year, _focusedMonth.month - 1),
+                ),
+                onNextMonth: () => setState(
+                  () => _focusedMonth =
+                      DateTime(_focusedMonth.year, _focusedMonth.month + 1),
+                ),
+                onDaySelected: (day) => setState(() {
+                  _selectedDay = day;
+                  _focusedMonth = DateTime(day.year, day.month);
+                }),
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+          AnimatedBuilder(
+            animation: appEventParticipation,
+            builder: (context, _) {
+              return _SelectedDayEventsPanel(
+                day: _selectedDay,
+                events: selectedDayEvents,
+                participation: appEventParticipation,
+                onEventTap: _openEventDetail,
+                onParticipationChanged: (event) =>
+                    appEventParticipation.toggle(event),
+              );
+            },
+          ),
           const SizedBox(height: 22),
           Text(
             _selectedFilter == "tutti"
@@ -5563,9 +7461,15 @@ class _EventsScreenState extends State<EventsScreen> {
               separatorBuilder: (_, __) => const SizedBox(width: 14),
               itemBuilder: (context, index) {
                 final event = events[index];
-                return _EventPosterCard(
-                  event: event,
-                  onTap: () => _openEventDetail(event),
+                return AnimatedBuilder(
+                  animation: appEventParticipation,
+                  builder: (context, _) {
+                    return _EventPosterCard(
+                      event: event,
+                      joined: appEventParticipation.isJoined(event),
+                      onTap: () => _openEventDetail(event),
+                    );
+                  },
                 );
               },
             ),
@@ -5577,7 +7481,16 @@ class _EventsScreenState extends State<EventsScreen> {
           ),
           const SizedBox(height: 10),
           for (final event in events)
-            _EventListTile(event: event, onTap: () => _openEventDetail(event)),
+            AnimatedBuilder(
+              animation: appEventParticipation,
+              builder: (context, _) {
+                return _EventListTile(
+                  event: event,
+                  joined: appEventParticipation.isJoined(event),
+                  onTap: () => _openEventDetail(event),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -5666,77 +7579,590 @@ class _EventFilterBar extends StatelessWidget {
   }
 }
 
-class _EventCalendarStrip extends StatelessWidget {
-  const _EventCalendarStrip({required this.events});
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
+bool _sameMonth(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month;
+
+List<DateTime> _calendarDays(DateTime month) {
+  final first = DateTime(month.year, month.month);
+  final leadingDays = first.weekday - DateTime.monday;
+  final start = first.subtract(Duration(days: leadingDays));
+  return List<DateTime>.generate(
+    42,
+    (index) => _dateOnly(start.add(Duration(days: index))),
+  );
+}
+
+List<AppEvent> _eventsForDay(DateTime day, List<AppEvent> events) {
+  return events
+      .where((event) => _eventDates(event).any((date) => _sameDay(date, day)))
+      .toList(growable: false);
+}
+
+Color _eventCategoryColor(String category) {
+  switch (category) {
+    case "feste_tradizioni":
+      return const Color(0xFFB5472F);
+    case "eventi_gastronomici":
+      return const Color(0xFFC9902E);
+    case "cultura_spettacoli":
+      return const Color(0xFF6E4AA0);
+    case "mostre":
+      return const Color(0xFF2D6F88);
+    case "sport_outdoor":
+      return const Color(0xFF2E7D57);
+    case "comunita_spiritualita":
+      return const Color(0xFF536B2F);
+    default:
+      return const Color(0xFF52615A);
+  }
+}
+
+String _formatMonthYear(DateTime month) {
+  return "${_capitalize(_monthName(month.month))} ${month.year}";
+}
+
+String _formatDayLong(DateTime day) {
+  return "${day.day} ${_monthName(day.month)} ${day.year}";
+}
+
+String _capitalize(String value) {
+  if (value.isEmpty) {
+    return value;
+  }
+  return value[0].toUpperCase() + value.substring(1);
+}
+
+String _monthName(int month) {
+  const names = [
+    "gennaio",
+    "febbraio",
+    "marzo",
+    "aprile",
+    "maggio",
+    "giugno",
+    "luglio",
+    "agosto",
+    "settembre",
+    "ottobre",
+    "novembre",
+    "dicembre",
+  ];
+  return names[(month - 1).clamp(0, 11).toInt()];
+}
+
+List<DateTime> _eventDates(AppEvent event) {
+  final year = DateTime.now().year;
+  switch (event.id) {
+    case "tartufo_birra_osterie":
+      return _dateRange(DateTime(year, 10, 3), DateTime(year, 10, 5));
+    case "rembrandt_barocci":
+      return _dateRange(DateTime(2025, 6, 8), DateTime(2025, 9, 7));
+    case "museo_fossili_minerali":
+      return List<DateTime>.generate(12, (index) => DateTime(year, index + 1));
+    case "torneo_tennis_birra":
+      return [
+        DateTime(year, 6, 1),
+        DateTime(year, 6, 8),
+        DateTime(year, 6, 15),
+        DateTime(year, 6, 22),
+      ];
+    case "estate_musicale":
+      return [
+        DateTime(year, 7, 16),
+        DateTime(year, 7, 23),
+        DateTime(year, 7, 30),
+      ];
+    case "passio":
+      return [_easterSunday(year).subtract(const Duration(days: 2))];
+    case "fiera_ss_crocifisso":
+      return _dateRange(DateTime(year, 6, 1), DateTime(year, 6, 3));
+    case "feste_medievali":
+      return [DateTime(year, 9, 14)];
+    case "sagra_coradella":
+      return _dateRange(DateTime(year, 7, 19), DateTime(year, 7, 20));
+    case "tank_fotografia":
+      return _dateRange(DateTime(year, 10, 18), DateTime(year, 10, 19));
+    case "giro_italia_women":
+      return [DateTime(year, 7, 7)];
+    case "foraging_retreat":
+      return [DateTime(year, 4, 21)];
+    case "liberazione":
+      return [DateTime(year, 4, 25)];
+    case "festa_lavoro_circolo":
+      return [DateTime(year, 5, 1)];
+    default:
+      return const <DateTime>[];
+  }
+}
+
+List<DateTime> _dateRange(DateTime start, DateTime end) {
+  final normalizedStart = _dateOnly(start);
+  final normalizedEnd = _dateOnly(end);
+  final length = normalizedEnd.difference(normalizedStart).inDays + 1;
+  if (length <= 0) {
+    return [normalizedStart];
+  }
+  return List<DateTime>.generate(
+    length,
+    (index) => normalizedStart.add(Duration(days: index)),
+  );
+}
+
+DateTime _easterSunday(int year) {
+  final a = year % 19;
+  final b = year ~/ 100;
+  final c = year % 100;
+  final d = b ~/ 4;
+  final e = b % 4;
+  final f = (b + 8) ~/ 25;
+  final g = (b - f + 1) ~/ 3;
+  final h = (19 * a + b - d - g + 15) % 30;
+  final i = c ~/ 4;
+  final k = c % 4;
+  final l = (32 + 2 * e + 2 * i - h - k) % 7;
+  final m = (a + 11 * h + 22 * l) ~/ 451;
+  final month = (h + l - 7 * m + 114) ~/ 31;
+  final day = ((h + l - 7 * m + 114) % 31) + 1;
+  return DateTime(year, month, day);
+}
+
+class _EventMonthCalendar extends StatelessWidget {
+  const _EventMonthCalendar({
+    required this.focusedMonth,
+    required this.selectedDay,
+    required this.events,
+    required this.participation,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+    required this.onDaySelected,
+  });
+
+  final DateTime focusedMonth;
+  final DateTime selectedDay;
+  final List<AppEvent> events;
+  final EventParticipationController participation;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
+  final ValueChanged<DateTime> onDaySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = _calendarDays(focusedMonth);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE1E8DD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton.filledTonal(
+                onPressed: onPreviousMonth,
+                icon: const Icon(Icons.chevron_left_rounded),
+                tooltip: "Mese precedente",
+              ),
+              Expanded(
+                child: Text(
+                  _formatMonthYear(focusedMonth),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: onNextMonth,
+                icon: const Icon(Icons.chevron_right_rounded),
+                tooltip: "Mese successivo",
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final label in [
+                "Lun",
+                "Mar",
+                "Mer",
+                "Gio",
+                "Ven",
+                "Sab",
+                "Dom"
+              ])
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: days.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 0.88,
+            ),
+            itemBuilder: (context, index) {
+              final day = days[index];
+              final dayEvents = _eventsForDay(day, events);
+              final inMonth = _sameMonth(day, focusedMonth);
+              final selected = _sameDay(day, selectedDay);
+              final joined =
+                  dayEvents.any((event) => participation.isJoined(event));
+              return _CalendarDayCell(
+                day: day,
+                inMonth: inMonth,
+                selected: selected,
+                joined: joined,
+                events: dayEvents,
+                onTap: () => onDaySelected(day),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          const _EventCalendarLegend(filters: _EventsScreenState._filters),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarDayCell extends StatelessWidget {
+  const _CalendarDayCell({
+    required this.day,
+    required this.inMonth,
+    required this.selected,
+    required this.joined,
+    required this.events,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final bool inMonth;
+  final bool selected;
+  final bool joined;
+  final List<AppEvent> events;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final eventCount = events.length;
+    final bgColor = selected
+        ? const Color(0xFFE4F2E8)
+        : joined
+            ? const Color(0xFFEAF5EA)
+            : inMonth
+                ? const Color(0xFFFAFCF7)
+                : const Color(0xFFF1F2EE);
+    final borderColor = selected
+        ? const Color(0xFF2E7D57)
+        : joined
+            ? const Color(0xFF78A65D)
+            : eventCount > 0
+                ? const Color(0xFFCAD8C7)
+                : const Color(0xFFE7ECE2);
+
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: selected ? 2 : 1),
+          ),
+          child: Stack(
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  "${day.day}",
+                  style: TextStyle(
+                    color: inMonth ? Colors.black87 : Colors.black38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (eventCount > 1)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    height: 19,
+                    constraints: const BoxConstraints(minWidth: 19),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF263E2B),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      "$eventCount",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              if (joined)
+                const Align(
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: Color(0xFF2E7D57),
+                    size: 18,
+                  ),
+                ),
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: _OverlappingEventMarks(events: events),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OverlappingEventMarks extends StatelessWidget {
+  const _OverlappingEventMarks({required this.events});
 
   final List<AppEvent> events;
 
   @override
   Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final visible = events.take(4).toList(growable: false);
     return SizedBox(
-      height: 88,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: events.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final event = events[index];
-          final pieces = event.dateLabel.split(" ");
-          return Container(
-            width: 96,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE1E8DD)),
+      width: 42,
+      height: 16,
+      child: Stack(
+        children: [
+          for (var i = 0; i < visible.length; i++)
+            Positioned(
+              left: i * 8,
+              bottom: 0,
+              child: Container(
+                width: 22,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: _eventCategoryColor(visible[i].category),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white, width: 0.7),
+                ),
+              ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+        ],
+      ),
+    );
+  }
+}
+
+class _EventCalendarLegend extends StatelessWidget {
+  const _EventCalendarLegend({required this.filters});
+
+  final Map<String, String> filters;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = filters.entries.where((entry) => entry.key != "tutti");
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final entry in entries)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            decoration: BoxDecoration(
+              color: _eventCategoryColor(entry.key).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _eventCategoryColor(entry.key),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
                 Text(
-                  pieces.first,
+                  entry.value,
                   style: const TextStyle(
-                    color: Color(0xFF2E7D57),
                     fontSize: 11,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  pieces.length > 1 ? pieces[1] : event.dateLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  event.category.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    height: 1,
-                    letterSpacing: 0.4,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+      ],
+    );
+  }
+}
+
+class _SelectedDayEventsPanel extends StatelessWidget {
+  const _SelectedDayEventsPanel({
+    required this.day,
+    required this.events,
+    required this.participation,
+    required this.onEventTap,
+    required this.onParticipationChanged,
+  });
+
+  final DateTime day;
+  final List<AppEvent> events;
+  final EventParticipationController participation;
+  final ValueChanged<AppEvent> onEventTap;
+  final ValueChanged<AppEvent> onParticipationChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE1E8DD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _formatDayLong(day),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          if (events.isEmpty)
+            const Text(
+              "Nessun evento marcato per questa giornata.",
+              style:
+                  TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
+            )
+          else
+            for (final event in events)
+              _SelectedDayEventRow(
+                event: event,
+                joined: participation.isJoined(event),
+                onOpen: () => onEventTap(event),
+                onParticipationChanged: () => onParticipationChanged(event),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedDayEventRow extends StatelessWidget {
+  const _SelectedDayEventRow({
+    required this.event,
+    required this.joined,
+    required this.onOpen,
+    required this.onParticipationChanged,
+  });
+
+  final AppEvent event;
+  final bool joined;
+  final VoidCallback onOpen;
+  final VoidCallback onParticipationChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _eventCategoryColor(event.category).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 5,
+            height: 54,
+            decoration: BoxDecoration(
+              color: _eventCategoryColor(event.category),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: InkWell(
+              onTap: onOpen,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    event.timeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: onParticipationChanged,
+            child: Text(joined ? "Partecipo" : "Partecipa"),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _EventPosterCard extends StatelessWidget {
-  const _EventPosterCard({required this.event, required this.onTap});
+  const _EventPosterCard({
+    required this.event,
+    required this.joined,
+    required this.onTap,
+  });
 
   final AppEvent event;
+  final bool joined;
   final VoidCallback onTap;
 
   @override
@@ -5751,6 +8177,10 @@ class _EventPosterCard extends StatelessWidget {
           children: [
             Expanded(child: EventPoster(event: event)),
             const SizedBox(height: 10),
+            if (joined) ...[
+              const _ParticipationPill(compact: true),
+              const SizedBox(height: 6),
+            ],
             Text(
               event.title,
               maxLines: 2,
@@ -5871,9 +8301,14 @@ class EventPoster extends StatelessWidget {
 }
 
 class _EventListTile extends StatelessWidget {
-  const _EventListTile({required this.event, required this.onTap});
+  const _EventListTile({
+    required this.event,
+    required this.joined,
+    required this.onTap,
+  });
 
   final AppEvent event;
+  final bool joined;
   final VoidCallback onTap;
 
   @override
@@ -5899,8 +8334,49 @@ class _EventListTile extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: const Icon(Icons.chevron_right_rounded),
+        trailing: joined
+            ? const _ParticipationPill(compact: true)
+            : const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _ParticipationPill extends StatelessWidget {
+  const _ParticipationPill({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 4 : 6,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E7D57),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.check_rounded,
+            size: compact ? 13 : 15,
+            color: Colors.white,
+          ),
+          SizedBox(width: compact ? 3 : 5),
+          Text(
+            compact ? "Si" : "Partecipo",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: compact ? 11 : 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -5934,9 +8410,13 @@ class EventDetailScreen extends StatelessWidget {
               icon: Icons.calendar_month_rounded, text: event.dateLabel),
           _EventInfoRow(icon: Icons.place_rounded, text: event.place),
           const SizedBox(height: 18),
+          _EventParticipationCard(event: event),
           _EventDetailSection(title: "Descrizione", body: event.description),
           _EventDetailSection(title: "Riferimenti", body: event.contacts),
           _EventDetailSection(title: "Sito web", body: event.website),
+          if (event.bookingRewardPoints > 0)
+            _EventBookingRewardCard(event: event),
+          _EventCheckinRewardCard(event: event),
           const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: () {
@@ -5957,13 +8437,285 @@ class EventDetailScreen extends StatelessWidget {
   }
 }
 
+class _EventParticipationCard extends StatelessWidget {
+  const _EventParticipationCard({required this.event});
+
+  final AppEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: appEventParticipation,
+      builder: (context, _) {
+        final joined = appEventParticipation.isJoined(event);
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: joined
+                ? _eventCategoryColor(event.category).withValues(alpha: 0.14)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: joined
+                  ? _eventCategoryColor(event.category)
+                  : const Color(0xFFE1E8DD),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: _eventCategoryColor(event.category),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  joined
+                      ? Icons.check_circle_rounded
+                      : Icons.event_available_rounded,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      joined
+                          ? "Partecipazione salvata"
+                          : "Segna partecipazione",
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      joined
+                          ? "Il giorno dell'evento resta evidenziato nel calendario."
+                          : "Il calendario colorera' il riquadro della giornata.",
+                      style: const TextStyle(height: 1.25),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              FilledButton(
+                onPressed: () {
+                  appEventParticipation.toggle(event);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        joined
+                            ? "Partecipazione rimossa dal calendario."
+                            : "Partecipazione aggiunta al calendario.",
+                      ),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: joined
+                      ? const Color(0xFF55615B)
+                      : const Color(0xFF2E7D57),
+                ),
+                child: Text(joined ? "Rimuovi" : "Partecipa"),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EventCheckinRewardCard extends StatelessWidget {
+  const _EventCheckinRewardCard({required this.event});
+
+  final AppEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: appGamification,
+      builder: (context, _) {
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE1E8DD)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Check-in ricompensa",
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "Genera il QR evento e simula la scansione staff per accreditare 120 token una sola volta.",
+                style: TextStyle(height: 1.35),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 86,
+                    height: 86,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F7F1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: CustomPaint(
+                      painter: _MockQrPainter(seed: event.id),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        final awarded =
+                            appGamification.recordEventCheckin(event);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              awarded
+                                  ? "Check-in valido: +120 token accreditati."
+                                  : "Check-in gia registrato per questo evento.",
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code_scanner_rounded),
+                      label: const Text("Simula scansione"),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D57),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EventBookingRewardCard extends StatelessWidget {
+  const _EventBookingRewardCard({required this.event});
+
+  final AppEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: appGamification,
+      builder: (context, _) {
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF8E1),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFFFE0A3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Prenotazione: +${event.bookingRewardPoints} token",
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "La prenotazione da app crea un movimento nel wallet. Il check-in staff, quando previsto, resta separato.",
+                style: TextStyle(height: 1.35),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () {
+                  final awarded = appGamification.recordBooking(
+                    sourceId: "event:${event.id}",
+                    label: "${event.bookingActionLabel}: ${event.title}",
+                    points: event.bookingRewardPoints,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        awarded
+                            ? "${event.bookingActionLabel} confermata: +${event.bookingRewardPoints} token."
+                            : "Prenotazione gia registrata per questa attivita.",
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.event_available_rounded),
+                label: Text(event.bookingActionLabel),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF8A6400),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MockQrPainter extends CustomPainter {
+  const _MockQrPainter({required this.seed});
+
+  final String seed;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFF203B2C);
+    final cell = size.width / 7;
+    for (var row = 0; row < 7; row += 1) {
+      for (var col = 0; col < 7; col += 1) {
+        final code = seed.codeUnitAt((row + col) % seed.length);
+        final finder =
+            row < 2 && col < 2 || row < 2 && col > 4 || row > 4 && col < 2;
+        if (finder || (code + row + col).isEven) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(col * cell + 3, row * cell + 3, cell - 6, cell - 6),
+              const Radius.circular(2),
+            ),
+            paint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MockQrPainter oldDelegate) {
+    return oldDelegate.seed != seed;
+  }
+}
+
 extension on AppEvent {
   String get categoryLabel {
     switch (category) {
       case "feste_tradizioni":
         return "Feste e tradizioni";
+      case "eventi_gastronomici":
+        return "Eventi gastronomici";
       case "cultura_spettacoli":
         return "Cultura e spettacoli";
+      case "mostre":
+        return "Mostre";
       case "sport_outdoor":
         return "Sport e outdoor";
       case "comunita_spiritualita":
@@ -6028,7 +8780,391 @@ class _EventDetailSection extends StatelessWidget {
   }
 }
 
-enum DiningKind { restaurant, agriturismo }
+class LocalProduct {
+  const LocalProduct({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.season,
+    required this.whereToBuy,
+    required this.sourceLabel,
+    required this.highlights,
+    required this.colors,
+    required this.icon,
+  });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final String season;
+  final String whereToBuy;
+  final String sourceLabel;
+  final List<String> highlights;
+  final List<Color> colors;
+  final IconData icon;
+}
+
+const List<LocalProduct> _localProducts = [
+  LocalProduct(
+    id: "prodotto_tartufo",
+    title: "Tartufo",
+    subtitle: "Oro bianco, nero pregiato, bianchetto e nero estivo.",
+    season:
+        "Bianco: ultima domenica di settembre - 31 dicembre. Nero pregiato: 1 dicembre - 15 marzo. Bianchetto: 15 gennaio - 30 aprile. Nero estivo: 1 giugno - 31 dicembre.",
+    whereToBuy:
+        "Stand della Mostra Mercato nel primo weekend di ottobre, commercianti di tartufo fresco, ristoranti e osterie aderenti. Per contatti aggiornati: Ufficio Turistico in piazza San Martino.",
+    sourceLabel: "Fonte: Vivere Apecchio Gusto / Tartufo e Birra",
+    highlights: [
+      "Territorio vocato alla produzione di tartufi in ogni stagione",
+      "Mostra Mercato del Tartufo nel centro storico",
+      "Abbinamenti con birra artigianale e prodotti del bosco",
+    ],
+    colors: [Color(0xFF3B2F2A), Color(0xFFD8B45D)],
+    icon: Icons.spa_rounded,
+  ),
+  LocalProduct(
+    id: "prodotto_birra",
+    title: "Birra artigianale",
+    subtitle: "La vocazione brassicola di Apecchio, Citta della Birra.",
+    season:
+        "Tutto l'anno. Picco di visibilita durante Tartufo & Birra e negli itinerari delle Strade della Birra.",
+    whereToBuy:
+        "Birrifici artigianali locali, ristoranti aderenti all'alogastronomia e stand degli eventi. Riferimenti di territorio: Amarcord, Tenute Collesi e Ufficio Turistico.",
+    sourceLabel: "Fonte: Vivere Apecchio Tartufo e Birra",
+    highlights: [
+      "Apecchio e riconosciuta come prima Citta della Birra Italiana",
+      "Acqua del Monte Nerone e orzo locale nella narrazione brassicola",
+      "Prodotto centrale per percorsi di gusto e alogastronomia",
+    ],
+    colors: [Color(0xFF51331D), Color(0xFFF0A33A)],
+    icon: Icons.sports_bar_rounded,
+  ),
+  LocalProduct(
+    id: "tartufo_birra",
+    title: "Alogastronomia",
+    subtitle: "Il legame tra birra artigianale, cucina locale e tartufo.",
+    season:
+        "Tutto l'anno nei ristoranti aderenti; esperienza diffusa nelle osterie temporanee del primo weekend di ottobre.",
+    whereToBuy:
+        "Ristoranti con adesivo Alogastronomia, osterie del centro storico durante Tartufo & Birra, calendario eventi gastronomici dell'app.",
+    sourceLabel: "Fonte: Vivere Apecchio Gusto",
+    highlights: [
+      "Abbinamento identitario tra birra, tartufo e prodotti locali",
+      "Percorsi di gusto collegati a cultura, artigianato e ambiente",
+      "Ponte naturale tra Food & Drink ed Eventi gastronomici",
+    ],
+    colors: [Color(0xFF253C2A), Color(0xFFC9902E)],
+    icon: Icons.local_bar_rounded,
+  ),
+  LocalProduct(
+    id: "tipicita_deco",
+    title: "Tipicita De.C.O.",
+    subtitle: "Ricette comunali e prodotti del bosco da valorizzare.",
+    season:
+        "Ricette De.C.O. tutto l'anno. Funghi e prodotti del bosco seguono raccolta e disponibilita stagionale.",
+    whereToBuy:
+        "Ristoranti del territorio, sagre di frazione, botteghe e alimentari locali. Per eventi dedicati: categoria Eventi gastronomici.",
+    sourceLabel: "Fonte: Vivere Apecchio Gusto",
+    highlights: [
+      "Salmi del Prete, Bostrengo e Coradella d'Agnello",
+      "Schede utili per prenotare tavolo o degustazione",
+      "Rimando a sagre, ristoranti e produttori locali",
+    ],
+    colors: [Color(0xFF6B4F3A), Color(0xFFE4B56A)],
+    icon: Icons.verified_rounded,
+  ),
+];
+
+class LocalProductsScreen extends StatefulWidget {
+  const LocalProductsScreen({super.key, required this.initialProductId});
+
+  final String initialProductId;
+
+  @override
+  State<LocalProductsScreen> createState() => _LocalProductsScreenState();
+}
+
+class _LocalProductsScreenState extends State<LocalProductsScreen> {
+  late LocalProduct _selectedProduct;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedProduct = _localProducts.firstWhere(
+      (product) => product.id == widget.initialProductId,
+      orElse: () => _localProducts.first,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F4EC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF6F4EC),
+        title: const Text("Prodotti locali"),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        children: [
+          _LocalProductHero(product: _selectedProduct),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 118,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _localProducts.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final product = _localProducts[index];
+                return _LocalProductCard(
+                  product: product,
+                  selected: product.id == _selectedProduct.id,
+                  onTap: () => setState(() => _selectedProduct = product),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+          _ProductInfoTile(
+            icon: Icons.calendar_month_rounded,
+            title: "Stagione",
+            body: _selectedProduct.season,
+          ),
+          _ProductInfoTile(
+            icon: Icons.shopping_basket_rounded,
+            title: "Dove comprarlo",
+            body: _selectedProduct.whereToBuy,
+          ),
+          _ProductInfoTile(
+            icon: Icons.verified_rounded,
+            title: "Riferimento",
+            body: _selectedProduct.sourceLabel,
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "In evidenza",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          for (final highlight in _selectedProduct.highlights)
+            _ProductHighlight(label: highlight),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalProductHero extends StatelessWidget {
+  const _LocalProductHero({required this.product});
+
+  final LocalProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 210,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: product.colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: Icon(
+              product.icon,
+              color: Colors.white.withValues(alpha: 0.55),
+              size: 72,
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "PRODOTTO LOCALE",
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.84),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                product.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  height: 0.98,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                product.subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.88),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalProductCard extends StatelessWidget {
+  const _LocalProductCard({
+    required this.product,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final LocalProduct product;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 152,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF243C2A) : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                product.icon,
+                color: selected ? Colors.white : const Color(0xFF2E7D57),
+              ),
+              const Spacer(),
+              Text(
+                product.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.w900,
+                  height: 1.04,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductInfoTile extends StatelessWidget {
+  const _ProductInfoTile({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF2E7D57)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 6),
+                Text(body, style: const TextStyle(height: 1.35)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductHighlight extends StatelessWidget {
+  const _ProductHighlight({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_rounded,
+              size: 19, color: Color(0xFF2E7D57)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum DiningKind { restaurant, agriturismo, bar, bnb, locale, mostra }
+
+String _diningTitle(DiningKind kind) {
+  switch (kind) {
+    case DiningKind.restaurant:
+      return "Ristoranti";
+    case DiningKind.agriturismo:
+      return "Agriturismi";
+    case DiningKind.bar:
+      return "Bar";
+    case DiningKind.bnb:
+      return "B&B";
+    case DiningKind.locale:
+      return "Locali";
+    case DiningKind.mostra:
+      return "Mostre e musei";
+  }
+}
 
 class DiningVenue {
   const DiningVenue({
@@ -6037,8 +9173,13 @@ class DiningVenue {
     required this.kind,
     required this.tagline,
     required this.area,
+    required this.address,
+    required this.contact,
     required this.todayStatus,
     required this.priceHint,
+    required this.sourceLabel,
+    required this.bookingRewardPoints,
+    required this.bookingActionLabel,
     required this.coverColors,
     required this.icon,
     required this.menuSections,
@@ -6050,8 +9191,13 @@ class DiningVenue {
   final DiningKind kind;
   final String tagline;
   final String area;
+  final String address;
+  final String contact;
   final String todayStatus;
   final String priceHint;
+  final String sourceLabel;
+  final int bookingRewardPoints;
+  final String bookingActionLabel;
   final List<Color> coverColors;
   final IconData icon;
   final Map<String, List<String>> menuSections;
@@ -6063,6 +9209,25 @@ class DiningVenue {
         return "Ristorante";
       case DiningKind.agriturismo:
         return "Agriturismo";
+      case DiningKind.bar:
+        return "Bar";
+      case DiningKind.bnb:
+        return "B&B";
+      case DiningKind.locale:
+        return "Locale";
+      case DiningKind.mostra:
+        return "Mostra";
+    }
+  }
+
+  String get sectionsTitle {
+    switch (kind) {
+      case DiningKind.bnb:
+        return "Servizi";
+      case DiningKind.mostra:
+        return "Cosa prenoti";
+      default:
+        return "Dettagli";
     }
   }
 }
@@ -6072,120 +9237,572 @@ const List<DiningVenue> _diningVenues = [
     id: "civico_14_5",
     name: "Civico 14+5",
     kind: DiningKind.restaurant,
-    tagline: "Cucina contemporanea, tavoli raccolti e carta stagionale.",
+    tagline: "Ristorante pizzeria e bike point in via Dante Alighieri.",
     area: "Centro storico",
+    address: "Via Dante Alighieri, 19 - Apecchio",
+    contact: "Cell. 338 9769898",
     todayStatus: "Oggi: tavoli a cena",
-    priceHint: "Menu medio 30-40 euro",
+    priceHint: "Cucina locale, pizza e piatti De.C.O.",
+    sourceLabel: "Fonte: Vivere Apecchio / Civico 14+5",
+    bookingRewardPoints: 35,
+    bookingActionLabel: "Prenota cena",
     coverColors: [Color(0xFF1F3A35), Color(0xFFE6B85C)],
     icon: Icons.restaurant_menu_rounded,
     menuSections: {
-      "Antipasti": ["Crostini misti", "Tagliere del territorio"],
-      "Primi": ["Tagliatelle al ragu", "Ravioli burro e salvia"],
-      "Secondi": ["Coniglio in porchetta", "Verdure grigliate"],
+      "Identita": ["Pasta fatta in casa", "Tartufo e funghi stagionali"],
+      "De.C.O.": ["Salmi del Prete", "Bostrengo di Apecchio"],
+      "Bike": ["Bike Point Civico 14+5", "Sosta ristoro per ciclisti"],
     },
     bookingSlots: ["12:30", "13:15", "19:45", "20:30", "21:15"],
   ),
   DiningVenue(
-    id: "dal_greco",
-    name: "Dal Greco",
+    id: "pizzeria_il_greco",
+    name: "Pizzeria Il Greco",
     kind: DiningKind.restaurant,
-    tagline: "Piatti sinceri, griglia e sapori di casa.",
-    area: "Zona paese",
+    tagline: "Pizzeria e bar nel paese, comoda per una prenotazione rapida.",
+    area: "Apecchio",
+    address: "Via Circonvallazione, 4 - Apecchio",
+    contact: "Tel. 0722 989038",
     todayStatus: "Oggi: pranzo e cena",
-    priceHint: "Menu medio 25-35 euro",
+    priceHint: "Pizzeria e bar",
+    sourceLabel: "Fonte: Vivere Apecchio / Tuttocitta",
+    bookingRewardPoints: 25,
+    bookingActionLabel: "Prenota tavolo",
     coverColors: [Color(0xFF355070), Color(0xFFE56B6F)],
-    icon: Icons.local_fire_department_rounded,
+    icon: Icons.local_pizza_rounded,
     menuSections: {
-      "Antipasti": ["Bruschette", "Affettati e formaggi"],
-      "Primi": ["Pappardelle al cinghiale", "Passatelli asciutti"],
-      "Secondi": ["Grigliata mista", "Patate al forno"],
+      "Ideale per": ["Pizza", "Pausa bar", "Cena informale"],
+      "Prenotazione": ["Tavolo serale", "Gruppi piccoli"],
     },
     bookingSlots: ["12:15", "13:00", "19:30", "20:15", "21:00"],
   ),
   DiningVenue(
-    id: "acquapartita",
-    name: "Acquapartita",
+    id: "locanda_sp257",
+    name: "Locanda SP257",
     kind: DiningKind.restaurant,
-    tagline: "Sosta informale con cucina del territorio e tavoli all'aperto.",
-    area: "Acquapartita",
-    todayStatus: "Oggi: aperto a cena",
-    priceHint: "Menu medio 25-30 euro",
+    tagline: "Locale in localita Pian di Molino per pranzo, cena e gruppi.",
+    area: "Pian di Molino",
+    address: "Loc. Pian di Molino - Apecchio",
+    contact: "Cell. 334 2259110",
+    todayStatus: "Oggi: cucina e bar",
+    priceHint: "Ristorante, bar e pizzeria",
+    sourceLabel: "Fonte: Vivere Apecchio / Tripadvisor",
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota cena",
     coverColors: [Color(0xFF2A6F97), Color(0xFFA9D6E5)],
-    icon: Icons.water_drop_rounded,
+    icon: Icons.storefront_rounded,
     menuSections: {
-      "Antipasti": ["Focaccia calda", "Verdure sottolio"],
-      "Primi": ["Gnocchi al sugo", "Maltagliati ai funghi"],
-      "Dolci": ["Crostata", "Crema della casa"],
+      "Servizi": ["Pranzo e cena", "Tavoli per gruppi", "Bar"],
+      "Prenotabile": ["Cena", "Pizza", "Ristoro dopo outdoor"],
     },
     bookingSlots: ["19:30", "20:00", "20:45", "21:15"],
   ),
   DiningVenue(
     id: "le_ciocche",
-    name: "Le Ciocche",
+    name: "Locanda Le Ciocche",
     kind: DiningKind.restaurant,
-    tagline: "Cucina rustica, porzioni generose e ambiente familiare.",
-    area: "Dintorni",
+    tagline: "Locanda in campagna, presente anche tra le strutture ricettive.",
+    area: "Le Ciocche",
+    address: "Loc. Le Ciocche - Apecchio",
+    contact: "Cell. 333 9356984",
     todayStatus: "Oggi: pochi posti",
-    priceHint: "Menu medio 20-30 euro",
+    priceHint: "Ristorante e ospitalita rurale",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota tavolo",
     coverColors: [Color(0xFF6B4F3A), Color(0xFFDDA15E)],
     icon: Icons.dinner_dining_rounded,
     menuSections: {
-      "Antipasti": ["Erbe di campo", "Crescia e salumi"],
-      "Primi": ["Polenta con sugo", "Cappelletti"],
-      "Secondi": ["Arrosto misto", "Fagioli in umido"],
+      "Esperienza": ["Cucina rustica", "Ambiente familiare"],
+      "Prenotabile": ["Pranzo", "Cena", "Soggiorni collegati"],
     },
     bookingSlots: ["12:45", "13:30", "20:00", "20:45"],
   ),
   DiningVenue(
-    id: "pian_di_molino",
-    name: "Pian Di Molino",
-    kind: DiningKind.agriturismo,
-    tagline: "Agriturismo immerso nel verde, cucina rurale e prodotti propri.",
-    area: "Campagna",
-    todayStatus: "Oggi: su prenotazione",
-    priceHint: "Menu degustazione 35 euro",
-    coverColors: [Color(0xFF386641), Color(0xFFA7C957)],
-    icon: Icons.agriculture_rounded,
+    id: "monte_nerone_ristorante",
+    name: "Ristorante Pizzeria Monte Nerone",
+    kind: DiningKind.restaurant,
+    tagline:
+        "Albergo, ristorante, pizzeria e bike hotel a Serravalle di Carda.",
+    area: "Serravalle di Carda",
+    address: "Loc. Pian di Trebbio, Serravalle di Carda",
+    contact: "Tel. 0722 90136",
+    todayStatus: "Oggi: tavoli e pizzeria",
+    priceHint: "Ristorante, pizzeria, bike hotel",
+    sourceLabel: "Fonte: Vivere Apecchio / Ristomille",
+    bookingRewardPoints: 35,
+    bookingActionLabel: "Prenota tavolo",
+    coverColors: [Color(0xFF264653), Color(0xFF2A9D8F)],
+    icon: Icons.hotel_rounded,
     menuSections: {
-      "Dalla terra": ["Ortaggi dell'orto", "Formaggi locali"],
-      "Primi": ["Tagliolini alle erbe", "Zuppa contadina"],
-      "Degustazione": ["Percorso della casa", "Dolci al forno"],
+      "Specialita": ["Funghi", "Tartufo", "Pasta fatta in casa"],
+      "Servizi": ["Cerimonie e gruppi", "Bike rent", "Bike hotel"],
     },
-    bookingSlots: ["12:30", "13:00", "19:30", "20:00"],
+    bookingSlots: ["12:30", "13:15", "19:45", "20:30"],
   ),
   DiningVenue(
-    id: "casserantonio",
-    name: "Casserantonio",
-    kind: DiningKind.agriturismo,
-    tagline: "Tavola agricola, sapori semplici e atmosfera lenta.",
-    area: "Collina",
-    todayStatus: "Oggi: cena disponibile",
-    priceHint: "Menu medio 30 euro",
-    coverColors: [Color(0xFF606C38), Color(0xFFFEFAE0)],
-    icon: Icons.local_florist_rounded,
+    id: "da_mario",
+    name: "Ristorante Da Mario",
+    kind: DiningKind.restaurant,
+    tagline: "Ristorante in localita Acquapartita.",
+    area: "Acquapartita",
+    address: "Loc. Acquapartita - Apecchio",
+    contact: "Tel. 0722 90216",
+    todayStatus: "Oggi: su prenotazione",
+    priceHint: "Cucina del territorio",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota pranzo",
+    coverColors: [Color(0xFF3A5A40), Color(0xFFA3B18A)],
+    icon: Icons.restaurant_rounded,
     menuSections: {
-      "Antipasti": ["Crostoni dell'aia", "Sottoli"],
-      "Primi": ["Strozzapreti", "Minestra di legumi"],
-      "Secondi": ["Carni al forno", "Verdure di stagione"],
+      "Esperienza": ["Cucina locale", "Tavoli in frazione"],
+      "Prenotabile": ["Pranzo", "Cena", "Tavolo famiglia"],
+    },
+    bookingSlots: ["12:30", "13:15", "19:45", "20:30"],
+  ),
+  DiningVenue(
+    id: "biancospino",
+    name: "Ristorante Pizzeria Il Biancospino",
+    kind: DiningKind.restaurant,
+    tagline: "Ristorante pizzeria a Pian di Trebbio.",
+    area: "Serravalle di Carda",
+    address: "Loc. Pian di Trebbio - Serravalle di Carda",
+    contact: "Tel. 0722 90218",
+    todayStatus: "Oggi: cena disponibile",
+    priceHint: "Ristorante e pizzeria",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota pizza",
+    coverColors: [Color(0xFF5F0F40), Color(0xFFE36414)],
+    icon: Icons.local_pizza_rounded,
+    menuSections: {
+      "Servizi": ["Pizzeria", "Ristorante"],
+      "Prenotabile": ["Tavolo cena", "Gruppi"],
     },
     bookingSlots: ["19:30", "20:15", "21:00"],
   ),
   DiningVenue(
-    id: "osteria_nuova",
-    name: "Osteria nuova",
-    kind: DiningKind.agriturismo,
-    tagline: "Osteria agricola con menu del giorno e sala accogliente.",
-    area: "Fuori paese",
-    todayStatus: "Oggi: pranzo disponibile",
-    priceHint: "Menu medio 25 euro",
-    coverColors: [Color(0xFF283618), Color(0xFFBC6C25)],
+    id: "trattoria_rossana",
+    name: "Trattoria Rossana",
+    kind: DiningKind.restaurant,
+    tagline:
+        "Trattoria nota per la coradella d'agnello di Serravalle di Carda.",
+    area: "Serravalle di Carda",
+    address: "Via Cagli, 97 - Serravalle di Carda",
+    contact: "Tel. 0722 90146",
+    todayStatus: "Oggi: cucina tipica",
+    priceHint: "Dove mangiare la Coradella d'agnello De.C.O.",
+    sourceLabel: "Fonte: Vivere Apecchio / Piatti De.C.O.",
+    bookingRewardPoints: 35,
+    bookingActionLabel: "Prenota piatto De.C.O.",
+    coverColors: [Color(0xFF7F5539), Color(0xFFE6CCB2)],
     icon: Icons.restaurant_rounded,
     menuSections: {
-      "Menu del giorno": ["Antipasto della casa", "Primo stagionale"],
-      "Secondi": ["Spezzatino", "Contorni caldi"],
-      "Dolci": ["Ciambellone", "Cantucci"],
+      "De.C.O.": ["Coradella d'agnello di Serravalle di Carda"],
+      "Esperienza": ["Cucina tradizionale", "Trattoria di frazione"],
     },
-    bookingSlots: ["12:15", "12:45", "13:30", "20:00"],
+    bookingSlots: ["12:30", "13:15", "19:45", "20:30"],
+  ),
+  DiningVenue(
+    id: "pian_di_molino",
+    name: "Agriturismo Pian di Molino",
+    kind: DiningKind.agriturismo,
+    tagline: "Agriturismo a Pian di Molino con cucina rurale e soggiorni.",
+    area: "Campagna",
+    address: "Loc. Pian di Molino - Apecchio",
+    contact: "Cell. 329 2016664",
+    todayStatus: "Oggi: su prenotazione",
+    priceHint: "Ristorazione e ricettivita",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 45,
+    bookingActionLabel: "Prenota agriturismo",
+    coverColors: [Color(0xFF386641), Color(0xFFA7C957)],
+    icon: Icons.agriculture_rounded,
+    menuSections: {
+      "Esperienza": ["Cucina rurale", "Soggiorno nel verde"],
+      "Prenotabile": ["Pranzo", "Cena", "Pernottamento"],
+    },
+    bookingSlots: ["12:30", "13:00", "19:30", "20:00"],
+  ),
+  DiningVenue(
+    id: "ca_cirigiolo",
+    name: "Agriturismo Ca' Cirigiolo",
+    kind: DiningKind.agriturismo,
+    tagline: "Agriturismo con ristorante, piscina e vista in alta collina.",
+    area: "Ca' Cirigiolo",
+    address: "Loc. Ca' Cirigiolo - Apecchio",
+    contact: "Cell. 348 0058169",
+    todayStatus: "Oggi: cena disponibile",
+    priceHint: "Ristorante, piscina, appartamenti",
+    sourceLabel: "Fonte: Vivere Apecchio / Agriturismi.it",
+    bookingRewardPoints: 45,
+    bookingActionLabel: "Prenota cena",
+    coverColors: [Color(0xFF606C38), Color(0xFFDDA15E)],
+    icon: Icons.local_florist_rounded,
+    menuSections: {
+      "De.C.O.": ["Salmi del Prete", "Prodotti locali"],
+      "Servizi": ["Ristorante", "Piscina", "Appartamenti"],
+    },
+    bookingSlots: ["19:30", "20:15", "21:00"],
+  ),
+  DiningVenue(
+    id: "agriturismo_chignoni",
+    name: "Agriturismo Chignoni",
+    kind: DiningKind.agriturismo,
+    tagline: "Ospitalita rurale in localita Chignoni.",
+    area: "Chignoni",
+    address: "Loc. Chignoni - Apecchio",
+    contact: "Cell. 340 3353492 / 338 8060533",
+    todayStatus: "Oggi: richiesta soggiorno",
+    priceHint: "Appartamenti, campagna, piscina",
+    sourceLabel: "Fonte: Vivere Apecchio / Agriturismi.it",
+    bookingRewardPoints: 40,
+    bookingActionLabel: "Richiedi soggiorno",
+    coverColors: [Color(0xFF283618), Color(0xFFBC6C25)],
+    icon: Icons.park_rounded,
+    menuSections: {
+      "Servizi": ["Appartamenti", "Piscina", "Vacanza in campagna"],
+      "Prenotabile": ["Soggiorno", "Weekend", "Gruppi"],
+    },
+    bookingSlots: ["09:30", "11:00", "16:00", "17:30"],
+  ),
+  DiningVenue(
+    id: "agriturismo_la_rocca",
+    name: "Agriturismo La Rocca",
+    kind: DiningKind.agriturismo,
+    tagline: "Agriturismo in localita La Rocca.",
+    area: "La Rocca",
+    address: "Loc. La Rocca - Apecchio",
+    contact: "Cell. 339 1866663",
+    todayStatus: "Oggi: richiesta disponibilita",
+    priceHint: "Soggiorni in agriturismo",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 40,
+    bookingActionLabel: "Richiedi soggiorno",
+    coverColors: [Color(0xFF31572C), Color(0xFF90A955)],
+    icon: Icons.cabin_rounded,
+    menuSections: {
+      "Servizi": ["Ospitalita rurale", "Natura", "Soggiorno"],
+      "Prenotabile": ["Weekend", "Settimana", "Famiglie"],
+    },
+    bookingSlots: ["09:30", "11:00", "16:00", "17:30"],
+  ),
+  DiningVenue(
+    id: "agriturismo_fontesomma",
+    name: "Agriturismo Fontesomma",
+    kind: DiningKind.agriturismo,
+    tagline: "Agriturismo in localita Fontesomma.",
+    area: "Fontesomma",
+    address: "Loc. Fontesomma - Apecchio",
+    contact: "Cell. 338 2636602",
+    todayStatus: "Oggi: richiesta soggiorno",
+    priceHint: "Soggiorni in agriturismo",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 40,
+    bookingActionLabel: "Richiedi soggiorno",
+    coverColors: [Color(0xFF386641), Color(0xFFF2E8CF)],
+    icon: Icons.nature_people_rounded,
+    menuSections: {
+      "Servizi": ["Ospitalita rurale", "Collina", "Relax"],
+      "Prenotabile": ["Soggiorno", "Weekend"],
+    },
+    bookingSlots: ["09:30", "11:00", "16:00", "17:30"],
+  ),
+  DiningVenue(
+    id: "agriturismo_la_spina",
+    name: "Agriturismo La Spina",
+    kind: DiningKind.agriturismo,
+    tagline: "Country house in collina con vista sulla vallata di Apecchio.",
+    area: "La Spina",
+    address: "Loc. La Spina - Apecchio",
+    contact: "Cell. 339 8063402",
+    todayStatus: "Oggi: disponibilita da verificare",
+    priceHint: "Country house, piscina, campagna",
+    sourceLabel: "Fonte: Vivere Apecchio / Agriturismi.it",
+    bookingRewardPoints: 40,
+    bookingActionLabel: "Richiedi soggiorno",
+    coverColors: [Color(0xFF588157), Color(0xFFDAD7CD)],
+    icon: Icons.house_siding_rounded,
+    menuSections: {
+      "Servizi": ["Country house", "Piscina", "Vista in collina"],
+      "Prenotabile": ["Camere", "Appartamenti", "Weekend"],
+    },
+    bookingSlots: ["09:30", "11:00", "16:00", "17:30"],
+  ),
+  DiningVenue(
+    id: "bb_il_borgo",
+    name: "B&B Il Borgo",
+    kind: DiningKind.bnb,
+    tagline: "B&B nel borgo, comodo per visitare il centro storico.",
+    area: "Centro storico",
+    address: "Via Borgo Mazzini, 28 - Apecchio",
+    contact: "Cell. 333 4251224",
+    todayStatus: "Oggi: richiesta camere",
+    priceHint: "B&B",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 50,
+    bookingActionLabel: "Richiedi camera",
+    coverColors: [Color(0xFF3D405B), Color(0xFFF2CC8F)],
+    icon: Icons.bed_rounded,
+    menuSections: {
+      "Servizi": ["Pernottamento", "Posizione nel borgo"],
+      "Prenotabile": ["Camera", "Weekend", "Soggiorno turistico"],
+    },
+    bookingSlots: ["09:30", "11:30", "15:30", "17:30"],
+  ),
+  DiningVenue(
+    id: "bb_d_dodo",
+    name: "B&B D' Dodo",
+    kind: DiningKind.bnb,
+    tagline: "B&B in via Dante Alighieri.",
+    area: "Centro paese",
+    address: "Via Dante Alighieri, 41 - Apecchio",
+    contact: "Cell. 320 4911626 / 334 7308339",
+    todayStatus: "Oggi: richiesta camere",
+    priceHint: "B&B",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 50,
+    bookingActionLabel: "Richiedi camera",
+    coverColors: [Color(0xFF4A4E69), Color(0xFFC9ADA7)],
+    icon: Icons.king_bed_rounded,
+    menuSections: {
+      "Servizi": ["Pernottamento", "Centro paese"],
+      "Prenotabile": ["Camera", "Soggiorno breve"],
+    },
+    bookingSlots: ["09:30", "11:30", "15:30", "17:30"],
+  ),
+  DiningVenue(
+    id: "bb_lospitale",
+    name: "B&B Lospitale",
+    kind: DiningKind.bnb,
+    tagline: "B&B in via Garibaldi.",
+    area: "Centro storico",
+    address: "Via G. Garibaldi, 2 - Apecchio",
+    contact: "Cell. 339 4606824",
+    todayStatus: "Oggi: richiesta camere",
+    priceHint: "B&B",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 50,
+    bookingActionLabel: "Richiedi camera",
+    coverColors: [Color(0xFF6D597A), Color(0xFFE5989B)],
+    icon: Icons.night_shelter_rounded,
+    menuSections: {
+      "Servizi": ["Pernottamento", "Centro storico"],
+      "Prenotabile": ["Camera", "Soggiorno turistico"],
+    },
+    bookingSlots: ["09:30", "11:30", "15:30", "17:30"],
+  ),
+  DiningVenue(
+    id: "bb_da_simone",
+    name: "B&B Da Simone",
+    kind: DiningKind.bnb,
+    tagline: "B&B e Bike Point a Pian di Molino.",
+    area: "Pian di Molino",
+    address: "Loc. Pian di Molino - Apecchio",
+    contact: "Cell. 339 8968470",
+    todayStatus: "Oggi: camere e bike point",
+    priceHint: "B&B, Bar Maria, Bike Point",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 55,
+    bookingActionLabel: "Richiedi camera",
+    coverColors: [Color(0xFF006D77), Color(0xFF83C5BE)],
+    icon: Icons.directions_bike_rounded,
+    menuSections: {
+      "Servizi": ["Pernottamento", "Bar Maria", "Bike Point"],
+      "Prenotabile": ["Camera", "Servizi per ciclisti"],
+    },
+    bookingSlots: ["09:30", "11:30", "15:30", "17:30"],
+  ),
+  DiningVenue(
+    id: "bar_maria",
+    name: "Bar Alimentari Maria",
+    kind: DiningKind.bar,
+    tagline: "Bar alimentari a Pian di Molino e punto di riferimento bike.",
+    area: "Pian di Molino",
+    address: "Pian di Molino, 8 - Apecchio",
+    contact: "Cell. 339 8968470",
+    todayStatus: "Oggi: colazioni e pausa",
+    priceHint: "Bar, alimentari, tavoli all'aperto",
+    sourceLabel: "Fonte: Vivere Apecchio / PagineGialle",
+    bookingRewardPoints: 15,
+    bookingActionLabel: "Prenota pausa",
+    coverColors: [Color(0xFF9A031E), Color(0xFFFB8B24)],
+    icon: Icons.local_cafe_rounded,
+    menuSections: {
+      "Servizi": ["Prima colazione", "Bar", "Alimentari"],
+      "Bike": ["Bike Point Bar Maria", "Sosta a Pian di Molino"],
+    },
+    bookingSlots: ["07:30", "09:00", "12:30", "17:30"],
+  ),
+  DiningVenue(
+    id: "bar_greco",
+    name: "Bar Greco",
+    kind: DiningKind.bar,
+    tagline: "Bar e pizzeria in via Circonvallazione.",
+    area: "Apecchio",
+    address: "Via Circonvallazione, 4 - Apecchio",
+    contact: "Tel. 0722 989038",
+    todayStatus: "Oggi: bar e pizza",
+    priceHint: "Bar, caffe, pizzeria",
+    sourceLabel: "Fonte: Tuttocitta / Vivere Apecchio",
+    bookingRewardPoints: 15,
+    bookingActionLabel: "Prenota tavolo",
+    coverColors: [Color(0xFF5F0F40), Color(0xFFFB8B24)],
+    icon: Icons.coffee_rounded,
+    menuSections: {
+      "Servizi": ["Caffe", "Bar", "Pizzeria"],
+      "Prenotabile": ["Pausa", "Tavolo pizzeria"],
+    },
+    bookingSlots: ["08:00", "10:30", "18:30", "20:30"],
+  ),
+  DiningVenue(
+    id: "bar_sp257",
+    name: "Bar SP257",
+    kind: DiningKind.bar,
+    tagline: "Bar e ristorante in localita Pian di Molino.",
+    area: "Pian di Molino",
+    address: "Loc. Pian di Molino - Apecchio",
+    contact: "Cell. 334 2259110",
+    todayStatus: "Oggi: bar, pranzo e cena",
+    priceHint: "Bar, ristorante, pizzeria",
+    sourceLabel: "Fonte: Vivere Apecchio / Tripadvisor",
+    bookingRewardPoints: 20,
+    bookingActionLabel: "Prenota tavolo",
+    coverColors: [Color(0xFF283618), Color(0xFFBC6C25)],
+    icon: Icons.sports_bar_rounded,
+    menuSections: {
+      "Servizi": ["Bar", "Ristorante", "Pizzeria"],
+      "Prenotabile": ["Pausa", "Pranzo", "Cena"],
+    },
+    bookingSlots: ["08:30", "12:30", "19:30", "20:30"],
+  ),
+  DiningVenue(
+    id: "bike_point_civico",
+    name: "Civico 14+5 - Ristobike",
+    kind: DiningKind.locale,
+    tagline: "Locale aderente alla rete Bike Point in Apecchio.",
+    area: "Centro storico",
+    address: "Via Dante Alighieri, 19 - Apecchio",
+    contact: "Cell. 338 9769898",
+    todayStatus: "Oggi: ristoro ciclisti",
+    priceHint: "Bike Point e ristorazione",
+    sourceLabel: "Fonte: Vivere Apecchio Outdoor",
+    bookingRewardPoints: 25,
+    bookingActionLabel: "Prenota bike stop",
+    coverColors: [Color(0xFF2D6A4F), Color(0xFF95D5B2)],
+    icon: Icons.electric_bike_rounded,
+    menuSections: {
+      "Bike Point": ["Ristoro", "Punto info ciclisti"],
+      "Prenotabile": ["Sosta gruppo", "Tavolo post-uscita"],
+    },
+    bookingSlots: ["09:00", "11:30", "16:30", "19:30"],
+  ),
+  DiningVenue(
+    id: "rifugio_la_cupa",
+    name: "Rifugio La Cupa",
+    kind: DiningKind.locale,
+    tagline: "Rifugio in quota sul Monte Nerone.",
+    area: "Monte Nerone",
+    address: "Loc. La Cupa di Monte Nerone",
+    contact: "Tel. 0722 90117 / Cell. 339 3353541",
+    todayStatus: "Oggi: meteo e disponibilita da verificare",
+    priceHint: "Rifugio e ristoro outdoor",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 35,
+    bookingActionLabel: "Prenota rifugio",
+    coverColors: [Color(0xFF1D3557), Color(0xFFA8DADC)],
+    icon: Icons.landscape_rounded,
+    menuSections: {
+      "Outdoor": ["Monte Nerone", "Ristoro escursionisti"],
+      "Prenotabile": ["Tavolo", "Gruppo trekking"],
+    },
+    bookingSlots: ["10:30", "12:30", "16:30", "19:30"],
+  ),
+  DiningVenue(
+    id: "chalet_corsini",
+    name: "Rifugio Chalet Principe Corsini",
+    kind: DiningKind.locale,
+    tagline: "Rifugio sul Monte Nerone, presente nella ricettivita locale.",
+    area: "Monte Nerone",
+    address: "Monte Nerone",
+    contact: "Cell. 331 8766610",
+    todayStatus: "Oggi: richiesta disponibilita",
+    priceHint: "Rifugio e accoglienza in quota",
+    sourceLabel: "Fonte: Vivere Apecchio",
+    bookingRewardPoints: 35,
+    bookingActionLabel: "Prenota rifugio",
+    coverColors: [Color(0xFF003049), Color(0xFFF77F00)],
+    icon: Icons.chalet_rounded,
+    menuSections: {
+      "Servizi": ["Rifugio", "Monte Nerone", "Sosta panoramica"],
+      "Prenotabile": ["Tavolo", "Gruppo outdoor"],
+    },
+    bookingSlots: ["10:30", "12:30", "16:30", "19:30"],
+  ),
+  DiningVenue(
+    id: "palazzo_ubaldini_mostre",
+    name: "Sale espositive di Palazzo Ubaldini",
+    kind: DiningKind.mostra,
+    tagline:
+        "Sale del Palazzo Ubaldini dedicate a mostre e iniziative culturali.",
+    area: "Centro storico",
+    address: "Piazza S. Martino - Apecchio",
+    contact: "Ufficio IAT +39 0722 99279",
+    todayStatus: "Oggi: visite su calendario",
+    priceHint: "Mostre, visite guidate e iniziative culturali",
+    sourceLabel: "Fonte: Vivere Apecchio / Palazzo Ubaldini",
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota mostra",
+    coverColors: [Color(0xFF493548), Color(0xFFE6C17A)],
+    icon: Icons.museum_rounded,
+    menuSections: {
+      "Spazi": ["Sale espositive", "Palazzo Ubaldini", "Piazza S. Martino"],
+      "Prenotabile": ["Visita mostra", "Ingresso gruppo", "Visita guidata"],
+    },
+    bookingSlots: ["10:00", "11:30", "15:30", "17:00"],
+  ),
+  DiningVenue(
+    id: "museo_fossili",
+    name: "Museo dei Fossili e Minerali",
+    kind: DiningKind.mostra,
+    tagline: "Museo interattivo nei sotterranei di Palazzo Ubaldini.",
+    area: "Palazzo Ubaldini",
+    address: "Piazza S. Martino - Apecchio",
+    contact: "Prenotazioni: prenotazioni@lamacina.it",
+    todayStatus: "Oggi: visite prenotabili",
+    priceHint: "Museo dei Fossili e Minerali del Monte Nerone",
+    sourceLabel: "Fonte: Vivere Apecchio Cultura",
+    bookingRewardPoints: 30,
+    bookingActionLabel: "Prenota visita",
+    coverColors: [Color(0xFF1B4332), Color(0xFF74C69D)],
+    icon: Icons.science_rounded,
+    menuSections: {
+      "Collezione": ["Fossili", "Minerali", "Reperti del Monte Nerone"],
+      "Prenotabile": ["Visita museo", "Gruppi", "Scuole"],
+    },
+    bookingSlots: ["10:00", "11:30", "15:30", "17:00"],
+  ),
+  DiningVenue(
+    id: "rembrandt_barocci_mostra",
+    name: "Rembrandt e Barocci",
+    kind: DiningKind.mostra,
+    tagline: "Archivio della mostra Incidere la luce a Palazzo Ubaldini.",
+    area: "Palazzo Ubaldini",
+    address: "Piazza S. Martino - Apecchio",
+    contact: "Ufficio IAT +39 0722 99279",
+    todayStatus: "Archivio mostra: 8 giugno - 7 settembre 2025",
+    priceHint: "Oltre quaranta incisioni originali",
+    sourceLabel: "Fonte: Vivere Apecchio / Palazzo Ubaldini",
+    bookingRewardPoints: 20,
+    bookingActionLabel: "Salva scheda mostra",
+    coverColors: [Color(0xFF3D2B3D), Color(0xFFC9A227)],
+    icon: Icons.palette_rounded,
+    menuSections: {
+      "Mostra": ["Rembrandt van Rijn", "Federico Barocci", "Incisioni"],
+      "Nota": ["Scheda archivio utile per materiali veritieri nel mockup"],
+    },
+    bookingSlots: ["10:00", "11:30", "15:30", "17:00"],
   ),
 ];
 
@@ -6202,8 +9819,7 @@ class DiningScreen extends StatelessWidget {
     final venues = _diningVenues
         .where((venue) => venue.kind == initialKind)
         .toList(growable: false);
-    final title =
-        initialKind == DiningKind.restaurant ? "Ristoranti" : "Agriturismi";
+    final title = _diningTitle(initialKind);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F4EC),
@@ -6460,6 +10076,7 @@ class DiningVenueDetailScreen extends StatefulWidget {
 class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
   int _selectedDay = 0;
   String? _selectedSlot;
+  String? _selectedVoucherCode;
 
   @override
   Widget build(BuildContext context) {
@@ -6493,15 +10110,25 @@ class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
           ),
           const SizedBox(height: 14),
           _VenueInfoRow(icon: Icons.place_rounded, text: widget.venue.area),
+          _VenueInfoRow(icon: Icons.map_rounded, text: widget.venue.address),
+          _VenueInfoRow(icon: Icons.phone_rounded, text: widget.venue.contact),
           _VenueInfoRow(
               icon: Icons.payments_rounded, text: widget.venue.priceHint),
           _VenueInfoRow(
               icon: Icons.event_available_rounded,
               text: widget.venue.todayStatus),
+          _VenueInfoRow(
+              icon: Icons.verified_rounded, text: widget.venue.sourceLabel),
+          _TrailDetailCard(
+            title: "Token prenotazione",
+            child: Text(
+              "Prenotando da app ottieni ${widget.venue.bookingRewardPoints} token. L'accredito e' idempotente: la stessa prenotazione non genera doppioni.",
+            ),
+          ),
           const SizedBox(height: 22),
-          const Text(
-            "Menu",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+          Text(
+            widget.venue.sectionsTitle,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 10),
           for (final entry in widget.venue.menuSections.entries)
@@ -6540,21 +10167,44 @@ class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
             ],
           ),
           const SizedBox(height: 18),
+          _DiningVoucherSelector(
+            selectedCode: _selectedVoucherCode,
+            onChanged: (code) => setState(() => _selectedVoucherCode = code),
+          ),
+          const SizedBox(height: 18),
           FilledButton.icon(
             onPressed: _selectedSlot == null
                 ? null
                 : () {
                     final dayLabel = _formatBookingDay(days[_selectedDay]);
+                    final redeemed = _selectedVoucherCode == null
+                        ? false
+                        : appGamification.redeemVoucher(
+                            code: _selectedVoucherCode!,
+                            merchantName: widget.venue.name,
+                          );
+                    final awarded = appGamification.recordBooking(
+                      sourceId: "${widget.venue.id}:$dayLabel:$_selectedSlot",
+                      label:
+                          "${widget.venue.bookingActionLabel}: ${widget.venue.name} · $dayLabel $_selectedSlot",
+                      points: widget.venue.bookingRewardPoints,
+                    );
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          "Richiesta per ${widget.venue.name}: $dayLabel alle $_selectedSlot",
+                          [
+                            "Richiesta per ${widget.venue.name}: $dayLabel alle $_selectedSlot",
+                            if (awarded)
+                              "+${widget.venue.bookingRewardPoints} token",
+                            if (redeemed) "voucher applicato",
+                          ].join(" · "),
                         ),
                       ),
                     );
+                    setState(() => _selectedVoucherCode = null);
                   },
             icon: const Icon(Icons.check_circle_rounded),
-            label: const Text("Richiedi prenotazione"),
+            label: Text(widget.venue.bookingActionLabel),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF2E7D57),
               padding: const EdgeInsets.symmetric(vertical: 15),
@@ -6588,6 +10238,56 @@ class _VenueInfoRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DiningVoucherSelector extends StatelessWidget {
+  const _DiningVoucherSelector({
+    required this.selectedCode,
+    required this.onChanged,
+  });
+
+  final String? selectedCode;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: appGamification,
+      builder: (context, _) {
+        final vouchers = appGamification.activeVouchers;
+        return _TrailDetailCard(
+          title: "Voucher APPecchio",
+          child: vouchers.isEmpty
+              ? const Text("Nessun voucher attivo da applicare.")
+              : DropdownButtonFormField<String?>(
+                  initialValue:
+                      vouchers.any((voucher) => voucher.code == selectedCode)
+                          ? selectedCode
+                          : null,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.confirmation_number_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text("Nessun voucher"),
+                    ),
+                    for (final voucher in vouchers)
+                      DropdownMenuItem<String?>(
+                        value: voucher.code,
+                        child: Text(
+                          "${voucher.label} (${voucher.code})",
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: onChanged,
+                ),
+        );
+      },
     );
   }
 }
