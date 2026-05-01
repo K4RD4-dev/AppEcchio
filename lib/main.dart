@@ -1504,8 +1504,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -2768,8 +2770,9 @@ class _NoticeInsightTile extends StatelessWidget {
                               notice.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w900),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                           if (notice.highlighted) ...[
@@ -2803,8 +2806,10 @@ class _NoticeInsightTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: Color(0xFF2E7D57)),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF2E7D57),
+                ),
               ],
             ),
           ),
@@ -3196,7 +3201,9 @@ class _CompactMenuCard extends StatelessWidget {
                       maxLines: compact ? 2 : 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: const Color(0xFF1B2E21),
+                        color: highlighted
+                            ? const Color(0xFF5F3C00)
+                            : const Color(0xFF1B2E21),
                         fontWeight: FontWeight.w800,
                         height: 1.06,
                         fontSize: compact ? 11 : 12,
@@ -8332,6 +8339,1164 @@ const List<AppEvent> _mockEvents = [
     icon: Icons.groups_rounded,
   ),
 ];
+
+class AppNotice {
+  const AppNotice({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.date,
+    required this.kindLabel,
+    required this.sourceLabel,
+    required this.icon,
+    required this.accentColor,
+    this.imageAsset,
+    this.imageUrl,
+    this.highlighted = false,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final DateTime date;
+  final String kindLabel;
+  final String sourceLabel;
+  final IconData icon;
+  final Color accentColor;
+  final String? imageAsset;
+  final String? imageUrl;
+  final bool highlighted;
+
+  bool get hasImage => imageAsset != null || imageUrl != null;
+  String get dateLabel => _formatNoticeDate(date);
+}
+
+class NoticeController extends ChangeNotifier {
+  NoticeController(List<AppNotice> notices) : _notices = List.of(notices) {
+    _sortNotices();
+  }
+
+  factory NoticeController.demo() {
+    final today = _dateOnly(DateTime.now());
+    return NoticeController([
+      AppNotice(
+        id: "viabilita-centro",
+        title: "Viabilita modificata in centro",
+        description:
+            "Dalle 9:00 alle 13:00 la circolazione nel tratto tra piazza San Martino e via XX Settembre viene regolata per lavori urgenti. Sono consigliati parcheggi esterni e accesso pedonale al centro storico.",
+        date: today.add(const Duration(hours: 9)),
+        kindLabel: "Viabilita",
+        sourceLabel: "Comune di Apecchio",
+        icon: Icons.traffic_rounded,
+        accentColor: const Color(0xFFB5472F),
+        imageAsset: "assets/images/appecchio_bg.png",
+        highlighted: true,
+      ),
+      AppNotice(
+        id: "raccolta-rifiuti",
+        title: "Raccolta rifiuti anticipata",
+        description:
+            "Per festivita e mercato settimanale il passaggio della raccolta organico viene anticipato al mattino. Esporre i mastelli entro le 6:30 nella propria zona.",
+        date: today.add(const Duration(days: 1)),
+        kindLabel: "Ambiente",
+        sourceLabel: "Ufficio Ambiente",
+        icon: Icons.recycling_rounded,
+        accentColor: const Color(0xFF2E7D57),
+      ),
+      AppNotice(
+        id: "acqua-pianello",
+        title: "Possibile calo pressione acqua",
+        description:
+            "Intervento programmato sulla rete idrica in localita Pianello. Durante la manutenzione possono verificarsi cali di pressione e brevi interruzioni.",
+        date: today.add(const Duration(days: 3)),
+        kindLabel: "Servizi",
+        sourceLabel: "Servizi tecnici",
+        icon: Icons.water_drop_rounded,
+        accentColor: const Color(0xFF2D6F88),
+      ),
+      AppNotice(
+        id: "biblioteca-orario",
+        title: "Biblioteca aperta nel pomeriggio",
+        description:
+            "Apertura straordinaria della biblioteca comunale con spazio studio, prestito libri e supporto per consultare i servizi digitali del Comune.",
+        date: today.add(const Duration(days: 5)),
+        kindLabel: "Comunita",
+        sourceLabel: "Biblioteca comunale",
+        icon: Icons.local_library_rounded,
+        accentColor: const Color(0xFF6E4AA0),
+      ),
+    ]);
+  }
+
+  final List<AppNotice> _notices;
+
+  List<AppNotice> get notices => List.unmodifiable(_notices);
+
+  List<AppNotice> get todayNotices {
+    final today = _dateOnly(DateTime.now());
+    return _notices
+        .where((notice) => _sameDay(notice.date, today))
+        .toList(growable: false);
+  }
+
+  AppNotice? get leadingNotice {
+    if (_notices.isEmpty) {
+      return null;
+    }
+    for (final notice in _notices) {
+      if (notice.highlighted) {
+        return notice;
+      }
+    }
+    return _notices.first;
+  }
+
+  void addNotice({
+    required String title,
+    required String description,
+    required DateTime date,
+    String? imageAsset,
+    String? imageUrl,
+  }) {
+    _notices.add(
+      AppNotice(
+        id: "notice-${DateTime.now().microsecondsSinceEpoch}",
+        title: title,
+        description: description,
+        date: _dateOnly(date),
+        kindLabel: "Segnalazione",
+        sourceLabel: "Inviata dall'app",
+        icon: Icons.report_problem_rounded,
+        accentColor: const Color(0xFFB5472F),
+        imageAsset: imageAsset,
+        imageUrl: imageUrl,
+        highlighted: true,
+      ),
+    );
+    _sortNotices();
+    notifyListeners();
+  }
+
+  void _sortNotices() {
+    _notices.sort((a, b) => b.date.compareTo(a.date));
+  }
+}
+
+class NoticesArchiveScreen extends StatelessWidget {
+  const NoticesArchiveScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Archivio avvisi"),
+      ),
+      body: AnimatedBuilder(
+        animation: appNotices,
+        builder: (context, _) {
+          final notices = appNotices.notices;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            children: [
+              _NoticeArchiveHeader(
+                noticeCount: notices.length,
+                onOpenCalendar: () => _openCalendar(context),
+                onCreateNotice: () => _openReport(context),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                "Tutti gli avvisi",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              for (final notice in notices)
+                _NoticeArchiveTile(
+                  notice: notice,
+                  onTap: () => _openDetail(context, notice),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _openCalendar(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const NoticeCalendarScreen()),
+    );
+  }
+
+  Future<void> _openReport(BuildContext context) async {
+    final added = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const NoticeReportScreen()),
+    );
+    if (added == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Segnalazione salvata negli avvisi.")),
+      );
+    }
+  }
+
+  void _openDetail(BuildContext context, AppNotice notice) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoticeDetailScreen(notice: notice),
+      ),
+    );
+  }
+}
+
+class _NoticeArchiveHeader extends StatelessWidget {
+  const _NoticeArchiveHeader({
+    required this.noticeCount,
+    required this.onOpenCalendar,
+    required this.onCreateNotice,
+  });
+
+  final int noticeCount;
+  final VoidCallback onOpenCalendar;
+  final VoidCallback onCreateNotice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF203B2C),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton.filledTonal(
+                onPressed: onOpenCalendar,
+                tooltip: "Apri calendario avvisi",
+                icon: const Icon(Icons.calendar_month_rounded),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF203B2C),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Avvisi e segnalazioni",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "$noticeCount elementi archiviati con data, descrizione e dettagli.",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.82),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onCreateNotice,
+              icon: const Icon(Icons.add_alert_rounded),
+              label: const Text("Nuova segnalazione"),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFFCF5A),
+                foregroundColor: const Color(0xFF203B2C),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeArchiveTile extends StatelessWidget {
+  const _NoticeArchiveTile({required this.notice, required this.onTap});
+
+  final AppNotice notice;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: notice.highlighted ? const Color(0xFFFFF3CF) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                _NoticeThumb(notice: notice),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notice.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${notice.dateLabel} · ${notice.kindLabel}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notice.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(height: 1.25),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeThumb extends StatelessWidget {
+  const _NoticeThumb({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    if (notice.imageAsset != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.asset(
+          notice.imageAsset!,
+          width: 58,
+          height: 58,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        color: notice.accentColor.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(notice.icon, color: notice.accentColor),
+    );
+  }
+}
+
+class NoticeCalendarScreen extends StatefulWidget {
+  const NoticeCalendarScreen({super.key});
+
+  @override
+  State<NoticeCalendarScreen> createState() => _NoticeCalendarScreenState();
+}
+
+class _NoticeCalendarScreenState extends State<NoticeCalendarScreen> {
+  late DateTime _focusedMonth;
+  late DateTime _selectedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    final today = _dateOnly(DateTime.now());
+    _focusedMonth = DateTime(today.year, today.month);
+    _selectedDay = today;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Calendario avvisi"),
+      ),
+      body: AnimatedBuilder(
+        animation: appNotices,
+        builder: (context, _) {
+          final notices = appNotices.notices;
+          final selectedNotices = _noticesForDay(_selectedDay, notices);
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            children: [
+              _NoticeMonthCalendar(
+                focusedMonth: _focusedMonth,
+                selectedDay: _selectedDay,
+                notices: notices,
+                onPreviousMonth: () => setState(
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month - 1,
+                  ),
+                ),
+                onNextMonth: () => setState(
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month + 1,
+                  ),
+                ),
+                onDaySelected: (day) => setState(() {
+                  _selectedDay = day;
+                  _focusedMonth = DateTime(day.year, day.month);
+                }),
+              ),
+              const SizedBox(height: 14),
+              _SelectedDayNoticesPanel(
+                day: _selectedDay,
+                notices: selectedNotices,
+                onNoticeTap: (notice) => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => NoticeDetailScreen(notice: notice),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _NoticeMonthCalendar extends StatelessWidget {
+  const _NoticeMonthCalendar({
+    required this.focusedMonth,
+    required this.selectedDay,
+    required this.notices,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+    required this.onDaySelected,
+  });
+
+  final DateTime focusedMonth;
+  final DateTime selectedDay;
+  final List<AppNotice> notices;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
+  final ValueChanged<DateTime> onDaySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = _calendarDays(focusedMonth);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE1E8DD)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton.filledTonal(
+                onPressed: onPreviousMonth,
+                icon: const Icon(Icons.chevron_left_rounded),
+                tooltip: "Mese precedente",
+              ),
+              Expanded(
+                child: Text(
+                  _formatMonthYear(focusedMonth),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: onNextMonth,
+                icon: const Icon(Icons.chevron_right_rounded),
+                tooltip: "Mese successivo",
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final label in [
+                "Lun",
+                "Mar",
+                "Mer",
+                "Gio",
+                "Ven",
+                "Sab",
+                "Dom",
+              ])
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: days.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 0.90,
+            ),
+            itemBuilder: (context, index) {
+              final day = days[index];
+              return _NoticeCalendarDayCell(
+                day: day,
+                inMonth: _sameMonth(day, focusedMonth),
+                selected: _sameDay(day, selectedDay),
+                notices: _noticesForDay(day, notices),
+                onTap: () => onDaySelected(day),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeCalendarDayCell extends StatelessWidget {
+  const _NoticeCalendarDayCell({
+    required this.day,
+    required this.inMonth,
+    required this.selected,
+    required this.notices,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final bool inMonth;
+  final bool selected;
+  final List<AppNotice> notices;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNotices = notices.isNotEmpty;
+    final highlighted = notices.any((notice) => notice.highlighted);
+    return Material(
+      color: selected
+          ? const Color(0xFFE4F2E8)
+          : highlighted
+              ? const Color(0xFFFFF3CF)
+              : inMonth
+                  ? const Color(0xFFFAFCF7)
+                  : const Color(0xFFF1F2EE),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFF2E7D57)
+                  : hasNotices
+                      ? const Color(0xFFC9A13A)
+                      : const Color(0xFFE7ECE2),
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  "${day.day}",
+                  style: TextStyle(
+                    color: inMonth ? Colors.black87 : Colors.black38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (hasNotices)
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Row(
+                    children: [
+                      Icon(
+                        highlighted
+                            ? Icons.campaign_rounded
+                            : Icons.circle_rounded,
+                        color: highlighted
+                            ? const Color(0xFF9A5A00)
+                            : const Color(0xFF2E7D57),
+                        size: highlighted ? 16 : 9,
+                      ),
+                      if (notices.length > 1) ...[
+                        const SizedBox(width: 3),
+                        Text(
+                          "${notices.length}",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedDayNoticesPanel extends StatelessWidget {
+  const _SelectedDayNoticesPanel({
+    required this.day,
+    required this.notices,
+    required this.onNoticeTap,
+  });
+
+  final DateTime day;
+  final List<AppNotice> notices;
+  final ValueChanged<AppNotice> onNoticeTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE1E8DD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _formatDayLong(day),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          if (notices.isEmpty)
+            const Text(
+              "Nessun avviso per questa giornata.",
+              style: TextStyle(
+                color: Colors.black54,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            for (final notice in notices)
+              _SelectedDayNoticeRow(
+                notice: notice,
+                onTap: () => onNoticeTap(notice),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedDayNoticeRow extends StatelessWidget {
+  const _SelectedDayNoticeRow({required this.notice, required this.onTap});
+
+  final AppNotice notice;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: notice.accentColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                Icon(notice.icon, color: notice.accentColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notice.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        notice.kindLabel,
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class NoticeDetailScreen extends StatelessWidget {
+  const NoticeDetailScreen({super.key, required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Dettaglio avviso"),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        children: [
+          _NoticeHero(notice: notice),
+          const SizedBox(height: 18),
+          Text(
+            notice.title,
+            style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 14),
+          _NoticeInfoRow(
+            icon: Icons.calendar_month_rounded,
+            text: notice.dateLabel,
+          ),
+          _NoticeInfoRow(icon: notice.icon, text: notice.kindLabel),
+          _NoticeInfoRow(
+            icon: Icons.verified_rounded,
+            text: notice.sourceLabel,
+          ),
+          const SizedBox(height: 16),
+          _NoticeDetailSection(title: "Descrizione", body: notice.description),
+          const _NoticeDetailSection(
+            title: "Aggiornamenti",
+            body:
+                "La scheda resta collegata alle notifiche e al calendario degli avvisi, cosi ogni aggiornamento conserva data, contesto e archivio.",
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeHero extends StatelessWidget {
+  const _NoticeHero({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(26),
+      child: SizedBox(
+        height: 236,
+        child: Stack(
+          children: [
+            Positioned.fill(child: _NoticeHeroBackground(notice: notice)),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.08),
+                      Colors.black.withValues(alpha: 0.62),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      notice.dateLabel,
+                      style: TextStyle(
+                        color: notice.accentColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    notice.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeHeroBackground extends StatelessWidget {
+  const _NoticeHeroBackground({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    if (notice.imageAsset != null) {
+      return Image.asset(notice.imageAsset!, fit: BoxFit.cover);
+    }
+    if (notice.imageUrl != null) {
+      return Image.network(
+        notice.imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _NoticeGradientBackground(notice: notice),
+      );
+    }
+    return _NoticeGradientBackground(notice: notice);
+  }
+}
+
+class _NoticeGradientBackground extends StatelessWidget {
+  const _NoticeGradientBackground({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [notice.accentColor, const Color(0xFF203B2C)],
+        ),
+      ),
+      child: Align(
+        alignment: Alignment.topRight,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Icon(
+            notice.icon,
+            color: Colors.white.withValues(alpha: 0.42),
+            size: 82,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeInfoRow extends StatelessWidget {
+  const _NoticeInfoRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF2E7D57)),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeDetailSection extends StatelessWidget {
+  const _NoticeDetailSection({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          Text(body, style: const TextStyle(height: 1.35)),
+        ],
+      ),
+    );
+  }
+}
+
+class NoticeReportScreen extends StatefulWidget {
+  const NoticeReportScreen({super.key});
+
+  @override
+  State<NoticeReportScreen> createState() => _NoticeReportScreenState();
+}
+
+class _NoticeReportScreenState extends State<NoticeReportScreen> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _imageController = TextEditingController();
+  DateTime _selectedDate = _dateOnly(DateTime.now());
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _imageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Nuova segnalazione"),
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: "Titolo",
+                      prefixIcon: Icon(Icons.title_rounded),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Inserisci un titolo";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _descriptionController,
+                    minLines: 4,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      labelText: "Descrizione",
+                      prefixIcon: Icon(Icons.notes_rounded),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Inserisci una descrizione";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.calendar_month_rounded),
+                    label: Text(_formatNoticeDate(_selectedDate)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _imageController,
+                    decoration: const InputDecoration(
+                      labelText: "Immagine opzionale",
+                      hintText: "URL o assets/images/appecchio_bg.png",
+                      prefixIcon: Icon(Icons.image_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: _submit,
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text("Salva segnalazione"),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D57),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = _dateOnly(picked));
+    }
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    final imageValue = _imageController.text.trim();
+    final imageAsset = imageValue.startsWith("assets/") ? imageValue : null;
+    final imageUrl =
+        imageValue.isNotEmpty && imageAsset == null ? imageValue : null;
+    appNotices.addNotice(
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
+      date: _selectedDate,
+      imageAsset: imageAsset,
+      imageUrl: imageUrl,
+    );
+    Navigator.of(context).pop(true);
+  }
+}
+
+List<AppNotice> _noticesForDay(DateTime day, List<AppNotice> notices) {
+  return notices
+      .where((notice) => _sameDay(notice.date, day))
+      .toList(growable: false);
+}
+
+String _formatNoticeDate(DateTime date) {
+  return "${date.day} ${_monthName(date.month)} ${date.year}";
+}
+
+String _formatNoticeShortDate(DateTime date) {
+  final today = _dateOnly(DateTime.now());
+  final tomorrow = today.add(const Duration(days: 1));
+  if (_sameDay(date, today)) {
+    return "Oggi";
+  }
+  if (_sameDay(date, tomorrow)) {
+    return "Domani";
+  }
+  const months = [
+    "gen",
+    "feb",
+    "mar",
+    "apr",
+    "mag",
+    "giu",
+    "lug",
+    "ago",
+    "set",
+    "ott",
+    "nov",
+    "dic",
+  ];
+  return "${date.day} ${months[date.month - 1]}";
+}
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key, this.initialFilter});
