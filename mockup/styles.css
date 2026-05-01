@@ -74,6 +74,8 @@ button {
 }
 
 ul { padding-left: 18px; }
+<<<<<<< codex/plan-gamification-feature-for-app-t32ze2
+=======
 
 input, select {
   display: block;
@@ -91,3 +93,4 @@ pre {
   border-radius: 8px;
   padding: 10px;
 }
+>>>>>>> main
