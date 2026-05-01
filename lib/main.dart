@@ -207,11 +207,7 @@ class RewardLedgerEntry {
 class GamificationController extends ChangeNotifier {
   GamificationController.demo()
       : rewardTiers = const [
-          RewardTier(
-            threshold: 500,
-            label: "Sconto 5%",
-            discountPercentage: 5,
-          ),
+          RewardTier(threshold: 500, label: "Sconto 5%", discountPercentage: 5),
           RewardTier(
             threshold: 1000,
             label: "Sconto 10%",
@@ -220,11 +216,7 @@ class GamificationController extends ChangeNotifier {
         ];
 
   static const List<RewardLevel> levels = [
-    RewardLevel(
-      name: "Esploratore",
-      minPoints: 0,
-      icon: Icons.explore_rounded,
-    ),
+    RewardLevel(name: "Esploratore", minPoints: 0, icon: Icons.explore_rounded),
     RewardLevel(
       name: "Amico del borgo",
       minPoints: 300,
@@ -370,10 +362,7 @@ class GamificationController extends ChangeNotifier {
     );
   }
 
-  bool redeemVoucher({
-    required String code,
-    required String merchantName,
-  }) {
+  bool redeemVoucher({required String code, required String merchantName}) {
     final index = _vouchers.indexWhere(
       (voucher) => voucher.code == code && voucher.isActive,
     );
@@ -435,10 +424,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController =
-      TextEditingController(text: "utente@apppecchio.it");
-  final TextEditingController _passwordController =
-      TextEditingController(text: "demo");
+  final TextEditingController _emailController = TextEditingController(
+    text: "utente@apppecchio.it",
+  );
+  final TextEditingController _passwordController = TextEditingController(
+    text: "demo",
+  );
   UserProfile _selectedProfile = UserProfile.resident;
   bool _obscurePassword = true;
 
@@ -551,9 +542,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(user: user),
-      ),
+      MaterialPageRoute<void>(builder: (_) => HomeScreen(user: user)),
     );
   }
 }
@@ -658,10 +647,7 @@ class _LoginFormCard extends StatelessWidget {
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({
-    super.key,
-    required this.user,
-  });
+  const HomeScreen({super.key, required this.user});
 
   final AppUser user;
 
@@ -692,11 +678,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _activeQuickFilter = "oggi";
 
   static const List<HomeQuickAction> _quickActions = [
-    HomeQuickAction(
-      id: "oggi",
-      label: "Oggi",
-      icon: Icons.today_rounded,
-    ),
+    HomeQuickAction(id: "oggi", label: "Oggi", icon: Icons.today_rounded),
     HomeQuickAction(
       id: "avvisi",
       label: "Avvisi",
@@ -736,30 +718,36 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.celebration_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "calendario",
-              label: "Calendario",
-              icon: Icons.calendar_month_rounded),
+            id: "calendario",
+            label: "Calendario",
+            icon: Icons.calendar_month_rounded,
+          ),
           MenuNode(
-              id: "feste_tradizioni",
-              label: "Feste e tradizioni",
-              icon: Icons.celebration_rounded),
+            id: "feste_tradizioni",
+            label: "Feste e tradizioni",
+            icon: Icons.celebration_rounded,
+          ),
           MenuNode(
-              id: "eventi_gastronomici",
-              label: "Eventi gastronomici",
-              icon: Icons.restaurant_menu_rounded),
+            id: "eventi_gastronomici",
+            label: "Eventi gastronomici",
+            icon: Icons.restaurant_menu_rounded,
+          ),
           MenuNode(
-              id: "cultura_spettacoli",
-              label: "Cultura e spettacoli",
-              icon: Icons.theater_comedy_rounded),
+            id: "cultura_spettacoli",
+            label: "Cultura e spettacoli",
+            icon: Icons.theater_comedy_rounded,
+          ),
           MenuNode(id: "mostre", label: "Mostre", icon: Icons.museum_rounded),
           MenuNode(
-              id: "sport_outdoor",
-              label: "Sport e outdoor",
-              icon: Icons.terrain_rounded),
+            id: "sport_outdoor",
+            label: "Sport e outdoor",
+            icon: Icons.terrain_rounded,
+          ),
           MenuNode(
-              id: "comunita_spiritualita",
-              label: "Comunita e spiritualita",
-              icon: Icons.groups_rounded),
+            id: "comunita_spiritualita",
+            label: "Comunita e spiritualita",
+            icon: Icons.groups_rounded,
+          ),
         ],
       ),
       MenuNode(
@@ -768,37 +756,46 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.restaurant_menu_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "ristoranti",
-              label: "Ristoranti",
-              icon: Icons.restaurant_rounded),
+            id: "ristoranti",
+            label: "Ristoranti",
+            icon: Icons.restaurant_rounded,
+          ),
           MenuNode(
-              id: "agriturismi",
-              label: "Agriturismi",
-              icon: Icons.park_rounded),
+            id: "agriturismi",
+            label: "Agriturismi",
+            icon: Icons.park_rounded,
+          ),
           MenuNode(id: "bar", label: "Bar", icon: Icons.local_cafe_rounded),
           MenuNode(
-              id: "locali", label: "Locali", icon: Icons.storefront_rounded),
+            id: "locali",
+            label: "Locali",
+            icon: Icons.storefront_rounded,
+          ),
           MenuNode(
             id: "prodotti_locali",
             label: "Prodotti locali",
             icon: Icons.shopping_basket_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "prodotto_tartufo",
-                  label: "Tartufo",
-                  icon: Icons.spa_rounded),
+                id: "prodotto_tartufo",
+                label: "Tartufo",
+                icon: Icons.spa_rounded,
+              ),
               MenuNode(
-                  id: "prodotto_birra",
-                  label: "Birra artigianale",
-                  icon: Icons.sports_bar_rounded),
+                id: "prodotto_birra",
+                label: "Birra artigianale",
+                icon: Icons.sports_bar_rounded,
+              ),
               MenuNode(
-                  id: "tartufo_birra",
-                  label: "Alogastronomia",
-                  icon: Icons.local_bar_rounded),
+                id: "tartufo_birra",
+                label: "Alogastronomia",
+                icon: Icons.local_bar_rounded,
+              ),
               MenuNode(
-                  id: "tipicita_deco",
-                  label: "Tipicita De.C.O.",
-                  icon: Icons.verified_rounded),
+                id: "tipicita_deco",
+                label: "Tipicita De.C.O.",
+                icon: Icons.verified_rounded,
+              ),
             ],
           ),
         ],
@@ -811,9 +808,10 @@ class _HomeScreenState extends State<HomeScreen> {
           MenuNode(id: "bnb", label: "B&B", icon: Icons.home_work_rounded),
           MenuNode(id: "hotel", label: "Hotel", icon: Icons.hotel_rounded),
           MenuNode(
-              id: "agriturismi_dormire",
-              label: "Agriturismi",
-              icon: Icons.park_rounded),
+            id: "agriturismi_dormire",
+            label: "Agriturismi",
+            icon: Icons.park_rounded,
+          ),
         ],
       ),
       MenuNode(
@@ -822,7 +820,10 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.account_balance_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "musei", label: "Musei e mostre", icon: Icons.museum_rounded),
+            id: "musei",
+            label: "Musei e mostre",
+            icon: Icons.museum_rounded,
+          ),
           MenuNode(
             id: "arte_storia",
             label: "Arte e storia",
@@ -830,13 +831,15 @@ class _HomeScreenState extends State<HomeScreen> {
             children: <MenuNode>[
               MenuNode(id: "arte", label: "Arte", icon: Icons.palette_rounded),
               MenuNode(
-                  id: "storia",
-                  label: "Percorsi storici",
-                  icon: Icons.history_edu_rounded),
+                id: "storia",
+                label: "Percorsi storici",
+                icon: Icons.history_edu_rounded,
+              ),
               MenuNode(
-                  id: "vicolo_ebrei",
-                  label: "Vicolo degli Ebrei",
-                  icon: Icons.signpost_rounded),
+                id: "vicolo_ebrei",
+                label: "Vicolo degli Ebrei",
+                icon: Icons.signpost_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -845,17 +848,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.location_city_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "borghi",
-                  label: "Borghi",
-                  icon: Icons.location_city_rounded),
+                id: "borghi",
+                label: "Borghi",
+                icon: Icons.location_city_rounded,
+              ),
               MenuNode(
-                  id: "teatro_perugini",
-                  label: "Teatro G. Perugini",
-                  icon: Icons.theaters_rounded),
+                id: "teatro_perugini",
+                label: "Teatro G. Perugini",
+                icon: Icons.theaters_rounded,
+              ),
               MenuNode(
-                  id: "globo_pace",
-                  label: "Globo della Pace",
-                  icon: Icons.public_rounded),
+                id: "globo_pace",
+                label: "Globo della Pace",
+                icon: Icons.public_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -864,25 +870,30 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.map_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "dove_siamo",
-                  label: "Dove siamo",
-                  icon: Icons.location_on_rounded),
+                id: "dove_siamo",
+                label: "Dove siamo",
+                icon: Icons.location_on_rounded,
+              ),
               MenuNode(
-                  id: "monte_nerone",
-                  label: "Monte Nerone",
-                  icon: Icons.landscape_rounded),
+                id: "monte_nerone",
+                label: "Monte Nerone",
+                icon: Icons.landscape_rounded,
+              ),
               MenuNode(
-                  id: "citta_birra",
-                  label: "Citta della Birra",
-                  icon: Icons.sports_bar_rounded),
+                id: "citta_birra",
+                label: "Citta della Birra",
+                icon: Icons.sports_bar_rounded,
+              ),
               MenuNode(
-                  id: "mappa_turistica",
-                  label: "Mappa turistica",
-                  icon: Icons.map_outlined),
+                id: "mappa_turistica",
+                label: "Mappa turistica",
+                icon: Icons.map_outlined,
+              ),
               MenuNode(
-                  id: "webcam_meteo",
-                  label: "Webcam e meteo",
-                  icon: Icons.wb_cloudy_rounded),
+                id: "webcam_meteo",
+                label: "Webcam e meteo",
+                icon: Icons.wb_cloudy_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -891,29 +902,35 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.church_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "ss_crocifisso",
-                  label: "Santuario SS. Crocifisso",
-                  icon: Icons.church_rounded),
+                id: "ss_crocifisso",
+                label: "Santuario SS. Crocifisso",
+                icon: Icons.church_rounded,
+              ),
               MenuNode(
-                  id: "madonna_vita",
-                  label: "Madonna della Vita",
-                  icon: Icons.volunteer_activism_rounded),
+                id: "madonna_vita",
+                label: "Madonna della Vita",
+                icon: Icons.volunteer_activism_rounded,
+              ),
               MenuNode(
-                  id: "san_martino",
-                  label: "San Martino",
-                  icon: Icons.account_balance_rounded),
+                id: "san_martino",
+                label: "San Martino",
+                icon: Icons.account_balance_rounded,
+              ),
               MenuNode(
-                  id: "parrocchia",
-                  label: "Parrocchia",
-                  icon: Icons.diversity_3_rounded),
+                id: "parrocchia",
+                label: "Parrocchia",
+                icon: Icons.diversity_3_rounded,
+              ),
               MenuNode(
-                  id: "oratorio",
-                  label: "Oratorio San Martino",
-                  icon: Icons.child_care_rounded),
+                id: "oratorio",
+                label: "Oratorio San Martino",
+                icon: Icons.child_care_rounded,
+              ),
               MenuNode(
-                  id: "avvisi_parrocchiali",
-                  label: "Avvisi parrocchiali",
-                  icon: Icons.campaign_rounded),
+                id: "avvisi_parrocchiali",
+                label: "Avvisi parrocchiali",
+                icon: Icons.campaign_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -922,31 +939,40 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.people_alt_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "notizie_paese",
-                  label: "Notizie del paese",
-                  icon: Icons.newspaper_rounded),
+                id: "notizie_paese",
+                label: "Notizie del paese",
+                icon: Icons.newspaper_rounded,
+              ),
               MenuNode(
-                  id: "pro_loco",
-                  label: "Pro Loco",
-                  icon: Icons.groups_2_rounded),
+                id: "pro_loco",
+                label: "Pro Loco",
+                icon: Icons.groups_2_rounded,
+              ),
               MenuNode(
-                  id: "associazioni",
-                  label: "Associazioni",
-                  icon: Icons.handshake_rounded),
+                id: "associazioni",
+                label: "Associazioni",
+                icon: Icons.handshake_rounded,
+              ),
               MenuNode(
-                  id: "avis", label: "AVIS", icon: Icons.bloodtype_rounded),
+                id: "avis",
+                label: "AVIS",
+                icon: Icons.bloodtype_rounded,
+              ),
               MenuNode(
-                  id: "biblioteca",
-                  label: "Biblioteca comunale",
-                  icon: Icons.local_library_rounded),
+                id: "biblioteca",
+                label: "Biblioteca comunale",
+                icon: Icons.local_library_rounded,
+              ),
               MenuNode(
-                  id: "mediateca",
-                  label: "Mediateca",
-                  icon: Icons.photo_library_rounded),
+                id: "mediateca",
+                label: "Mediateca",
+                icon: Icons.photo_library_rounded,
+              ),
               MenuNode(
-                  id: "foto_giorno",
-                  label: "Foto del giorno",
-                  icon: Icons.camera_alt_rounded),
+                id: "foto_giorno",
+                label: "Foto del giorno",
+                icon: Icons.camera_alt_rounded,
+              ),
             ],
           ),
         ],
@@ -957,18 +983,21 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.miscellaneous_services_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "farmacia",
-              label: "Farmacie",
-              icon: Icons.local_hospital_rounded),
+            id: "farmacia",
+            label: "Farmacie",
+            icon: Icons.local_hospital_rounded,
+          ),
           MenuNode(
-              id: "trasporti",
-              label: "Trasporti",
-              icon: Icons.directions_bus_rounded),
+            id: "trasporti",
+            label: "Trasporti",
+            icon: Icons.directions_bus_rounded,
+          ),
           MenuNode(id: "bancomat", label: "Bancomat", icon: Icons.atm_rounded),
           MenuNode(
-              id: "salute",
-              label: "Salute",
-              icon: Icons.health_and_safety_rounded),
+            id: "salute",
+            label: "Salute",
+            icon: Icons.health_and_safety_rounded,
+          ),
         ],
       ),
       MenuNode(
@@ -982,17 +1011,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.apartment_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "sindaco_giunta",
-                  label: "Sindaco e Giunta",
-                  icon: Icons.groups_rounded),
+                id: "sindaco_giunta",
+                label: "Sindaco e Giunta",
+                icon: Icons.groups_rounded,
+              ),
               MenuNode(
-                  id: "uffici_orari",
-                  label: "Uffici e orari",
-                  icon: Icons.schedule_rounded),
+                id: "uffici_orari",
+                label: "Uffici e orari",
+                icon: Icons.schedule_rounded,
+              ),
               MenuNode(
-                  id: "rubrica",
-                  label: "Contatti rapidi",
-                  icon: Icons.contact_phone_rounded),
+                id: "rubrica",
+                label: "Contatti rapidi",
+                icon: Icons.contact_phone_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -1001,17 +1033,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.how_to_vote_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "diretta",
-                  label: "Diretta sedute",
-                  icon: Icons.live_tv_rounded),
+                id: "diretta",
+                label: "Diretta sedute",
+                icon: Icons.live_tv_rounded,
+              ),
               MenuNode(
-                  id: "registrazioni",
-                  label: "Sedute registrate",
-                  icon: Icons.video_library_rounded),
+                id: "registrazioni",
+                label: "Sedute registrate",
+                icon: Icons.video_library_rounded,
+              ),
               MenuNode(
-                  id: "ordine_giorno",
-                  label: "Ordine del giorno",
-                  icon: Icons.list_alt_rounded),
+                id: "ordine_giorno",
+                label: "Ordine del giorno",
+                icon: Icons.list_alt_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -1020,17 +1055,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.gavel_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "albo_pretorio",
-                  label: "Albo pretorio",
-                  icon: Icons.folder_shared_rounded),
+                id: "albo_pretorio",
+                label: "Albo pretorio",
+                icon: Icons.folder_shared_rounded,
+              ),
               MenuNode(
-                  id: "delibere",
-                  label: "Delibere e determine",
-                  icon: Icons.description_rounded),
+                id: "delibere",
+                label: "Delibere e determine",
+                icon: Icons.description_rounded,
+              ),
               MenuNode(
-                  id: "bandi",
-                  label: "Bandi e concorsi",
-                  icon: Icons.campaign_rounded),
+                id: "bandi",
+                label: "Bandi e concorsi",
+                icon: Icons.campaign_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -1039,21 +1077,25 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.volunteer_activism_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "pagamenti",
-                  label: "Pagamenti e tributi",
-                  icon: Icons.payments_rounded),
+                id: "pagamenti",
+                label: "Pagamenti e tributi",
+                icon: Icons.payments_rounded,
+              ),
               MenuNode(
-                  id: "appuntamenti",
-                  label: "Prenota appuntamento",
-                  icon: Icons.event_available_rounded),
+                id: "appuntamenti",
+                label: "Prenota appuntamento",
+                icon: Icons.event_available_rounded,
+              ),
               MenuNode(
-                  id: "certificati",
-                  label: "Certificati anagrafici",
-                  icon: Icons.badge_rounded),
+                id: "certificati",
+                label: "Certificati anagrafici",
+                icon: Icons.badge_rounded,
+              ),
               MenuNode(
-                  id: "segnalazioni",
-                  label: "Segnalazioni al Comune",
-                  icon: Icons.report_problem_rounded),
+                id: "segnalazioni",
+                label: "Segnalazioni al Comune",
+                icon: Icons.report_problem_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -1062,17 +1104,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.public_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "scuola",
-                  label: "Servizi scolastici",
-                  icon: Icons.school_rounded),
+                id: "scuola",
+                label: "Servizi scolastici",
+                icon: Icons.school_rounded,
+              ),
               MenuNode(
-                  id: "mobilita",
-                  label: "Viabilita e trasporto locale",
-                  icon: Icons.traffic_rounded),
+                id: "mobilita",
+                label: "Viabilita e trasporto locale",
+                icon: Icons.traffic_rounded,
+              ),
               MenuNode(
-                  id: "rifiuti",
-                  label: "Raccolta rifiuti",
-                  icon: Icons.recycling_rounded),
+                id: "rifiuti",
+                label: "Raccolta rifiuti",
+                icon: Icons.recycling_rounded,
+              ),
             ],
           ),
         ],
@@ -1088,49 +1133,57 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.event_available_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "campetto_del_prete",
-                  label: "Campetto del prete",
-                  icon: Icons.grass_rounded),
+                id: "campetto_del_prete",
+                label: "Campetto del prete",
+                icon: Icons.grass_rounded,
+              ),
               MenuNode(
                 id: "palazzetto",
                 label: "Palazzetto",
                 icon: Icons.sports_handball_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "palazzetto_calcetto",
-                      label: "Calcetto",
-                      icon: Icons.sports_soccer_rounded),
+                    id: "palazzetto_calcetto",
+                    label: "Calcetto",
+                    icon: Icons.sports_soccer_rounded,
+                  ),
                   MenuNode(
-                      id: "palazzetto_city_tennis",
-                      label: "City tennis",
-                      icon: Icons.sports_handball_rounded),
+                    id: "palazzetto_city_tennis",
+                    label: "City tennis",
+                    icon: Icons.sports_handball_rounded,
+                  ),
                   MenuNode(
-                      id: "palazzetto_pallavolo",
-                      label: "Pallavolo",
-                      icon: Icons.sports_volleyball_rounded),
+                    id: "palazzetto_pallavolo",
+                    label: "Pallavolo",
+                    icon: Icons.sports_volleyball_rounded,
+                  ),
                 ],
               ),
               MenuNode(
-                  id: "campo_tennis",
-                  label: "Campo da tennis",
-                  icon: Icons.sports_tennis_rounded),
+                id: "campo_tennis",
+                label: "Campo da tennis",
+                icon: Icons.sports_tennis_rounded,
+              ),
               MenuNode(
                 id: "regole_prenotazione",
                 label: "Regolamenti e tariffe",
                 icon: Icons.rule_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "fasce_orarie",
-                      label: "Fasce orarie",
-                      icon: Icons.schedule_rounded),
+                    id: "fasce_orarie",
+                    label: "Fasce orarie",
+                    icon: Icons.schedule_rounded,
+                  ),
                   MenuNode(
-                      id: "tariffe",
-                      label: "Tariffe",
-                      icon: Icons.euro_rounded),
+                    id: "tariffe",
+                    label: "Tariffe",
+                    icon: Icons.euro_rounded,
+                  ),
                   MenuNode(
-                      id: "annulla_sposta",
-                      label: "Annulla o sposta prenotazione",
-                      icon: Icons.swap_horiz_rounded),
+                    id: "annulla_sposta",
+                    label: "Annulla o sposta prenotazione",
+                    icon: Icons.swap_horiz_rounded,
+                  ),
                 ],
               ),
             ],
@@ -1141,30 +1194,35 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.terrain_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "mappa_sentieri",
-                  label: "Mappa sentieri",
-                  icon: Icons.map_rounded),
+                id: "mappa_sentieri",
+                label: "Mappa sentieri",
+                icon: Icons.map_rounded,
+              ),
               MenuNode(
-                  id: "difficolta_tempo",
-                  label: "Difficolta e tempi",
-                  icon: Icons.hiking_rounded),
+                id: "difficolta_tempo",
+                label: "Difficolta e tempi",
+                icon: Icons.hiking_rounded,
+              ),
               MenuNode(
                 id: "guide_noleggi",
                 label: "Guide e noleggi",
                 icon: Icons.support_agent_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "prenota_guida",
-                      label: "Prenota guida ambientale",
-                      icon: Icons.support_agent_rounded),
+                    id: "prenota_guida",
+                    label: "Prenota guida ambientale",
+                    icon: Icons.support_agent_rounded,
+                  ),
                   MenuNode(
-                      id: "prenota_istruttore",
-                      label: "Prenota istruttore outdoor",
-                      icon: Icons.fitness_center_rounded),
+                    id: "prenota_istruttore",
+                    label: "Prenota istruttore outdoor",
+                    icon: Icons.fitness_center_rounded,
+                  ),
                   MenuNode(
-                      id: "noleggio_ebike",
-                      label: "Noleggio bici elettriche",
-                      icon: Icons.electric_bike_rounded),
+                    id: "noleggio_ebike",
+                    label: "Noleggio bici elettriche",
+                    icon: Icons.electric_bike_rounded,
+                  ),
                 ],
               ),
               MenuNode(
@@ -1173,17 +1231,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.family_restroom_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "tour_famiglie",
-                      label: "Tour famiglie e scuole",
-                      icon: Icons.family_restroom_rounded),
+                    id: "tour_famiglie",
+                    label: "Tour famiglie e scuole",
+                    icon: Icons.family_restroom_rounded,
+                  ),
                   MenuNode(
-                      id: "canoa_trekking",
-                      label: "Canoa e trekking guidato",
-                      icon: Icons.kayaking_rounded),
+                    id: "canoa_trekking",
+                    label: "Canoa e trekking guidato",
+                    icon: Icons.kayaking_rounded,
+                  ),
                   MenuNode(
-                      id: "birdwatching",
-                      label: "Birdwatching",
-                      icon: Icons.visibility_rounded),
+                    id: "birdwatching",
+                    label: "Birdwatching",
+                    icon: Icons.visibility_rounded,
+                  ),
                 ],
               ),
               MenuNode(
@@ -1192,9 +1253,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.forest_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "parco_avventura",
-                      label: "Parco Avventura Furlo",
-                      icon: Icons.forest_rounded),
+                    id: "parco_avventura",
+                    label: "Parco Avventura Furlo",
+                    icon: Icons.forest_rounded,
+                  ),
                 ],
               ),
             ],
@@ -1342,8 +1404,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1480,8 +1544,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool _isSportRulesNode(MenuNode node) {
-    return const {"fasce_orarie", "tariffe", "annulla_sposta"}
-        .contains(node.id);
+    return const {
+      "fasce_orarie",
+      "tariffe",
+      "annulla_sposta",
+    }.contains(node.id);
   }
 
   bool _isOutdoorServiceNode(MenuNode node) {
@@ -1530,8 +1597,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1552,8 +1621,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1582,8 +1653,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1604,8 +1677,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1626,17 +1701,16 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
               end: Offset.zero,
             ).animate(curved),
-            child: FadeTransition(
-              opacity: curved,
-              child: const TrailsScreen(),
-            ),
+            child: FadeTransition(opacity: curved, child: const TrailsScreen()),
           );
         },
       ),
@@ -1648,8 +1722,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1670,8 +1746,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1692,8 +1770,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1715,8 +1795,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1737,8 +1819,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1775,7 +1859,7 @@ class _LivingMapLayer extends StatelessWidget {
                     colors: [
                       Color(0xFF4F7F62),
                       Color(0xFF769F80),
-                      Color(0xFFB1C8AF)
+                      Color(0xFFB1C8AF),
                     ],
                   ),
                 ),
@@ -1783,11 +1867,7 @@ class _LivingMapLayer extends StatelessWidget {
             },
           ),
         ),
-        Positioned.fill(
-          child: CustomPaint(
-            painter: _MapPathPainter(),
-          ),
-        ),
+        Positioned.fill(child: CustomPaint(painter: _MapPathPainter())),
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -1817,12 +1897,24 @@ class _MapPathPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     final path = Path()
       ..moveTo(20, size.height * 0.24)
-      ..quadraticBezierTo(size.width * 0.45, size.height * 0.22,
-          size.width - 30, size.height * 0.35)
       ..quadraticBezierTo(
-          size.width * 0.4, size.height * 0.54, 40, size.height * 0.68)
-      ..quadraticBezierTo(size.width * 0.6, size.height * 0.76, size.width - 40,
-          size.height * 0.9);
+        size.width * 0.45,
+        size.height * 0.22,
+        size.width - 30,
+        size.height * 0.35,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.4,
+        size.height * 0.54,
+        40,
+        size.height * 0.68,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.6,
+        size.height * 0.76,
+        size.width - 40,
+        size.height * 0.9,
+      );
     canvas.drawPath(path, paint);
   }
 
@@ -2229,10 +2321,7 @@ class _HomeInsightContent extends StatelessWidget {
                 else if (selectedAction == "aperti")
                   _OpenNowOverview(onOpenDining: onOpenDining)
                 else if (selectedAction == "vicino")
-                  _NearbyOverview(
-                    raining: raining,
-                    onOpenTrails: onOpenTrails,
-                  )
+                  _NearbyOverview(raining: raining, onOpenTrails: onOpenTrails)
                 else
                   _NotificationsOverview(
                     onOpenNotices: onOpenNotices,
@@ -2287,8 +2376,10 @@ class _WeatherSuggestionBubble extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 3),
                 Text(message, style: const TextStyle(height: 1.25)),
               ],
@@ -2416,10 +2507,7 @@ class _OpenNowOverview extends StatelessWidget {
 }
 
 class _NearbyOverview extends StatelessWidget {
-  const _NearbyOverview({
-    required this.raining,
-    required this.onOpenTrails,
-  });
+  const _NearbyOverview({required this.raining, required this.onOpenTrails});
 
   final bool raining;
   final VoidCallback onOpenTrails;
@@ -2579,8 +2667,9 @@ class _NoticeInsightTile extends StatelessWidget {
                               notice.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w900),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                           if (notice.highlighted) ...[
@@ -2614,8 +2703,10 @@ class _NoticeInsightTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: Color(0xFF2E7D57)),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF2E7D57),
+                ),
               ],
             ),
           ),
@@ -2699,8 +2790,10 @@ class _InsightTile extends StatelessWidget {
                   ),
                 ),
                 if (onTap != null)
-                  const Icon(Icons.chevron_right_rounded,
-                      color: Color(0xFF2E7D57)),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF2E7D57),
+                  ),
               ],
             ),
           ),
@@ -2941,10 +3034,7 @@ class _CompactMenuStage extends StatelessWidget {
 }
 
 class _CompactBackButton extends StatelessWidget {
-  const _CompactBackButton({
-    required this.label,
-    required this.onTap,
-  });
+  const _CompactBackButton({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
@@ -2962,8 +3052,11 @@ class _CompactBackButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.arrow_back_rounded,
-                  color: Colors.white, size: 18),
+              const Icon(
+                Icons.arrow_back_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
               const SizedBox(width: 6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 116),
@@ -2972,7 +3065,9 @@ class _CompactBackButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w800),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -2984,10 +3079,7 @@ class _CompactBackButton extends StatelessWidget {
 }
 
 class _CompactMenuCard extends StatelessWidget {
-  const _CompactMenuCard({
-    required this.node,
-    required this.onTap,
-  });
+  const _CompactMenuCard({required this.node, required this.onTap});
 
   final MenuNode node;
   final VoidCallback onTap;
@@ -3026,7 +3118,9 @@ class _CompactMenuCard extends StatelessWidget {
                       maxLines: compact ? 2 : 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: const Color(0xFF1B2E21),
+                        color: highlighted
+                            ? const Color(0xFF5F3C00)
+                            : const Color(0xFF1B2E21),
                         fontWeight: FontWeight.w800,
                         height: 1.06,
                         fontSize: compact ? 11 : 12,
@@ -3079,8 +3173,10 @@ class _RadialMenuStage extends StatelessWidget {
         final nodeHeight = ((shortest * spec.nodeHeightFactor) * countFactor)
             .clamp(spec.minNodeHeight, spec.maxNodeHeight)
             .toDouble();
-        final center = Offset(constraints.maxWidth / 2,
-            constraints.maxHeight * spec.centerYFactor);
+        final center = Offset(
+          constraints.maxWidth / 2,
+          constraints.maxHeight * spec.centerYFactor,
+        );
         final targets = _computeTargets(
           size: Size(constraints.maxWidth, constraints.maxHeight),
           center: center,
@@ -3119,12 +3215,15 @@ class _RadialMenuStage extends StatelessWidget {
                       child: Center(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.22)),
+                              color: Colors.white.withValues(alpha: 0.22),
+                            ),
                           ),
                           child: Text(
                             currentNode.label,
@@ -3490,8 +3589,9 @@ class _ExploreOrbButton extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1F5D3E)
-                        .withValues(alpha: isOpen ? 0.45 : 0.60),
+                    color: const Color(
+                      0xFF1F5D3E,
+                    ).withValues(alpha: isOpen ? 0.45 : 0.60),
                     blurRadius: isOpen ? 22 : 34,
                     spreadRadius: isOpen ? 1 : 3,
                     offset: const Offset(0, 12),
@@ -3593,7 +3693,10 @@ class _RadialNode extends StatelessWidget {
               ),
               boxShadow: const [
                 BoxShadow(
-                    color: Colors.black38, blurRadius: 14, offset: Offset(0, 7))
+                  color: Colors.black38,
+                  blurRadius: 14,
+                  offset: Offset(0, 7),
+                ),
               ],
             ),
             child: Center(
@@ -3611,13 +3714,15 @@ class _RadialNode extends StatelessWidget {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(icon,
-                            size: adaptiveIconSize,
-                            color: selected
-                                ? Colors.white
-                                : highlighted
-                                    ? const Color(0xFF9A5A00)
-                                    : const Color(0xFF1B2E21)),
+                        Icon(
+                          icon,
+                          size: adaptiveIconSize,
+                          color: selected
+                              ? Colors.white
+                              : highlighted
+                                  ? const Color(0xFF9A5A00)
+                                  : const Color(0xFF1B2E21),
+                        ),
                         SizedBox(height: compact ? 2 : 5),
                         Expanded(
                           child: Center(
@@ -3653,10 +3758,7 @@ class _RadialNode extends StatelessWidget {
 }
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({
-    super.key,
-    required this.user,
-  });
+  const SettingsScreen({super.key, required this.user});
 
   final AppUser user;
 
@@ -3786,16 +3888,15 @@ class _SettingsSectionCard extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
         leading: CircleAvatar(
           backgroundColor: const Color(0xFFE4EFE8),
           child: Icon(icon, color: const Color(0xFF2E7D57)),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
@@ -3805,10 +3906,7 @@ class _SettingsSectionCard extends StatelessWidget {
 }
 
 class _SettingsDetailScreen extends StatefulWidget {
-  const _SettingsDetailScreen({
-    required this.user,
-    required this.kind,
-  });
+  const _SettingsDetailScreen({required this.user, required this.kind});
 
   final AppUser user;
   final _SettingsPageKind kind;
@@ -3989,10 +4087,7 @@ class _ReadonlySettingsTile extends StatelessWidget {
 }
 
 class RewardsScreen extends StatelessWidget {
-  const RewardsScreen({
-    super.key,
-    required this.controller,
-  });
+  const RewardsScreen({super.key, required this.controller});
 
   final GamificationController controller;
 
@@ -4128,10 +4223,7 @@ class RewardsScreen extends StatelessWidget {
 }
 
 class _RewardTierRow extends StatelessWidget {
-  const _RewardTierRow({
-    required this.tier,
-    required this.unlocked,
-  });
+  const _RewardTierRow({required this.tier, required this.unlocked});
 
   final RewardTier tier;
   final bool unlocked;
@@ -4207,10 +4299,7 @@ class _RewardLevelRow extends StatelessWidget {
 }
 
 class _RewardMedalRow extends StatelessWidget {
-  const _RewardMedalRow({
-    required this.medal,
-    required this.unlocked,
-  });
+  const _RewardMedalRow({required this.medal, required this.unlocked});
 
   final RewardMedal medal;
   final bool unlocked;
@@ -4335,10 +4424,7 @@ class _DropdownSettingsTile extends StatelessWidget {
         underline: const SizedBox.shrink(),
         items: [
           for (final item in values)
-            DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            ),
+            DropdownMenuItem<String>(value: item, child: Text(item)),
         ],
         onChanged: (value) {
           if (value != null) {
@@ -4504,7 +4590,7 @@ const List<TrailRoute> _trailRoutes = [
       "Apecchio",
       "Gorgaccia",
       "Fosso dei Tacconi",
-      "Sentiero Italia"
+      "Sentiero Italia",
     ],
     sourceLabel: "Pesaro Trekking - Sentiero 39 Monte Nerone",
     sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-39.html",
@@ -4991,9 +5077,7 @@ class _TrailsScreenState extends State<TrailsScreen> {
 
   void _openTrailDetail(TrailRoute trail) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TrailDetailScreen(trail: trail),
-      ),
+      MaterialPageRoute<void>(builder: (_) => TrailDetailScreen(trail: trail)),
     );
   }
 
@@ -5001,10 +5085,7 @@ class _TrailsScreenState extends State<TrailsScreen> {
     setState(() => _selectedTrail = trail);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => TrailMapScreen(
-          trail: trail,
-          reliefMode: _reliefMode,
-        ),
+        builder: (_) => TrailMapScreen(trail: trail, reliefMode: _reliefMode),
       ),
     );
   }
@@ -5064,11 +5145,7 @@ class _TrailsHero extends StatelessWidget {
               bottom: 14,
               child: _TrailMapLegend(selectedTrail: selectedTrail),
             ),
-            const Positioned(
-              left: 16,
-              top: 16,
-              child: _TrailMapBadge(),
-            ),
+            const Positioned(left: 16, top: 16, child: _TrailMapBadge()),
           ],
         ),
       ),
@@ -5190,8 +5267,9 @@ class TrailGeometryRepository {
         return fallback(trail);
       }
       try {
-        final source =
-            await NetworkAssetBundle(Uri.parse(trail.gpxUrl)).loadString("");
+        final source = await NetworkAssetBundle(
+          Uri.parse(trail.gpxUrl),
+        ).loadString("");
         final points = _parseGpxTrack(source);
         if (points.length >= 2) {
           return TrailMapGeometry(
@@ -5343,8 +5421,9 @@ class _TrailOnlineMap extends StatelessWidget {
                       points: _apecchioBoundary,
                       color: const Color(0xFF2E7D57).withValues(alpha: 0.08),
                       borderStrokeWidth: 3.2,
-                      borderColor:
-                          const Color(0xFF0F5C43).withValues(alpha: 0.92),
+                      borderColor: const Color(
+                        0xFF0F5C43,
+                      ).withValues(alpha: 0.92),
                       label: "Comune di Apecchio",
                       labelStyle: const TextStyle(
                         color: Color(0xFF173B2B),
@@ -5498,11 +5577,7 @@ class _ReliefLinePainter extends CustomPainter {
 }
 
 class _TrailSourcePill extends StatelessWidget {
-  const _TrailSourcePill({
-    super.key,
-    required this.label,
-    required this.icon,
-  });
+  const _TrailSourcePill({super.key, required this.label, required this.icon});
 
   final String label;
   final IconData icon;
@@ -5611,10 +5686,7 @@ class _TrailMapModeSwitch extends StatelessWidget {
 }
 
 class _TrailMapModeChip extends StatelessWidget {
-  const _TrailMapModeChip({
-    required this.reliefMode,
-    required this.onTap,
-  });
+  const _TrailMapModeChip({required this.reliefMode, required this.onTap});
 
   final bool reliefMode;
   final VoidCallback onTap;
@@ -5691,10 +5763,7 @@ class _TrailQuickOpenRow extends StatelessWidget {
 }
 
 class _TrailSelectedPanel extends StatelessWidget {
-  const _TrailSelectedPanel({
-    required this.trail,
-    required this.onOpenDetail,
-  });
+  const _TrailSelectedPanel({required this.trail, required this.onOpenDetail});
 
   final TrailRoute trail;
   final VoidCallback onOpenDetail;
@@ -5756,13 +5825,21 @@ class _TrailSelectedPanel extends StatelessWidget {
             runSpacing: 8,
             children: [
               _TrailStatChip(
-                  icon: Icons.straighten_rounded, label: trail.distanceLabel),
+                icon: Icons.straighten_rounded,
+                label: trail.distanceLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.trending_up_rounded, label: trail.elevationLabel),
+                icon: Icons.trending_up_rounded,
+                label: trail.elevationLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.schedule_rounded, label: trail.timeLabel),
+                icon: Icons.schedule_rounded,
+                label: trail.timeLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.hiking_rounded, label: trail.difficulty),
+                icon: Icons.hiking_rounded,
+                label: trail.difficulty,
+              ),
               _TrailStatChip(
                 icon: Icons.filter_hdr_rounded,
                 label: "${trail.maxAltitudeM} m max",
@@ -5800,10 +5877,7 @@ class _TrailSelectedPanel extends StatelessWidget {
 }
 
 class _TrailStatChip extends StatelessWidget {
-  const _TrailStatChip({
-    required this.icon,
-    required this.label,
-  });
+  const _TrailStatChip({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -6133,18 +6207,25 @@ class TrailDetailScreen extends StatelessWidget {
             runSpacing: 8,
             children: [
               _TrailStatChip(
-                  icon: Icons.straighten_rounded, label: trail.distanceLabel),
+                icon: Icons.straighten_rounded,
+                label: trail.distanceLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.trending_up_rounded,
-                  label: "+${trail.elevationGainM} m"),
+                icon: Icons.trending_up_rounded,
+                label: "+${trail.elevationGainM} m",
+              ),
               _TrailStatChip(
-                  icon: Icons.trending_down_rounded,
-                  label: "-${trail.elevationLossM} m"),
+                icon: Icons.trending_down_rounded,
+                label: "-${trail.elevationLossM} m",
+              ),
               _TrailStatChip(
-                  icon: Icons.schedule_rounded, label: trail.timeLabel),
+                icon: Icons.schedule_rounded,
+                label: trail.timeLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.hiking_rounded,
-                  label: "Difficolta ${trail.difficulty}"),
+                icon: Icons.hiking_rounded,
+                label: "Difficolta ${trail.difficulty}",
+              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -6153,17 +6234,20 @@ class TrailDetailScreen extends StatelessWidget {
             child: Column(
               children: [
                 _TrailInfoRow(
-                    icon: Icons.flag_rounded,
-                    label: "Partenza",
-                    value: "${trail.start} · ${trail.startAltitudeM} m"),
+                  icon: Icons.flag_rounded,
+                  label: "Partenza",
+                  value: "${trail.start} · ${trail.startAltitudeM} m",
+                ),
                 _TrailInfoRow(
-                    icon: Icons.place_rounded,
-                    label: "Arrivo",
-                    value: "${trail.end} · ${trail.endAltitudeM} m"),
+                  icon: Icons.place_rounded,
+                  label: "Arrivo",
+                  value: "${trail.end} · ${trail.endAltitudeM} m",
+                ),
                 _TrailInfoRow(
-                    icon: Icons.filter_hdr_rounded,
-                    label: "Quota massima",
-                    value: "${trail.maxAltitudeM} m"),
+                  icon: Icons.filter_hdr_rounded,
+                  label: "Quota massima",
+                  value: "${trail.maxAltitudeM} m",
+                ),
               ],
             ),
           ),
@@ -6230,10 +6314,7 @@ class TrailDetailScreen extends StatelessWidget {
 }
 
 class _TrailDetailCard extends StatelessWidget {
-  const _TrailDetailCard({
-    required this.title,
-    required this.child,
-  });
+  const _TrailDetailCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -6497,21 +6578,23 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
                 slots: allSlots,
                 reservations: appSportReservations,
                 onPreviousMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month - 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month - 1,
+                  ),
                 ),
                 onNextMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month + 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month + 1,
+                  ),
                 ),
                 onDaySelected: (day) => setState(() {
                   _selectedDay = day;
                   _focusedMonth = DateTime(day.year, day.month);
                   final daySlots = _sportSlotsForDay(day, allSlots);
                   final preferred = daySlots
-                      .where(
-                        (slot) => slot.facility.id == _selectedFacility.id,
-                      )
+                      .where((slot) => slot.facility.id == _selectedFacility.id)
                       .toList(growable: false);
                   _selectedSlot = preferred.isNotEmpty
                       ? preferred.first
@@ -6581,21 +6664,25 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
             child: Column(
               children: [
                 _TrailInfoRow(
-                    icon: Icons.place_rounded,
-                    label: "Luogo",
-                    value: _selectedFacility.place),
+                  icon: Icons.place_rounded,
+                  label: "Luogo",
+                  value: _selectedFacility.place,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.layers_rounded,
-                    label: "Fondo",
-                    value: _selectedFacility.surface),
+                  icon: Icons.layers_rounded,
+                  label: "Fondo",
+                  value: _selectedFacility.surface,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.groups_rounded,
-                    label: "Formato",
-                    value: _selectedFacility.capacity),
+                  icon: Icons.groups_rounded,
+                  label: "Formato",
+                  value: _selectedFacility.capacity,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.euro_rounded,
-                    label: "Tariffa",
-                    value: _selectedFacility.priceLabel),
+                  icon: Icons.euro_rounded,
+                  label: "Tariffa",
+                  value: _selectedFacility.priceLabel,
+                ),
               ],
             ),
           ),
@@ -6756,7 +6843,7 @@ class _SportBookingCalendar extends StatelessWidget {
                 "Gio",
                 "Ven",
                 "Sab",
-                "Dom"
+                "Dom",
               ])
                 Expanded(
                   child: Center(
@@ -7042,8 +7129,9 @@ class _SportDaySlotsPanel extends StatelessWidget {
                           ? Colors.white
                           : slot.facility.color,
                     ),
-                    label:
-                        Text("${slot.timeLabel} · ${slot.facility.activity}"),
+                    label: Text(
+                      "${slot.timeLabel} · ${slot.facility.activity}",
+                    ),
                     selected: selectedSlot?.id == slot.id,
                     selectedColor: slot.facility.color,
                     labelStyle: TextStyle(
@@ -7330,7 +7418,7 @@ class _SportPricingRules extends StatelessWidget {
           icon: Icons.sports_handball_rounded,
           lines: [
             "City tennis da 14 euro/ora",
-            "Calcetto e volley da 18 euro/ora"
+            "Calcetto e volley da 18 euro/ora",
           ],
         ),
         _SportRuleBlock(
@@ -7338,7 +7426,7 @@ class _SportPricingRules extends StatelessWidget {
           icon: Icons.volunteer_activism_rounded,
           lines: [
             "Scuole e associazioni: tariffa convenzionata",
-            "Residenti: priorita sugli slot feriali"
+            "Residenti: priorita sugli slot feriali",
           ],
         ),
       ],
@@ -7358,7 +7446,7 @@ class _SportChangeRules extends StatelessWidget {
           icon: Icons.event_busy_rounded,
           lines: [
             "Gratuito fino a 6 ore prima",
-            "Dopo la scadenza resta visibile allo sportello"
+            "Dopo la scadenza resta visibile allo sportello",
           ],
         ),
         _SportRuleBlock(
@@ -7366,7 +7454,7 @@ class _SportChangeRules extends StatelessWidget {
           icon: Icons.swap_horiz_rounded,
           lines: [
             "Una modifica rapida per prenotazione",
-            "Conferma immediata se lo slot e libero"
+            "Conferma immediata se lo slot e libero",
           ],
         ),
         _SportRuleBlock(
@@ -7374,7 +7462,7 @@ class _SportChangeRules extends StatelessWidget {
           icon: Icons.water_drop_rounded,
           lines: [
             "Campi outdoor riprogrammabili",
-            "Palazzetto suggerito come alternativa"
+            "Palazzetto suggerito come alternativa",
           ],
         ),
       ],
@@ -7416,8 +7504,10 @@ class _SportRuleBlock extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 6),
                 for (final line in lines)
                   Padding(
@@ -7616,17 +7706,20 @@ class _OutdoorServicesScreenState extends State<OutdoorServicesScreen> {
             child: Column(
               children: [
                 _TrailInfoRow(
-                    icon: Icons.schedule_rounded,
-                    label: "Durata",
-                    value: _selectedService.duration),
+                  icon: Icons.schedule_rounded,
+                  label: "Durata",
+                  value: _selectedService.duration,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.euro_rounded,
-                    label: "Costo",
-                    value: _selectedService.priceLabel),
+                  icon: Icons.euro_rounded,
+                  label: "Costo",
+                  value: _selectedService.priceLabel,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.groups_rounded,
-                    label: "Ideale per",
-                    value: _selectedService.bestFor),
+                  icon: Icons.groups_rounded,
+                  label: "Ideale per",
+                  value: _selectedService.bestFor,
+                ),
               ],
             ),
           ),
@@ -7645,7 +7738,8 @@ class _OutdoorServicesScreenState extends State<OutdoorServicesScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      "Mockup: richiesta inviata per ${_selectedService.title}."),
+                    "Mockup: richiesta inviata per ${_selectedService.title}.",
+                  ),
                 ),
               );
             },
@@ -7803,8 +7897,11 @@ class _SportBullet extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_rounded,
-              size: 18, color: Color(0xFF2E7D57)),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 18,
+            color: Color(0xFF2E7D57),
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: const TextStyle(height: 1.25))),
         ],
@@ -8088,6 +8185,1164 @@ const List<AppEvent> _mockEvents = [
   ),
 ];
 
+class AppNotice {
+  const AppNotice({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.date,
+    required this.kindLabel,
+    required this.sourceLabel,
+    required this.icon,
+    required this.accentColor,
+    this.imageAsset,
+    this.imageUrl,
+    this.highlighted = false,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final DateTime date;
+  final String kindLabel;
+  final String sourceLabel;
+  final IconData icon;
+  final Color accentColor;
+  final String? imageAsset;
+  final String? imageUrl;
+  final bool highlighted;
+
+  bool get hasImage => imageAsset != null || imageUrl != null;
+  String get dateLabel => _formatNoticeDate(date);
+}
+
+class NoticeController extends ChangeNotifier {
+  NoticeController(List<AppNotice> notices) : _notices = List.of(notices) {
+    _sortNotices();
+  }
+
+  factory NoticeController.demo() {
+    final today = _dateOnly(DateTime.now());
+    return NoticeController([
+      AppNotice(
+        id: "viabilita-centro",
+        title: "Viabilita modificata in centro",
+        description:
+            "Dalle 9:00 alle 13:00 la circolazione nel tratto tra piazza San Martino e via XX Settembre viene regolata per lavori urgenti. Sono consigliati parcheggi esterni e accesso pedonale al centro storico.",
+        date: today.add(const Duration(hours: 9)),
+        kindLabel: "Viabilita",
+        sourceLabel: "Comune di Apecchio",
+        icon: Icons.traffic_rounded,
+        accentColor: const Color(0xFFB5472F),
+        imageAsset: "assets/images/appecchio_bg.png",
+        highlighted: true,
+      ),
+      AppNotice(
+        id: "raccolta-rifiuti",
+        title: "Raccolta rifiuti anticipata",
+        description:
+            "Per festivita e mercato settimanale il passaggio della raccolta organico viene anticipato al mattino. Esporre i mastelli entro le 6:30 nella propria zona.",
+        date: today.add(const Duration(days: 1)),
+        kindLabel: "Ambiente",
+        sourceLabel: "Ufficio Ambiente",
+        icon: Icons.recycling_rounded,
+        accentColor: const Color(0xFF2E7D57),
+      ),
+      AppNotice(
+        id: "acqua-pianello",
+        title: "Possibile calo pressione acqua",
+        description:
+            "Intervento programmato sulla rete idrica in localita Pianello. Durante la manutenzione possono verificarsi cali di pressione e brevi interruzioni.",
+        date: today.add(const Duration(days: 3)),
+        kindLabel: "Servizi",
+        sourceLabel: "Servizi tecnici",
+        icon: Icons.water_drop_rounded,
+        accentColor: const Color(0xFF2D6F88),
+      ),
+      AppNotice(
+        id: "biblioteca-orario",
+        title: "Biblioteca aperta nel pomeriggio",
+        description:
+            "Apertura straordinaria della biblioteca comunale con spazio studio, prestito libri e supporto per consultare i servizi digitali del Comune.",
+        date: today.add(const Duration(days: 5)),
+        kindLabel: "Comunita",
+        sourceLabel: "Biblioteca comunale",
+        icon: Icons.local_library_rounded,
+        accentColor: const Color(0xFF6E4AA0),
+      ),
+    ]);
+  }
+
+  final List<AppNotice> _notices;
+
+  List<AppNotice> get notices => List.unmodifiable(_notices);
+
+  List<AppNotice> get todayNotices {
+    final today = _dateOnly(DateTime.now());
+    return _notices
+        .where((notice) => _sameDay(notice.date, today))
+        .toList(growable: false);
+  }
+
+  AppNotice? get leadingNotice {
+    if (_notices.isEmpty) {
+      return null;
+    }
+    for (final notice in _notices) {
+      if (notice.highlighted) {
+        return notice;
+      }
+    }
+    return _notices.first;
+  }
+
+  void addNotice({
+    required String title,
+    required String description,
+    required DateTime date,
+    String? imageAsset,
+    String? imageUrl,
+  }) {
+    _notices.add(
+      AppNotice(
+        id: "notice-${DateTime.now().microsecondsSinceEpoch}",
+        title: title,
+        description: description,
+        date: _dateOnly(date),
+        kindLabel: "Segnalazione",
+        sourceLabel: "Inviata dall'app",
+        icon: Icons.report_problem_rounded,
+        accentColor: const Color(0xFFB5472F),
+        imageAsset: imageAsset,
+        imageUrl: imageUrl,
+        highlighted: true,
+      ),
+    );
+    _sortNotices();
+    notifyListeners();
+  }
+
+  void _sortNotices() {
+    _notices.sort((a, b) => b.date.compareTo(a.date));
+  }
+}
+
+class NoticesArchiveScreen extends StatelessWidget {
+  const NoticesArchiveScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Archivio avvisi"),
+      ),
+      body: AnimatedBuilder(
+        animation: appNotices,
+        builder: (context, _) {
+          final notices = appNotices.notices;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            children: [
+              _NoticeArchiveHeader(
+                noticeCount: notices.length,
+                onOpenCalendar: () => _openCalendar(context),
+                onCreateNotice: () => _openReport(context),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                "Tutti gli avvisi",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              for (final notice in notices)
+                _NoticeArchiveTile(
+                  notice: notice,
+                  onTap: () => _openDetail(context, notice),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _openCalendar(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const NoticeCalendarScreen()),
+    );
+  }
+
+  Future<void> _openReport(BuildContext context) async {
+    final added = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const NoticeReportScreen()),
+    );
+    if (added == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Segnalazione salvata negli avvisi.")),
+      );
+    }
+  }
+
+  void _openDetail(BuildContext context, AppNotice notice) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoticeDetailScreen(notice: notice),
+      ),
+    );
+  }
+}
+
+class _NoticeArchiveHeader extends StatelessWidget {
+  const _NoticeArchiveHeader({
+    required this.noticeCount,
+    required this.onOpenCalendar,
+    required this.onCreateNotice,
+  });
+
+  final int noticeCount;
+  final VoidCallback onOpenCalendar;
+  final VoidCallback onCreateNotice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF203B2C),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton.filledTonal(
+                onPressed: onOpenCalendar,
+                tooltip: "Apri calendario avvisi",
+                icon: const Icon(Icons.calendar_month_rounded),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF203B2C),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Avvisi e segnalazioni",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "$noticeCount elementi archiviati con data, descrizione e dettagli.",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.82),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onCreateNotice,
+              icon: const Icon(Icons.add_alert_rounded),
+              label: const Text("Nuova segnalazione"),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFFCF5A),
+                foregroundColor: const Color(0xFF203B2C),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeArchiveTile extends StatelessWidget {
+  const _NoticeArchiveTile({required this.notice, required this.onTap});
+
+  final AppNotice notice;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: notice.highlighted ? const Color(0xFFFFF3CF) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                _NoticeThumb(notice: notice),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notice.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${notice.dateLabel} · ${notice.kindLabel}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notice.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(height: 1.25),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeThumb extends StatelessWidget {
+  const _NoticeThumb({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    if (notice.imageAsset != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.asset(
+          notice.imageAsset!,
+          width: 58,
+          height: 58,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        color: notice.accentColor.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(notice.icon, color: notice.accentColor),
+    );
+  }
+}
+
+class NoticeCalendarScreen extends StatefulWidget {
+  const NoticeCalendarScreen({super.key});
+
+  @override
+  State<NoticeCalendarScreen> createState() => _NoticeCalendarScreenState();
+}
+
+class _NoticeCalendarScreenState extends State<NoticeCalendarScreen> {
+  late DateTime _focusedMonth;
+  late DateTime _selectedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    final today = _dateOnly(DateTime.now());
+    _focusedMonth = DateTime(today.year, today.month);
+    _selectedDay = today;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Calendario avvisi"),
+      ),
+      body: AnimatedBuilder(
+        animation: appNotices,
+        builder: (context, _) {
+          final notices = appNotices.notices;
+          final selectedNotices = _noticesForDay(_selectedDay, notices);
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+            children: [
+              _NoticeMonthCalendar(
+                focusedMonth: _focusedMonth,
+                selectedDay: _selectedDay,
+                notices: notices,
+                onPreviousMonth: () => setState(
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month - 1,
+                  ),
+                ),
+                onNextMonth: () => setState(
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month + 1,
+                  ),
+                ),
+                onDaySelected: (day) => setState(() {
+                  _selectedDay = day;
+                  _focusedMonth = DateTime(day.year, day.month);
+                }),
+              ),
+              const SizedBox(height: 14),
+              _SelectedDayNoticesPanel(
+                day: _selectedDay,
+                notices: selectedNotices,
+                onNoticeTap: (notice) => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => NoticeDetailScreen(notice: notice),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _NoticeMonthCalendar extends StatelessWidget {
+  const _NoticeMonthCalendar({
+    required this.focusedMonth,
+    required this.selectedDay,
+    required this.notices,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+    required this.onDaySelected,
+  });
+
+  final DateTime focusedMonth;
+  final DateTime selectedDay;
+  final List<AppNotice> notices;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
+  final ValueChanged<DateTime> onDaySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = _calendarDays(focusedMonth);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE1E8DD)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton.filledTonal(
+                onPressed: onPreviousMonth,
+                icon: const Icon(Icons.chevron_left_rounded),
+                tooltip: "Mese precedente",
+              ),
+              Expanded(
+                child: Text(
+                  _formatMonthYear(focusedMonth),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: onNextMonth,
+                icon: const Icon(Icons.chevron_right_rounded),
+                tooltip: "Mese successivo",
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final label in [
+                "Lun",
+                "Mar",
+                "Mer",
+                "Gio",
+                "Ven",
+                "Sab",
+                "Dom",
+              ])
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: days.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 0.90,
+            ),
+            itemBuilder: (context, index) {
+              final day = days[index];
+              return _NoticeCalendarDayCell(
+                day: day,
+                inMonth: _sameMonth(day, focusedMonth),
+                selected: _sameDay(day, selectedDay),
+                notices: _noticesForDay(day, notices),
+                onTap: () => onDaySelected(day),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeCalendarDayCell extends StatelessWidget {
+  const _NoticeCalendarDayCell({
+    required this.day,
+    required this.inMonth,
+    required this.selected,
+    required this.notices,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final bool inMonth;
+  final bool selected;
+  final List<AppNotice> notices;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNotices = notices.isNotEmpty;
+    final highlighted = notices.any((notice) => notice.highlighted);
+    return Material(
+      color: selected
+          ? const Color(0xFFE4F2E8)
+          : highlighted
+              ? const Color(0xFFFFF3CF)
+              : inMonth
+                  ? const Color(0xFFFAFCF7)
+                  : const Color(0xFFF1F2EE),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFF2E7D57)
+                  : hasNotices
+                      ? const Color(0xFFC9A13A)
+                      : const Color(0xFFE7ECE2),
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  "${day.day}",
+                  style: TextStyle(
+                    color: inMonth ? Colors.black87 : Colors.black38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (hasNotices)
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Row(
+                    children: [
+                      Icon(
+                        highlighted
+                            ? Icons.campaign_rounded
+                            : Icons.circle_rounded,
+                        color: highlighted
+                            ? const Color(0xFF9A5A00)
+                            : const Color(0xFF2E7D57),
+                        size: highlighted ? 16 : 9,
+                      ),
+                      if (notices.length > 1) ...[
+                        const SizedBox(width: 3),
+                        Text(
+                          "${notices.length}",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedDayNoticesPanel extends StatelessWidget {
+  const _SelectedDayNoticesPanel({
+    required this.day,
+    required this.notices,
+    required this.onNoticeTap,
+  });
+
+  final DateTime day;
+  final List<AppNotice> notices;
+  final ValueChanged<AppNotice> onNoticeTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE1E8DD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _formatDayLong(day),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          if (notices.isEmpty)
+            const Text(
+              "Nessun avviso per questa giornata.",
+              style: TextStyle(
+                color: Colors.black54,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            for (final notice in notices)
+              _SelectedDayNoticeRow(
+                notice: notice,
+                onTap: () => onNoticeTap(notice),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SelectedDayNoticeRow extends StatelessWidget {
+  const _SelectedDayNoticeRow({required this.notice, required this.onTap});
+
+  final AppNotice notice;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: notice.accentColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
+                Icon(notice.icon, color: notice.accentColor),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notice.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        notice.kindLabel,
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class NoticeDetailScreen extends StatelessWidget {
+  const NoticeDetailScreen({super.key, required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Dettaglio avviso"),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        children: [
+          _NoticeHero(notice: notice),
+          const SizedBox(height: 18),
+          Text(
+            notice.title,
+            style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 14),
+          _NoticeInfoRow(
+            icon: Icons.calendar_month_rounded,
+            text: notice.dateLabel,
+          ),
+          _NoticeInfoRow(icon: notice.icon, text: notice.kindLabel),
+          _NoticeInfoRow(
+            icon: Icons.verified_rounded,
+            text: notice.sourceLabel,
+          ),
+          const SizedBox(height: 16),
+          _NoticeDetailSection(title: "Descrizione", body: notice.description),
+          const _NoticeDetailSection(
+            title: "Aggiornamenti",
+            body:
+                "La scheda resta collegata alle notifiche e al calendario degli avvisi, cosi ogni aggiornamento conserva data, contesto e archivio.",
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeHero extends StatelessWidget {
+  const _NoticeHero({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(26),
+      child: SizedBox(
+        height: 236,
+        child: Stack(
+          children: [
+            Positioned.fill(child: _NoticeHeroBackground(notice: notice)),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.08),
+                      Colors.black.withValues(alpha: 0.62),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      notice.dateLabel,
+                      style: TextStyle(
+                        color: notice.accentColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    notice.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeHeroBackground extends StatelessWidget {
+  const _NoticeHeroBackground({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    if (notice.imageAsset != null) {
+      return Image.asset(notice.imageAsset!, fit: BoxFit.cover);
+    }
+    if (notice.imageUrl != null) {
+      return Image.network(
+        notice.imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _NoticeGradientBackground(notice: notice),
+      );
+    }
+    return _NoticeGradientBackground(notice: notice);
+  }
+}
+
+class _NoticeGradientBackground extends StatelessWidget {
+  const _NoticeGradientBackground({required this.notice});
+
+  final AppNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [notice.accentColor, const Color(0xFF203B2C)],
+        ),
+      ),
+      child: Align(
+        alignment: Alignment.topRight,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Icon(
+            notice.icon,
+            color: Colors.white.withValues(alpha: 0.42),
+            size: 82,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeInfoRow extends StatelessWidget {
+  const _NoticeInfoRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF2E7D57)),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoticeDetailSection extends StatelessWidget {
+  const _NoticeDetailSection({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          Text(body, style: const TextStyle(height: 1.35)),
+        ],
+      ),
+    );
+  }
+}
+
+class NoticeReportScreen extends StatefulWidget {
+  const NoticeReportScreen({super.key});
+
+  @override
+  State<NoticeReportScreen> createState() => _NoticeReportScreenState();
+}
+
+class _NoticeReportScreenState extends State<NoticeReportScreen> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _imageController = TextEditingController();
+  DateTime _selectedDate = _dateOnly(DateTime.now());
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _imageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F1),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F7F1),
+        title: const Text("Nuova segnalazione"),
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: "Titolo",
+                      prefixIcon: Icon(Icons.title_rounded),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Inserisci un titolo";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _descriptionController,
+                    minLines: 4,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      labelText: "Descrizione",
+                      prefixIcon: Icon(Icons.notes_rounded),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Inserisci una descrizione";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.calendar_month_rounded),
+                    label: Text(_formatNoticeDate(_selectedDate)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _imageController,
+                    decoration: const InputDecoration(
+                      labelText: "Immagine opzionale",
+                      hintText: "URL o assets/images/appecchio_bg.png",
+                      prefixIcon: Icon(Icons.image_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton.icon(
+                    onPressed: _submit,
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text("Salva segnalazione"),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D57),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = _dateOnly(picked));
+    }
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    final imageValue = _imageController.text.trim();
+    final imageAsset = imageValue.startsWith("assets/") ? imageValue : null;
+    final imageUrl =
+        imageValue.isNotEmpty && imageAsset == null ? imageValue : null;
+    appNotices.addNotice(
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
+      date: _selectedDate,
+      imageAsset: imageAsset,
+      imageUrl: imageUrl,
+    );
+    Navigator.of(context).pop(true);
+  }
+}
+
+List<AppNotice> _noticesForDay(DateTime day, List<AppNotice> notices) {
+  return notices
+      .where((notice) => _sameDay(notice.date, day))
+      .toList(growable: false);
+}
+
+String _formatNoticeDate(DateTime date) {
+  return "${date.day} ${_monthName(date.month)} ${date.year}";
+}
+
+String _formatNoticeShortDate(DateTime date) {
+  final today = _dateOnly(DateTime.now());
+  final tomorrow = today.add(const Duration(days: 1));
+  if (_sameDay(date, today)) {
+    return "Oggi";
+  }
+  if (_sameDay(date, tomorrow)) {
+    return "Domani";
+  }
+  const months = [
+    "gen",
+    "feb",
+    "mar",
+    "apr",
+    "mag",
+    "giu",
+    "lug",
+    "ago",
+    "set",
+    "ott",
+    "nov",
+    "dic",
+  ];
+  return "${date.day} ${months[date.month - 1]}";
+}
+
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key, this.initialFilter});
 
@@ -8158,12 +9413,16 @@ class _EventsScreenState extends State<EventsScreen> {
                 events: events,
                 participation: appEventParticipation,
                 onPreviousMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month - 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month - 1,
+                  ),
                 ),
                 onNextMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month + 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month + 1,
+                  ),
                 ),
                 onDaySelected: (day) => setState(() {
                   _selectedDay = day;
@@ -8239,9 +9498,7 @@ class _EventsScreenState extends State<EventsScreen> {
 
   void _openEventDetail(AppEvent event) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => EventDetailScreen(event: event),
-      ),
+      MaterialPageRoute<void>(builder: (_) => EventDetailScreen(event: event)),
     );
   }
 }
@@ -8539,7 +9796,7 @@ class _EventMonthCalendar extends StatelessWidget {
                 "Gio",
                 "Ven",
                 "Sab",
-                "Dom"
+                "Dom",
               ])
                 Expanded(
                   child: Center(
@@ -8571,8 +9828,9 @@ class _EventMonthCalendar extends StatelessWidget {
               final dayEvents = _eventsForDay(day, events);
               final inMonth = _sameMonth(day, focusedMonth);
               final selected = _sameDay(day, selectedDay);
-              final joined =
-                  dayEvents.any((event) => participation.isJoined(event));
+              final joined = dayEvents.any(
+                (event) => participation.isJoined(event),
+              );
               return _CalendarDayCell(
                 day: day,
                 inMonth: inMonth,
@@ -8811,8 +10069,10 @@ class _SelectedDayEventsPanel extends StatelessWidget {
           if (events.isEmpty)
             const Text(
               "Nessun evento marcato per questa giornata.",
-              style:
-                  TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: Colors.black54,
+                fontWeight: FontWeight.w700,
+              ),
             )
           else
             for (final event in events)
@@ -9061,9 +10321,10 @@ class _EventListTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         leading: SizedBox(
-            width: 54,
-            height: 54,
-            child: EventPoster(event: event, micro: true)),
+          width: 54,
+          height: 54,
+          child: EventPoster(event: event, micro: true),
+        ),
         title: Text(
           event.title,
           maxLines: 1,
@@ -9148,7 +10409,9 @@ class EventDetailScreen extends StatelessWidget {
           const SizedBox(height: 14),
           _EventInfoRow(icon: Icons.schedule_rounded, text: event.timeLabel),
           _EventInfoRow(
-              icon: Icons.calendar_month_rounded, text: event.dateLabel),
+            icon: Icons.calendar_month_rounded,
+            text: event.dateLabel,
+          ),
           _EventInfoRow(icon: Icons.place_rounded, text: event.place),
           const SizedBox(height: 18),
           _EventParticipationCard(event: event),
@@ -9311,16 +10574,15 @@ class _EventCheckinRewardCard extends StatelessWidget {
                       color: const Color(0xFFF4F7F1),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: CustomPaint(
-                      painter: _MockQrPainter(seed: event.id),
-                    ),
+                    child: CustomPaint(painter: _MockQrPainter(seed: event.id)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: () {
-                        final awarded =
-                            appGamification.recordEventCheckin(event);
+                        final awarded = appGamification.recordEventCheckin(
+                          event,
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -9844,8 +11106,10 @@ class _ProductInfoTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 6),
                 Text(body, style: const TextStyle(height: 1.35)),
               ],
@@ -9873,8 +11137,11 @@ class _ProductHighlight extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded,
-              size: 19, color: Color(0xFF2E7D57)),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 19,
+            color: Color(0xFF2E7D57),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -10548,10 +11815,7 @@ const List<DiningVenue> _diningVenues = [
 ];
 
 class DiningScreen extends StatelessWidget {
-  const DiningScreen({
-    super.key,
-    this.initialKind = DiningKind.restaurant,
-  });
+  const DiningScreen({super.key, this.initialKind = DiningKind.restaurant});
 
   final DiningKind initialKind;
 
@@ -10727,10 +11991,7 @@ class _DiningSection extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final venue = venues[index];
-              return _DiningVenueCard(
-                venue: venue,
-                onTap: () => onTap(venue),
-              );
+              return _DiningVenueCard(venue: venue, onTap: () => onTap(venue));
             },
           ),
         ),
@@ -10775,8 +12036,10 @@ class _DiningVenueCard extends StatelessWidget {
                 venue.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -10835,10 +12098,7 @@ class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          _DiningHero(
-            highlightedVenue: widget.venue,
-            onTap: () {},
-          ),
+          _DiningHero(highlightedVenue: widget.venue, onTap: () {}),
           const SizedBox(height: 18),
           Text(
             widget.venue.name,
@@ -10854,12 +12114,17 @@ class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
           _VenueInfoRow(icon: Icons.map_rounded, text: widget.venue.address),
           _VenueInfoRow(icon: Icons.phone_rounded, text: widget.venue.contact),
           _VenueInfoRow(
-              icon: Icons.payments_rounded, text: widget.venue.priceHint),
+            icon: Icons.payments_rounded,
+            text: widget.venue.priceHint,
+          ),
           _VenueInfoRow(
-              icon: Icons.event_available_rounded,
-              text: widget.venue.todayStatus),
+            icon: Icons.event_available_rounded,
+            text: widget.venue.todayStatus,
+          ),
           _VenueInfoRow(
-              icon: Icons.verified_rounded, text: widget.venue.sourceLabel),
+            icon: Icons.verified_rounded,
+            text: widget.venue.sourceLabel,
+          ),
           _TrailDetailCard(
             title: "Token prenotazione",
             child: Text(
@@ -11156,7 +12421,7 @@ String _month(DateTime date) {
     "set",
     "ott",
     "nov",
-    "dic"
+    "dic",
   ];
   return months[date.month - 1];
 }
@@ -11927,11 +13192,7 @@ FinalInfoPage _finalPage({
     icon: icon,
     coverColors: coverColors,
     facts: [
-      FinalInfoFact(
-        icon: Icons.place_rounded,
-        title: "Accesso",
-        value: access,
-      ),
+      FinalInfoFact(icon: Icons.place_rounded, title: "Accesso", value: access),
       FinalInfoFact(
         icon: Icons.schedule_rounded,
         title: "Quando",
@@ -12220,11 +13481,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Canale streaming istituzionale",
     timing: "Solo durante sedute programmate",
     contact: "Segreteria consiglio",
-    highlights: const [
-      "Stato live",
-      "Prossima seduta",
-      "Ordine del giorno",
-    ],
+    highlights: const ["Stato live", "Prossima seduta", "Ordine del giorno"],
     actionBody:
         "La pagina mette insieme streaming e contesto, cosi la diretta non resta un link isolato.",
     actionItems: const [
@@ -12360,11 +13617,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Archivio atti amministrativi",
     timing: "Consultazione continua",
     contact: "Segreteria generale",
-    highlights: const [
-      "Ricerca per anno",
-      "Tipo atto",
-      "Documenti collegati",
-    ],
+    highlights: const ["Ricerca per anno", "Tipo atto", "Documenti collegati"],
     actionBody:
         "La pagina serve cittadini che cercano un atto specifico e cittadini che partono da un tema.",
     actionItems: const [
@@ -12430,11 +13683,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Portale pagamenti e ufficio tributi",
     timing: "Scadenze tributarie e avvisi",
     contact: "Ufficio tributi",
-    highlights: const [
-      "PagoPA",
-      "Avvisi",
-      "Scadenze",
-    ],
+    highlights: const ["PagoPA", "Avvisi", "Scadenze"],
     actionBody:
         "La pagina prepara il cittadino prima del portale esterno, riducendo errori e confusione.",
     actionItems: const [
@@ -12465,11 +13714,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Sportelli su appuntamento",
     timing: "Fasce disponibili secondo ufficio",
     contact: "Centralino e ufficio scelto",
-    highlights: const [
-      "Scelta motivo",
-      "Promemoria",
-      "Documenti necessari",
-    ],
+    highlights: const ["Scelta motivo", "Promemoria", "Documenti necessari"],
     actionBody:
         "Il flusso mette prima il bisogno del cittadino e poi l'ufficio competente.",
     actionItems: const [
@@ -12570,11 +13815,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Scuola, Comune, servizi famiglia",
     timing: "Anno scolastico e scadenze iscrizione",
     contact: "Ufficio scuola",
-    highlights: const [
-      "Mensa",
-      "Trasporto scolastico",
-      "Avvisi famiglie",
-    ],
+    highlights: const ["Mensa", "Trasporto scolastico", "Avvisi famiglie"],
     actionBody:
         "La pagina ordina servizi ricorrenti e scadenze stagionali per genitori e studenti.",
     actionItems: const [
@@ -12605,11 +13846,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Strade comunali, parcheggi, trasporto locale",
     timing: "Avvisi temporanei e ordinanze",
     contact: "Polizia locale e ufficio tecnico",
-    highlights: const [
-      "Cantieri",
-      "Ordinanze",
-      "Parcheggi evento",
-    ],
+    highlights: const ["Cantieri", "Ordinanze", "Parcheggi evento"],
     actionBody:
         "La pagina separa mobilita quotidiana e avvisi temporanei che cambiano il comportamento del cittadino.",
     actionItems: const [
@@ -12640,11 +13877,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Calendario e servizi ambientali",
     timing: "Giorni di raccolta e avvisi",
     contact: "Gestore rifiuti e Comune",
-    highlights: const [
-      "Calendario",
-      "Ingombranti",
-      "Regole conferimento",
-    ],
+    highlights: const ["Calendario", "Ingombranti", "Regole conferimento"],
     actionBody:
         "La pagina deve rispondere alla domanda pratica: cosa espongo, quando e dove.",
     actionItems: const [
@@ -12780,11 +14013,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Centro, cultura, servizi, natura",
     timing: "Prima e durante la visita",
     contact: "Ufficio turistico",
-    highlights: const [
-      "Tappe consigliate",
-      "Servizi vicini",
-      "Percorsi brevi",
-    ],
+    highlights: const ["Tappe consigliate", "Servizi vicini", "Percorsi brevi"],
     actionBody:
         "La mappa turistica deve essere piu selettiva della mappa base: poche cose, ben ordinate.",
     actionItems: const [
@@ -12815,11 +14044,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Borgo, frazioni, Monte Nerone",
     timing: "Da controllare prima di partire",
     contact: "Fonti meteo e Comune",
-    highlights: const [
-      "Webcam",
-      "Meteo in quota",
-      "Avvisi utili",
-    ],
+    highlights: const ["Webcam", "Meteo in quota", "Avvisi utili"],
     actionBody:
         "La pagina aiuta a scegliere attivita e abbigliamento con un colpo d'occhio.",
     actionItems: const [
@@ -12885,11 +14110,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Luogo devozionale del territorio",
     timing: "Visita breve o ricorrenze",
     contact: "Parrocchia",
-    highlights: const [
-      "Memoria locale",
-      "Percorso spirituale",
-      "Sosta breve",
-    ],
+    highlights: const ["Memoria locale", "Percorso spirituale", "Sosta breve"],
     actionBody:
         "La pagina aiuta a inserire la tappa in un percorso piu ampio senza perderne il valore.",
     actionItems: const [
@@ -12920,11 +14141,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Chiesa parrocchiale e centro storico",
     timing: "Orari e celebrazioni da verificare",
     contact: "Parrocchia di San Martino",
-    highlights: const [
-      "Chiesa principale",
-      "Avvisi",
-      "Percorso culturale",
-    ],
+    highlights: const ["Chiesa principale", "Avvisi", "Percorso culturale"],
     actionBody:
         "La pagina rende San Martino un punto di connessione tra cultura, fede e vita comunitaria.",
     actionItems: const [
@@ -12955,11 +14172,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Parrocchia e gruppi collegati",
     timing: "Celebrazioni, incontri, avvisi",
     contact: "Segreteria parrocchiale",
-    highlights: const [
-      "Orari celebrazioni",
-      "Gruppi",
-      "Avvisi",
-    ],
+    highlights: const ["Orari celebrazioni", "Gruppi", "Avvisi"],
     actionBody:
         "La pagina serve chi cerca orari, contatti o attivita senza dover seguire canali separati.",
     actionItems: const [
@@ -12990,11 +14203,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Oratorio e spazi parrocchiali",
     timing: "Pomeriggi, estate, appuntamenti speciali",
     contact: "Referenti oratorio",
-    highlights: const [
-      "Attivita ragazzi",
-      "Estate",
-      "Famiglie",
-    ],
+    highlights: const ["Attivita ragazzi", "Estate", "Famiglie"],
     actionBody:
         "La scheda rende visibili iniziative che spesso circolano solo nel passaparola.",
     actionItems: const [
@@ -13025,11 +14234,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Bacheca parrocchiale",
     timing: "Aggiornamento settimanale o straordinario",
     contact: "Parrocchia",
-    highlights: const [
-      "Ultimi avvisi",
-      "Ricorrenze",
-      "Gruppi",
-    ],
+    highlights: const ["Ultimi avvisi", "Ricorrenze", "Gruppi"],
     actionBody:
         "La pagina mette davanti gli avvisi recenti e permette di ritrovare quelli ancora validi.",
     actionItems: const [
@@ -13060,11 +14265,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Comune, associazioni, comunita",
     timing: "Aggiornamenti periodici",
     contact: "Redazione locale o Comune",
-    highlights: const [
-      "Avvisi brevi",
-      "Storie locali",
-      "Link a eventi",
-    ],
+    highlights: const ["Avvisi brevi", "Storie locali", "Link a eventi"],
     actionBody:
         "La pagina raccoglie contenuti piccoli ma importanti, senza trasformarli in notifiche invasive.",
     actionItems: const [
@@ -13095,11 +14296,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Associazioni e sedi operative",
     timing: "Eventi, sagre, iniziative stagionali",
     contact: "Referenti Pro Loco",
-    highlights: const [
-      "Eventi",
-      "Volontariato",
-      "Tradizioni",
-    ],
+    highlights: const ["Eventi", "Volontariato", "Tradizioni"],
     actionBody:
         "La pagina rende la Pro Loco un ponte tra eventi, territorio e partecipazione.",
     actionItems: const [
@@ -13130,11 +14327,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Associazioni culturali, sportive, sociali",
     timing: "Attivita durante l'anno",
     contact: "Referenti associativi",
-    highlights: const [
-      "Ambiti",
-      "Contatti",
-      "Iniziative aperte",
-    ],
+    highlights: const ["Ambiti", "Contatti", "Iniziative aperte"],
     actionBody:
         "La pagina deve aiutare a trovare il gruppo giusto, non solo elencare nomi.",
     actionItems: const [
@@ -13165,11 +14358,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Gruppo AVIS locale e punti donazione",
     timing: "Calendario raccolte e appuntamenti",
     contact: "Referenti AVIS",
-    highlights: const [
-      "Donazione",
-      "Appuntamenti",
-      "Sensibilizzazione",
-    ],
+    highlights: const ["Donazione", "Appuntamenti", "Sensibilizzazione"],
     actionBody:
         "La pagina rende immediato il contatto e spiega i passaggi senza entrare in ambito medico.",
     actionItems: const [
@@ -13200,11 +14389,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Biblioteca e spazi culturali",
     timing: "Orari di apertura e iniziative",
     contact: "Biblioteca comunale",
-    highlights: const [
-      "Prestiti",
-      "Eventi culturali",
-      "Spazi studio",
-    ],
+    highlights: const ["Prestiti", "Eventi culturali", "Spazi studio"],
     actionBody:
         "La pagina trasforma la biblioteca in un servizio vivo, collegato a cultura e comunita.",
     actionItems: const [
@@ -13235,11 +14420,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Archivio digitale locale",
     timing: "Consultazione continua",
     contact: "Biblioteca o redazione locale",
-    highlights: const [
-      "Foto storiche",
-      "Video",
-      "Raccolte tematiche",
-    ],
+    highlights: const ["Foto storiche", "Video", "Raccolte tematiche"],
     actionBody:
         "La mediateca valorizza contenuti che altrimenti restano dispersi tra archivi e social.",
     actionItems: const [
@@ -13540,10 +14721,7 @@ class _FinalInfoFactGrid extends StatelessWidget {
 }
 
 class _FinalInfoFactCard extends StatelessWidget {
-  const _FinalInfoFactCard({
-    required this.width,
-    required this.fact,
-  });
+  const _FinalInfoFactCard({required this.width, required this.fact});
 
   final double width;
   final FinalInfoFact fact;
@@ -13703,9 +14881,10 @@ class DetailScreen extends StatelessWidget {
                 child: Text(
                   title,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800),
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               SafeArea(
@@ -13722,9 +14901,13 @@ class DetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(type,
-                      style: const TextStyle(
-                          color: Colors.black54, fontWeight: FontWeight.w700)),
+                  Text(
+                    type,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   const Row(
                     children: [
@@ -13739,7 +14922,8 @@ class DetailScreen extends StatelessWidget {
                       Icon(Icons.place, size: 18),
                       SizedBox(width: 8),
                       Expanded(
-                          child: Text("Centro storico, territorio APPecchio")),
+                        child: Text("Centro storico, territorio APPecchio"),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),

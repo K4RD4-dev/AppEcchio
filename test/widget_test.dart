@@ -40,8 +40,9 @@ void main() {
     expect(find.text('Accedi'), findsOneWidget);
   });
 
-  testWidgets('welcomes a resident user on the home screen',
-      (WidgetTester tester) async {
+  testWidgets('welcomes a resident user on the home screen', (
+    WidgetTester tester,
+  ) async {
     await pumpApp(tester);
     await loginAsResident(tester);
 
@@ -53,8 +54,9 @@ void main() {
     expect(find.text('Vicino a me'), findsOneWidget);
   });
 
-  testWidgets('opens the radial menu on a phone portrait viewport',
-      (WidgetTester tester) async {
+  testWidgets('opens the radial menu on a phone portrait viewport', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -68,8 +70,9 @@ void main() {
     expect(find.text('Impostazioni'), findsNothing);
   });
 
-  testWidgets('uses the compact menu on a short landscape viewport',
-      (WidgetTester tester) async {
+  testWidgets('uses the compact menu on a short landscape viewport', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -83,8 +86,9 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
-  testWidgets('opens settings and profile pages from the home header',
-      (WidgetTester tester) async {
+  testWidgets('opens settings and profile pages from the home header', (
+    WidgetTester tester,
+  ) async {
     await pumpApp(tester);
     await loginAsResident(tester);
 
@@ -103,8 +107,9 @@ void main() {
     expect(find.text('Stato privacy'), findsOneWidget);
   });
 
-  testWidgets('opens trails from the sport menu tree',
-      (WidgetTester tester) async {
+  testWidgets('opens trails from the sport menu tree', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -124,18 +129,18 @@ void main() {
     expect(find.text('Apecchio - Bivio Sentiero Italia'), findsWidgets);
   });
 
-  testWidgets('selecting a trail opens its full-screen map',
-      (WidgetTester tester) async {
+  testWidgets('selecting a trail opens its full-screen map', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      const MaterialApp(home: TrailsScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: TrailsScreen()));
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const ValueKey("trail-map-button-sentiero_39")));
+    await tester.tap(
+      find.byKey(const ValueKey("trail-map-button-sentiero_39")),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Sentiero 39'), findsOneWidget);
@@ -143,14 +148,13 @@ void main() {
     expect(find.text('Apri scheda sentiero'), findsOneWidget);
   });
 
-  testWidgets('trails screen filters and opens a trail detail',
-      (WidgetTester tester) async {
+  testWidgets('trails screen filters and opens a trail detail', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      const MaterialApp(home: TrailsScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: TrailsScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('Tutti'), findsOneWidget);
@@ -177,8 +181,9 @@ void main() {
     expect(find.text('Scarica GPX'), findsOneWidget);
   });
 
-  testWidgets('opens sport booking from the sport menu tree',
-      (WidgetTester tester) async {
+  testWidgets('opens sport booking from the sport menu tree', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -201,12 +206,11 @@ void main() {
     expect(find.text('Mar'), findsOneWidget);
   });
 
-  testWidgets('opens sport rules and outdoor services screens',
-      (WidgetTester tester) async {
+  testWidgets('opens sport rules and outdoor services screens', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: SportRulesScreen(initialSectionId: 'tariffe'),
-      ),
+      const MaterialApp(home: SportRulesScreen(initialSectionId: 'tariffe')),
     );
     await tester.pumpAndSettle();
 
@@ -228,8 +232,9 @@ void main() {
     expect(find.text('Richiedi disponibilita'), findsOneWidget);
   });
 
-  testWidgets('renders final info pages on a phone viewport',
-      (WidgetTester tester) async {
+  testWidgets('renders final info pages on a phone viewport', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -297,8 +302,9 @@ void main() {
     expect(find.text('Apri mappa'), findsOneWidget);
   });
 
-  testWidgets('opens a final services page from the radial menu',
-      (WidgetTester tester) async {
+  testWidgets('opens a final services page from the radial menu', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -321,5 +327,57 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Chiama farmacia'), findsOneWidget);
+  });
+
+  testWidgets('renders notices archive, calendar, detail and report flow', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const MaterialApp(home: NoticesArchiveScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Archivio avvisi'), findsOneWidget);
+    expect(find.text('Avvisi e segnalazioni'), findsOneWidget);
+    expect(find.text('Viabilita modificata in centro'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Apri calendario avvisi'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendario avvisi'), findsOneWidget);
+    expect(find.text('Lun'), findsOneWidget);
+    expect(find.text('Mar'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Viabilita modificata in centro').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dettaglio avviso'), findsOneWidget);
+    expect(find.text('Descrizione'), findsOneWidget);
+    expect(find.text('Comune di Apecchio'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nuova segnalazione'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Lampione spento');
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'Segnalazione test dal mockup.',
+    );
+    await tester.ensureVisible(find.text('Salva segnalazione'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salva segnalazione'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Lampione spento'),
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Lampione spento'), findsOneWidget);
   });
 }
