@@ -442,4 +442,56 @@ void main() {
     );
     expect(find.text('Chiama farmacia'), findsOneWidget);
   });
+
+  testWidgets('renders notices archive, calendar, detail and report flow', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const MaterialApp(home: NoticesArchiveScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Archivio avvisi'), findsOneWidget);
+    expect(find.text('Avvisi e segnalazioni'), findsOneWidget);
+    expect(find.text('Viabilita modificata in centro'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Apri calendario avvisi'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendario avvisi'), findsOneWidget);
+    expect(find.text('Lun'), findsOneWidget);
+    expect(find.text('Mar'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Viabilita modificata in centro').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dettaglio avviso'), findsOneWidget);
+    expect(find.text('Descrizione'), findsOneWidget);
+    expect(find.text('Comune di Apecchio'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nuova segnalazione'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Lampione spento');
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'Segnalazione test dal mockup.',
+    );
+    await tester.ensureVisible(find.text('Salva segnalazione'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salva segnalazione'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Lampione spento'),
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Lampione spento'), findsOneWidget);
+  });
 }
