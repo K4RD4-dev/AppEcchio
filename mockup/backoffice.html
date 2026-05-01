@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APPecchio Backoffice</title>
+    <link rel="stylesheet" href="backoffice.css" />
+  </head>
+  <body>
+    <header class="appbar">
+      <div>
+        <p class="eyebrow">APPecchio</p>
+        <h1>Backoffice ruoli e organizzazioni</h1>
+      </div>
+      <div class="context-switcher">
+        <label>
+          Ruolo
+          <select id="roleSelect">
+            <option value="merchant">Esercente</option>
+            <option value="organization">Organizzazione</option>
+            <option value="supervisor">Supervisore</option>
+            <option value="mayor">Sindaco</option>
+            <option value="admin">Amministratore</option>
+          </select>
+        </label>
+        <label>
+          Contesto
+          <select id="organizationSelect">
+            <option value="osteria">Osteria Monte Nerone</option>
+            <option value="proloco">Pro Loco Apecchio</option>
+            <option value="comune">Comune di Apecchio</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="profile-card">
+          <div class="avatar" id="roleInitial">E</div>
+          <div>
+            <strong id="roleName">Esercente</strong>
+            <span id="roleScope">Gestione attività locale</span>
+          </div>
+        </div>
+        <nav id="mainNav" class="nav"></nav>
+      </aside>
+
+      <main id="workspace" class="workspace" aria-live="polite"></main>
+    </div>
+
+    <template id="dashboardTemplate">
+      <section class="view-grid">
+        <div class="hero-panel">
+          <div>
+            <p class="eyebrow" data-role-eyebrow></p>
+            <h2 data-role-title></h2>
+            <p data-role-copy></p>
+          </div>
+          <button class="primary-action" data-primary-action></button>
+        </div>
+        <div class="metric-grid" data-metrics></div>
+        <div data-participation></div>
+        <div class="two-column">
+          <article class="panel">
+            <div class="panel-heading">
+              <h3>Priorità</h3>
+              <span class="status-dot"></span>
+            </div>
+            <ul class="task-list" data-priorities></ul>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <h3>Attività recenti</h3>
+              <span class="muted">demo</span>
+            </div>
+            <ul class="activity-list" data-activity></ul>
+          </article>
+        </div>
+      </section>
+    </template>
+  </body>
+  <script src="backoffice.js"></script>
+</html>

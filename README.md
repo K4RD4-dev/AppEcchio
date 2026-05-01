@@ -47,34 +47,12 @@ flutter run
 Vedi `APPecchio_UX_Blueprint.md` per wireframe, flow e stati interazione.
 
 ### Proposte funzionali
+
 - [Piano area gamification](docs/gamification-plan.md)
 - [Implementazione gamification](docs/gamification/)
 - [Mockup UI gamification](mockup/index.html)
-
-
-
-### Proposte funzionali
-- [Piano area gamification](docs/gamification-plan.md)
-- [Implementazione gamification](docs/gamification/)
-- [Mockup UI gamification](mockup/index.html)
+- [Piano interfacce backoffice](docs/backoffice-roles-interface-plan.md)
+- [Mockup backoffice ruoli e organizzazioni](mockup/backoffice.html)
 
 ## Avvertenze
 Questa documentazione è una guida tecnica. Non sostituisce in alcun modo il parere di consulenti legali, DPO o specialisti di settore.
-- [Implementazione gamification](docs/gamification/)
-- [Mockup UI gamification](mockup/index.html)
-
-
-### Proposte funzionali
-- [Piano area gamification](docs/gamification-plan.md)
-- [Implementazione gamification](docs/gamification/)
-- [Mockup UI gamification](mockup/index.html)
-
-
-### Proposte funzionali
-- [Piano area gamification](docs/gamification-plan.md)
-- [Implementazione gamification](docs/gamification/)
-- [Mockup UI gamification](mockup/index.html)
-
-## Avvertenze
-Questa documentazione è una guida tecnica. Non sostituisce in alcun modo il parere di consulenti legali, DPO o specialisti di settore.
-
