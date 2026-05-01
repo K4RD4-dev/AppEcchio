@@ -101,7 +101,6 @@ final EventParticipationController appEventParticipation =
     EventParticipationController();
 final SportReservationController appSportReservations =
     SportReservationController();
-final NoticeController appNotices = NoticeController.demo();
 
 class SportReservationController extends ChangeNotifier {
   final Set<String> _reservedSlotIds = {};
@@ -567,9 +566,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => user.isBackoffice
+      MaterialPageRoute<void>(
+        builder: (_) => user.isBackoffice
             ? BackofficeScreen(initialProfile: user.profile)
-            : HomeScreen(user: user)),
+            : HomeScreen(user: user),
+      ),
     );
   }
 
@@ -758,14 +759,12 @@ class MenuNode {
     required this.id,
     required this.label,
     required this.icon,
-    this.highlighted = false,
     this.children = const <MenuNode>[],
   });
 
   final String id;
   final String label;
   final IconData icon;
-  final bool highlighted;
   final List<MenuNode> children;
 
   bool get isLeaf => children.isEmpty;
@@ -777,11 +776,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const List<HomeQuickAction> _quickActions = [
     HomeQuickAction(id: "oggi", label: "Oggi", icon: Icons.today_rounded),
-    HomeQuickAction(
-      id: "avvisi",
-      label: "Avvisi",
-      icon: Icons.campaign_rounded,
-    ),
     HomeQuickAction(
       id: "aperti",
       label: "Aperti ora",
@@ -804,12 +798,6 @@ class _HomeScreenState extends State<HomeScreen> {
     label: "Esplora",
     icon: Icons.explore_rounded,
     children: <MenuNode>[
-      MenuNode(
-        id: "avvisi",
-        label: "Avvisi",
-        icon: Icons.campaign_rounded,
-        highlighted: true,
-      ),
       MenuNode(
         id: "eventi",
         label: "Eventi",
@@ -1374,7 +1362,6 @@ class _HomeScreenState extends State<HomeScreen> {
       id: _menuRoot.id,
       label: _menuRoot.label,
       icon: _menuRoot.icon,
-      highlighted: _menuRoot.highlighted,
       children: _menuRoot.children
           .where((node) => node.id != "myapecchio")
           .toList(growable: false),
@@ -1427,8 +1414,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _HomeInsightPanel(
                           selectedAction: _activeQuickFilter,
                           user: widget.user,
-                          onOpenNotices: _openNotices,
-                          onOpenNoticeDetail: _openNoticeDetail,
                           onOpenEvents: () => _openEvents(),
                           onOpenDining: () => _openDining(nodeId: "ristoranti"),
                           onOpenTrails: _openTrails,
@@ -1496,40 +1481,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openNotices() {
-    setState(() => _showRadialMenu = false);
-    Navigator.of(context).push(
-      PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 280),
-        pageBuilder: (_, animation, __) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          );
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.15, 0),
-              end: Offset.zero,
-            ).animate(curved),
-            child: FadeTransition(
-              opacity: curved,
-              child: const NoticesArchiveScreen(),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _openNoticeDetail(AppNotice notice) {
-    setState(() => _showRadialMenu = false);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => NoticeDetailScreen(notice: notice),
-      ),
-    );
-  }
-
   void _onNodeTap(MenuNode node) {
     if (node.isLeaf) {
       setState(() => _showRadialMenu = false);
@@ -1539,10 +1490,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         if (_isEventNode(node)) {
           _openEvents(initialFilter: node.id == "calendario" ? null : node.id);
-          return;
-        }
-        if (_isNoticeNode(node)) {
-          _openNotices();
           return;
         }
         if (_isLocalProductNode(node)) {
@@ -1600,10 +1547,6 @@ class _HomeScreenState extends State<HomeScreen> {
       "sport_outdoor",
       "comunita_spiritualita",
     }.contains(node.id);
-  }
-
-  bool _isNoticeNode(MenuNode node) {
-    return node.id == "avvisi";
   }
 
   bool _isDiningNode(MenuNode node) {
@@ -2078,9 +2021,12 @@ class _WelcomePanel extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: "Logout",
+                tooltip: "Cambia ruolo",
                 onPressed: onLogout,
-                icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                icon: const Icon(
+                  Icons.switch_account_rounded,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -2327,8 +2273,6 @@ class _HomeInsightPanel extends StatelessWidget {
   const _HomeInsightPanel({
     required this.selectedAction,
     required this.user,
-    required this.onOpenNotices,
-    required this.onOpenNoticeDetail,
     required this.onOpenEvents,
     required this.onOpenDining,
     required this.onOpenTrails,
@@ -2336,8 +2280,6 @@ class _HomeInsightPanel extends StatelessWidget {
 
   final String selectedAction;
   final AppUser user;
-  final VoidCallback onOpenNotices;
-  final ValueChanged<AppNotice> onOpenNoticeDetail;
   final VoidCallback onOpenEvents;
   final VoidCallback onOpenDining;
   final VoidCallback onOpenTrails;
@@ -2351,8 +2293,6 @@ class _HomeInsightPanel extends StatelessWidget {
         key: ValueKey<String>(selectedAction),
         selectedAction: selectedAction,
         user: user,
-        onOpenNotices: onOpenNotices,
-        onOpenNoticeDetail: onOpenNoticeDetail,
         onOpenEvents: onOpenEvents,
         onOpenDining: onOpenDining,
         onOpenTrails: onOpenTrails,
@@ -2366,8 +2306,6 @@ class _HomeInsightContent extends StatelessWidget {
     super.key,
     required this.selectedAction,
     required this.user,
-    required this.onOpenNotices,
-    required this.onOpenNoticeDetail,
     required this.onOpenEvents,
     required this.onOpenDining,
     required this.onOpenTrails,
@@ -2375,8 +2313,6 @@ class _HomeInsightContent extends StatelessWidget {
 
   final String selectedAction;
   final AppUser user;
-  final VoidCallback onOpenNotices;
-  final ValueChanged<AppNotice> onOpenNoticeDetail;
   final VoidCallback onOpenEvents;
   final VoidCallback onOpenDining;
   final VoidCallback onOpenTrails;
@@ -2405,26 +2341,16 @@ class _HomeInsightContent extends StatelessWidget {
                 if (selectedAction == "oggi")
                   _TodayOverview(
                     raining: raining,
-                    onOpenNotices: onOpenNotices,
-                    onOpenNoticeDetail: onOpenNoticeDetail,
                     onOpenEvents: onOpenEvents,
                     onOpenDining: onOpenDining,
                     onOpenTrails: onOpenTrails,
-                  )
-                else if (selectedAction == "avvisi")
-                  _NoticesOverview(
-                    onOpenNotices: onOpenNotices,
-                    onOpenNoticeDetail: onOpenNoticeDetail,
                   )
                 else if (selectedAction == "aperti")
                   _OpenNowOverview(onOpenDining: onOpenDining)
                 else if (selectedAction == "vicino")
                   _NearbyOverview(raining: raining, onOpenTrails: onOpenTrails)
                 else
-                  _NotificationsOverview(
-                    onOpenNotices: onOpenNotices,
-                    onOpenNoticeDetail: onOpenNoticeDetail,
-                  ),
+                  const _NotificationsOverview(),
               ],
             ),
           ),
@@ -2492,16 +2418,12 @@ class _WeatherSuggestionBubble extends StatelessWidget {
 class _TodayOverview extends StatelessWidget {
   const _TodayOverview({
     required this.raining,
-    required this.onOpenNotices,
-    required this.onOpenNoticeDetail,
     required this.onOpenEvents,
     required this.onOpenDining,
     required this.onOpenTrails,
   });
 
   final bool raining;
-  final VoidCallback onOpenNotices;
-  final ValueChanged<AppNotice> onOpenNoticeDetail;
   final VoidCallback onOpenEvents;
   final VoidCallback onOpenDining;
   final VoidCallback onOpenTrails;
@@ -2512,27 +2434,6 @@ class _TodayOverview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _PanelTitle(title: "Oggi in paese"),
-        AnimatedBuilder(
-          animation: appNotices,
-          builder: (context, _) {
-            final notice = appNotices.todayNotices.isNotEmpty
-                ? appNotices.todayNotices.first
-                : appNotices.leadingNotice;
-            if (notice == null) {
-              return _InsightTile(
-                icon: Icons.campaign_rounded,
-                title: "Nessun avviso urgente",
-                subtitle: "L'archivio resta pronto per nuove segnalazioni.",
-                onTap: onOpenNotices,
-              );
-            }
-            return _NoticeInsightTile(
-              notice: notice,
-              compactDate: true,
-              onTap: () => onOpenNoticeDetail(notice),
-            );
-          },
-        ),
         _InsightTile(
           icon: raining ? Icons.museum_rounded : Icons.hiking_rounded,
           title: raining
@@ -2634,182 +2535,32 @@ class _NearbyOverview extends StatelessWidget {
   }
 }
 
-class _NoticesOverview extends StatelessWidget {
-  const _NoticesOverview({
-    required this.onOpenNotices,
-    required this.onOpenNoticeDetail,
-  });
-
-  final VoidCallback onOpenNotices;
-  final ValueChanged<AppNotice> onOpenNoticeDetail;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: appNotices,
-      builder: (context, _) {
-        final notices = appNotices.notices.take(4).toList(growable: false);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _PanelTitle(title: "Avvisi e segnalazioni"),
-            for (final notice in notices)
-              _NoticeInsightTile(
-                notice: notice,
-                onTap: () => onOpenNoticeDetail(notice),
-              ),
-            _InsightTile(
-              icon: Icons.archive_rounded,
-              title: "Archivio completo",
-              subtitle:
-                  "Apri tutti gli avvisi e consulta il calendario dedicato.",
-              onTap: onOpenNotices,
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _NotificationsOverview extends StatelessWidget {
-  const _NotificationsOverview({
-    required this.onOpenNotices,
-    required this.onOpenNoticeDetail,
-  });
-
-  final VoidCallback onOpenNotices;
-  final ValueChanged<AppNotice> onOpenNoticeDetail;
+  const _NotificationsOverview();
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: appNotices,
-      builder: (context, _) {
-        final notices = appNotices.notices.take(2).toList(growable: false);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _PanelTitle(title: "Notifiche"),
-            for (final notice in notices)
-              _NoticeInsightTile(
-                notice: notice,
-                onTap: () => onOpenNoticeDetail(notice),
-              ),
-            const _InsightTile(
-              icon: Icons.notifications_active_rounded,
-              title: "Meteo aggiornato",
-              subtitle:
-                  "Pioggia possibile nel pomeriggio: consigliati eventi al coperto.",
-            ),
-            const _InsightTile(
-              icon: Icons.event_available_rounded,
-              title: "Prenotazioni",
-              subtitle: "Palazzetto libero dalle 18:30 per attivita indoor.",
-            ),
-            _InsightTile(
-              icon: Icons.archive_rounded,
-              title: "Tutti gli avvisi",
-              subtitle: "Consulta archivio e calendario delle segnalazioni.",
-              onTap: onOpenNotices,
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _NoticeInsightTile extends StatelessWidget {
-  const _NoticeInsightTile({
-    required this.notice,
-    required this.onTap,
-    this.compactDate = false,
-  });
-
-  final AppNotice notice;
-  final VoidCallback onTap;
-  final bool compactDate;
-
-  @override
-  Widget build(BuildContext context) {
-    final dateLabel =
-        compactDate ? _formatNoticeShortDate(notice.date) : notice.dateLabel;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: notice.highlighted
-            ? const Color(0xFFFFF1C7)
-            : Colors.white.withValues(alpha: 0.90),
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: notice.accentColor.withValues(alpha: 0.16),
-                  child: Icon(notice.icon, color: notice.accentColor),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              notice.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          if (notice.highlighted) ...[
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.priority_high_rounded,
-                              color: Color(0xFF9A5A00),
-                              size: 17,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        "$dateLabel · ${notice.kindLabel}",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        notice.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(height: 1.2),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFF2E7D57),
-                ),
-              ],
-            ),
-          ),
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PanelTitle(title: "Notifiche"),
+        _InsightTile(
+          icon: Icons.notifications_active_rounded,
+          title: "Meteo aggiornato",
+          subtitle:
+              "Pioggia possibile nel pomeriggio: consigliati eventi al coperto.",
         ),
-      ),
+        _InsightTile(
+          icon: Icons.event_available_rounded,
+          title: "Prenotazioni",
+          subtitle: "Palazzetto libero dalle 18:30 per attivita indoor.",
+        ),
+        _InsightTile(
+          icon: Icons.restaurant_rounded,
+          title: "Cena",
+          subtitle: "Nuovi slot disponibili da Civico 14+5.",
+        ),
+      ],
     );
   }
 }
@@ -2916,31 +2667,12 @@ class _RadialMenuOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 520),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final offsetAnim = Tween<Offset>(
-          begin: const Offset(0.06, 0),
-          end: Offset.zero,
-        ).animate(animation);
-        final scaleAnim = Tween<double>(begin: 0.96, end: 1).animate(animation);
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: offsetAnim,
-            child: ScaleTransition(scale: scaleAnim, child: child),
-          ),
-        );
-      },
-      child: _RadialMenuStage(
-        key: ValueKey<String>(currentNode.id),
-        currentNode: currentNode,
-        parentNode: parentNode,
-        onNodeTap: onNodeTap,
-        onBackTap: onBackTap,
-      ),
+    return _RadialMenuStage(
+      key: ValueKey<String>(currentNode.id),
+      currentNode: currentNode,
+      parentNode: parentNode,
+      onNodeTap: onNodeTap,
+      onBackTap: onBackTap,
     );
   }
 }
@@ -3003,11 +2735,10 @@ class _MenuLayoutSpec {
   factory _MenuLayoutSpec.from(Size size) {
     final shortest = math.min(size.width, size.height);
     final isLandscape = size.width > size.height;
-    final compact = size.width < 360 || size.height < 560;
     final tablet = shortest >= 600;
 
     return _MenuLayoutSpec(
-      useCompactMenu: compact || (isLandscape && size.height < 640),
+      useCompactMenu: false,
       edgePadding: shortest < 390 ? 10 : 16,
       bottomPadding: shortest < 390 ? 82 : 96,
       titleTop: isLandscape ? 24 : (shortest < 390 ? 54 : 70),
@@ -3015,9 +2746,9 @@ class _MenuLayoutSpec {
       centerYFactor: isLandscape ? 0.54 : 0.52,
       nodeWidthFactor: tablet ? 0.20 : 0.27,
       nodeHeightFactor: tablet ? 0.16 : 0.21,
-      minNodeWidth: shortest < 390 ? 76 : 86,
+      minNodeWidth: shortest <= 430 ? 62 : 86,
       maxNodeWidth: tablet ? 148 : 122,
-      minNodeHeight: shortest < 390 ? 66 : 74,
+      minNodeHeight: shortest <= 430 ? 50 : 74,
       maxNodeHeight: tablet ? 116 : 100,
       rootRadiusFactor: tablet ? 0.33 : 0.38,
       childRadiusFactor: tablet ? 0.30 : 0.34,
@@ -3184,11 +2915,8 @@ class _CompactMenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final highlighted = node.highlighted;
     return Material(
-      color: highlighted
-          ? const Color(0xFFFFF1C7)
-          : Colors.white.withValues(alpha: 0.94),
+      color: Colors.white.withValues(alpha: 0.94),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -3203,9 +2931,7 @@ class _CompactMenuCard extends StatelessWidget {
                 children: [
                   Icon(
                     node.icon,
-                    color: highlighted
-                        ? const Color(0xFF9A5A00)
-                        : const Color(0xFF1B2E21),
+                    color: const Color(0xFF1B2E21),
                     size: compact ? 20 : 26,
                   ),
                   SizedBox(height: compact ? 4 : 8),
@@ -3216,9 +2942,7 @@ class _CompactMenuCard extends StatelessWidget {
                       maxLines: compact ? 2 : 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: highlighted
-                            ? const Color(0xFF5F3C00)
-                            : const Color(0xFF1B2E21),
+                        color: const Color(0xFF1B2E21),
                         fontWeight: FontWeight.w800,
                         height: 1.06,
                         fontSize: compact ? 11 : 12,
@@ -3249,6 +2973,8 @@ class _RadialMenuStage extends StatelessWidget {
   final ValueChanged<MenuNode> onNodeTap;
   final VoidCallback onBackTap;
 
+  static const double _goldenRatio = 1.618033988749895;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -3264,17 +2990,23 @@ class _RadialMenuStage extends StatelessWidget {
           );
         }
 
-        final countFactor = currentNode.children.length > 5 ? 0.88 : 1.0;
+        final countFactor = currentNode.children.length > 5
+            ? 0.68
+            : (currentNode.children.length > 3 ? 0.70 : 1.0);
         final nodeWidth = ((shortest * spec.nodeWidthFactor) * countFactor)
             .clamp(spec.minNodeWidth, spec.maxNodeWidth)
             .toDouble();
         final nodeHeight = ((shortest * spec.nodeHeightFactor) * countFactor)
             .clamp(spec.minNodeHeight, spec.maxNodeHeight)
             .toDouble();
-        final center = Offset(
-          constraints.maxWidth / 2,
-          constraints.maxHeight * spec.centerYFactor,
-        );
+        final center = Offset(constraints.maxWidth / 2,
+            constraints.maxHeight * spec.centerYFactor);
+        final backRadius = (shortest * spec.backRadiusFactor)
+            .clamp(spec.minBackRadius, spec.maxBackRadius)
+            .toDouble();
+        final backTarget = parentNode != null
+            ? Offset(center.dx - backRadius, center.dy)
+            : null;
         final targets = _computeTargets(
           size: Size(constraints.maxWidth, constraints.maxHeight),
           center: center,
@@ -3282,6 +3014,7 @@ class _RadialMenuStage extends StatelessWidget {
           hasParent: parentNode != null,
           nodeWidth: nodeWidth,
           nodeHeight: nodeHeight,
+          backTarget: backTarget,
           spec: spec,
         );
         return Container(
@@ -3342,6 +3075,7 @@ class _RadialMenuStage extends StatelessWidget {
                       painter: _TreeBranchPainter(
                         center: center,
                         targets: targets,
+                        backTarget: backTarget,
                         progress: progress,
                         hasParent: parentNode != null,
                       ),
@@ -3351,13 +3085,11 @@ class _RadialMenuStage extends StatelessWidget {
                     _RadialNode(
                       center: center,
                       fixedAngle: math.pi,
-                      radius: (shortest * spec.backRadiusFactor)
-                          .clamp(spec.minBackRadius, spec.maxBackRadius)
-                          .toDouble(),
+                      radius: backRadius,
+                      nodeId: "back-${parentNode!.id}",
                       label: parentNode!.label,
                       icon: Icons.undo_rounded,
                       selected: false,
-                      highlighted: false,
                       progress: progress,
                       width: nodeWidth,
                       height: nodeHeight,
@@ -3368,10 +3100,10 @@ class _RadialMenuStage extends StatelessWidget {
                       center: center,
                       fixedOffset: targets[i],
                       radius: 0,
+                      nodeId: currentNode.children[i].id,
                       label: currentNode.children[i].label,
                       icon: currentNode.children[i].icon,
                       selected: false,
-                      highlighted: currentNode.children[i].highlighted,
                       progress: progress,
                       width: nodeWidth,
                       height: nodeHeight,
@@ -3393,13 +3125,19 @@ class _RadialMenuStage extends StatelessWidget {
     required bool hasParent,
     required double nodeWidth,
     required double nodeHeight,
+    required Offset? backTarget,
     required _MenuLayoutSpec spec,
   }) {
     if (total == 0) {
       return const <Offset>[];
     }
-    final start = hasParent ? -math.pi / 2.25 : -math.pi * 0.86;
-    final end = hasParent ? math.pi / 2.25 : math.pi * 0.86;
+    final useWideChildArc = hasParent && size.height < 520;
+    final start = hasParent
+        ? (useWideChildArc ? -math.pi * 0.78 : -math.pi / 2.65)
+        : -math.pi * 0.86;
+    final end = hasParent
+        ? (useWideChildArc ? math.pi * 0.78 : math.pi / 2.65)
+        : math.pi * 0.86;
     final shortest = math.min(size.width, size.height);
     var baseRadius = (hasParent
             ? shortest * spec.childRadiusFactor
@@ -3415,7 +3153,10 @@ class _RadialMenuStage extends StatelessWidget {
     final maxX = size.width - horizontalPadding - nodeWidth / 2;
     final minY = topPadding + nodeHeight / 2;
     final maxY = size.height - bottomPadding - nodeHeight / 2;
-    final childMinX = hasParent ? center.dx + nodeWidth * 0.10 : minX;
+    final openOrbSize = (shortest * 0.22).clamp(76.0, 86.0).toDouble();
+    final centerClearance = openOrbSize / 2 + nodeWidth / 2 + spec.nodeGap;
+    final childMinX =
+        hasParent && !useWideChildArc ? center.dx + centerClearance : minX;
 
     Offset clampToViewport(Offset point) {
       return Offset(
@@ -3451,39 +3192,47 @@ class _RadialMenuStage extends StatelessWidget {
     }
 
     List<Offset> buildPositions(double radius) {
-      final ringGap = (nodeHeight * spec.ringGapFactor)
-          .clamp(spec.minRingGap, spec.maxRingGap)
-          .toDouble();
+      final arc = (end - start).abs();
+      const goldenGapFactor =
+          1 / _goldenRatio + 1 / (_goldenRatio * _goldenRatio);
+      final ringGap =
+          (nodeHeight * ((spec.ringGapFactor + goldenGapFactor) / 2))
+              .clamp(spec.minRingGap, spec.maxRingGap)
+              .toDouble();
       final rings = <double>[radius];
-      if (total > 7) {
+      if (total > 4) {
         rings.add((radius - ringGap).clamp(74.0, radius).toDouble());
       }
-      if (total > 12) {
+      if (total > 8) {
         rings.add((radius - (ringGap * 2)).clamp(62.0, radius).toDouble());
       }
 
       var remaining = total;
       final points = <Offset>[];
-      final outerCount =
-          rings.length == 1 ? total : math.min(total, (total * 0.58).ceil());
 
       for (var ringIndex = 0; ringIndex < rings.length; ringIndex++) {
         final ringRadius = rings[ringIndex];
-        final take = ringIndex == 0 || ringIndex == rings.length - 1
-            ? math.min(remaining, outerCount)
-            : math.min(remaining, (remaining / 2).ceil());
+        final ringArcLength = arc * ringRadius;
+        final capacity =
+            math.max(1, (ringArcLength / (nodeWidth + spec.nodeGap)).floor());
+        final take = ringIndex == rings.length - 1
+            ? remaining
+            : math.min(remaining, capacity);
         if (take <= 0) {
           continue;
         }
 
-        final ringInset = ringIndex * 0.16;
+        final ringInset = ringIndex / (_goldenRatio * 5);
         final ringStart = start + (end - start) * ringInset;
         final ringEnd = end - (end - start) * ringInset;
-        final offsetStep = ringIndex.isOdd && take > 1 ? 0.5 / take : 0.0;
+        final offsetStep =
+            ringIndex.isOdd && take > 1 ? 1 / (_goldenRatio * take) : 0.0;
 
         for (var i = 0; i < take; i++) {
           final t = take == 1 ? 0.5 : (i + offsetStep) / (take - 1);
-          final angle = ringStart + (ringEnd - ringStart) * t.clamp(0.0, 1.0);
+          final angle = ringStart +
+              (ringEnd - ringStart) *
+                  _goldenArcProgress(t.clamp(0.0, 1.0).toDouble());
           final dx = center.dx + math.cos(angle) * ringRadius;
           final dy = center.dy + math.sin(angle) * ringRadius;
           points.add(clampToViewport(Offset(dx, dy)));
@@ -3494,7 +3243,6 @@ class _RadialMenuStage extends StatelessWidget {
         }
       }
 
-      // Fallback: if nodes still remain, place near center arc.
       if (remaining > 0) {
         final extraRadius = (radius - 10).clamp(58.0, radius).toDouble();
         for (var i = 0; i < remaining; i++) {
@@ -3512,20 +3260,14 @@ class _RadialMenuStage extends StatelessWidget {
       final ideals = List<Offset>.of(initial);
       var positions = List<Offset>.of(initial);
       final minDistance = math.max(nodeWidth, nodeHeight) + spec.nodeGap;
-      final backPoint = Offset(
-        center.dx -
-            (shortest * spec.backRadiusFactor)
-                .clamp(spec.minBackRadius, spec.maxBackRadius)
-                .toDouble(),
-        center.dy,
-      );
+      final backPoint = backTarget ?? Offset.zero;
 
       for (var iteration = 0; iteration < 96; iteration++) {
         var moved = false;
         final deltas = List<Offset>.filled(total, Offset.zero);
 
         for (var i = 0; i < total; i++) {
-          deltas[i] += (ideals[i] - positions[i]) * 0.025;
+          deltas[i] += (ideals[i] - positions[i]) * 0.12;
 
           if (hasParent) {
             final fromBack = positions[i] - backPoint;
@@ -3584,18 +3326,36 @@ class _RadialMenuStage extends StatelessWidget {
 
     return points;
   }
+
+  double _goldenArcProgress(double t) {
+    if (t <= 0) {
+      return 0;
+    }
+    if (t >= 1) {
+      return 1;
+    }
+    final mirrored = t <= 0.5 ? t * 2 : (1 - t) * 2;
+    final grown =
+        (math.pow(_goldenRatio, mirrored).toDouble() - 1) / (_goldenRatio - 1);
+    final eased = grown.clamp(0.0, 1.0).toDouble() / 2;
+    return t <= 0.5 ? eased : 1 - eased;
+  }
 }
 
 class _TreeBranchPainter extends CustomPainter {
   _TreeBranchPainter({
     required this.center,
     required this.targets,
+    required this.backTarget,
     required this.progress,
     required this.hasParent,
   });
 
+  static const double _goldenRatio = 1.618033988749895;
+
   final Offset center;
   final List<Offset> targets;
+  final Offset? backTarget;
   final double progress;
   final bool hasParent;
 
@@ -3609,38 +3369,52 @@ class _TreeBranchPainter extends CustomPainter {
 
     for (var i = 0; i < targets.length; i++) {
       final target = Offset.lerp(center, targets[i], progress) ?? targets[i];
-      final midX = (center.dx + target.dx) / 2;
-      final wave = (i.isEven ? 1 : -1) * 24.0;
-      final path = Path()
-        ..moveTo(center.dx, center.dy)
-        ..cubicTo(
-          midX - 38,
-          center.dy + wave,
-          midX + 16,
-          target.dy - wave,
-          target.dx,
-          target.dy,
-        );
-      canvas.drawPath(path, paint);
+      canvas.drawPath(_goldenBranchPath(center, target, i), paint);
     }
 
-    if (hasParent) {
-      final back = Offset(center.dx - 128 * progress, center.dy);
-      final backPath = Path()
-        ..moveTo(center.dx, center.dy)
-        ..quadraticBezierTo(center.dx - 72, center.dy - 14, back.dx, back.dy);
+    if (hasParent && backTarget != null) {
+      final back = Offset.lerp(center, backTarget!, progress) ?? backTarget!;
       canvas.drawPath(
-        backPath,
+        _goldenBranchPath(center, back, targets.length),
         paint
           ..color = const Color(0xFFE4EFE8).withValues(alpha: 0.35 * progress),
       );
     }
   }
 
+  Path _goldenBranchPath(Offset from, Offset to, int index) {
+    final vector = to - from;
+    final distance = vector.distance;
+    final path = Path()..moveTo(from.dx, from.dy);
+    if (distance < 0.1) {
+      return path..lineTo(to.dx, to.dy);
+    }
+
+    final baseAngle = math.atan2(vector.dy, vector.dx);
+    final turnSign =
+        baseAngle.abs() < 0.08 ? (index.isEven ? -1.0 : 1.0) : baseAngle.sign;
+    final turn = turnSign *
+        (math.pi / (5.5 * _goldenRatio)) *
+        (distance / 180).clamp(0.55, 1.0).toDouble();
+
+    for (var step = 1; step <= 18; step++) {
+      final t = step / 18;
+      final radius = distance *
+          ((math.pow(_goldenRatio, t).toDouble() - 1) / (_goldenRatio - 1));
+      final angle = baseAngle + math.sin(math.pi * t) * turn;
+      path.lineTo(
+        from.dx + math.cos(angle) * radius,
+        from.dy + math.sin(angle) * radius,
+      );
+    }
+    return path;
+  }
+
   @override
   bool shouldRepaint(covariant _TreeBranchPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.targets != targets ||
+        oldDelegate.backTarget != backTarget ||
         oldDelegate.center != center ||
         oldDelegate.hasParent != hasParent;
   }
@@ -3662,9 +3436,9 @@ class _ExploreOrbButton extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final spec = _MenuLayoutSpec.from(size);
     final shortest = size.shortestSide;
-    final openSize = (shortest * 0.31).clamp(98.0, 118.0).toDouble();
+    final openSize = (shortest * 0.22).clamp(76.0, 86.0).toDouble();
     final closedSize = (shortest * 0.24).clamp(80.0, 92.0).toDouble();
-    final openFont = (shortest * 0.030).clamp(10.0, 12.0).toDouble();
+    final openFont = (shortest * 0.026).clamp(9.0, 10.5).toDouble();
     final closedFont = (shortest * 0.038).clamp(12.0, 14.0).toDouble();
     final openAlignment =
         spec.useCompactMenu ? const Alignment(0, 0.92) : Alignment.center;
@@ -3702,7 +3476,7 @@ class _ExploreOrbButton extends StatelessWidget {
                   Icon(
                     isOpen ? Icons.close_rounded : Icons.explore_rounded,
                     color: Colors.white,
-                    size: isOpen ? 30 : 32,
+                    size: isOpen ? 24 : 32,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -3731,10 +3505,10 @@ class _RadialNode extends StatelessWidget {
     required this.radius,
     required this.width,
     required this.height,
+    required this.nodeId,
     required this.label,
     required this.icon,
     required this.selected,
-    required this.highlighted,
     required this.progress,
     required this.onTap,
     this.fixedAngle,
@@ -3745,10 +3519,10 @@ class _RadialNode extends StatelessWidget {
   final double radius;
   final double width;
   final double height;
+  final String nodeId;
   final String label;
   final IconData icon;
   final bool selected;
-  final bool highlighted;
   final double progress;
   final VoidCallback onTap;
   final double? fixedAngle;
@@ -3762,14 +3536,14 @@ class _RadialNode extends StatelessWidget {
         fixedOffset?.dx ?? (center.dx + math.cos(fixedAngle ?? 0) * radius);
     final targetDy =
         fixedOffset?.dy ?? (center.dy + math.sin(fixedAngle ?? 0) * radius);
-    final dx = center.dx + (targetDx - center.dx) * progress;
-    final dy = center.dy + (targetDy - center.dy) * progress;
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 520),
-      curve: Curves.easeOutCubic,
+    final dx = targetDx;
+    final dy = targetDy;
+    return Positioned(
       left: dx - (width / 2),
       top: dy - (height / 2),
       child: GestureDetector(
+        key: ValueKey("menu-node-$nodeId"),
+        behavior: HitTestBehavior.translucent,
         onTap: onTap,
         child: AnimatedScale(
           duration: const Duration(milliseconds: 280),
@@ -3780,15 +3554,9 @@ class _RadialNode extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected
                   ? const Color(0xFF2E7D57)
-                  : highlighted
-                      ? const Color(0xFFFFF1C7)
-                      : Colors.white.withValues(alpha: 0.95),
+                  : Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: highlighted
-                    ? const Color(0xFFFFD46A)
-                    : Colors.white.withValues(alpha: 0.7),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black38,
@@ -3816,9 +3584,7 @@ class _RadialNode extends StatelessWidget {
                           icon,
                           size: adaptiveIconSize,
                           color:
-                              selected ? Colors.white: highlighted
-                                  ? const Color(0xFF9A5A00)
-                                  : const Color(0xFF1B2E21),
+                              selected ? Colors.white : const Color(0xFF1B2E21),
                         ),
                         SizedBox(height: compact ? 2 : 5),
                         Expanded(
@@ -3834,9 +3600,7 @@ class _RadialNode extends StatelessWidget {
                                 fontSize: adaptiveTextSize,
                                 color: selected
                                     ? Colors.white
-                                    : highlighted
-                                        ? const Color(0xFF5F3C00)
-                                        : const Color(0xFF1B2E21),
+                                    : const Color(0xFF1B2E21),
                               ),
                             ),
                           ),
@@ -4079,6 +3843,24 @@ class _SettingsDetailScreenState extends State<_SettingsDetailScreen> {
         icon: Icons.key_rounded,
         title: "Metodo accesso",
         value: "Login dimostrativa locale",
+      ),
+      Card(
+        elevation: 0,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: ListTile(
+          leading: const Icon(
+            Icons.switch_account_rounded,
+            color: Color(0xFF2E7D57),
+          ),
+          title: const Text("Cambia ruolo"),
+          subtitle: const Text("Torna alla schermata di scelta profilo."),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+            (_) => false,
+          ),
+        ),
       ),
     ];
   }
@@ -8281,1164 +8063,6 @@ const List<AppEvent> _mockEvents = [
     icon: Icons.groups_rounded,
   ),
 ];
-
-class AppNotice {
-  const AppNotice({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.kindLabel,
-    required this.sourceLabel,
-    required this.icon,
-    required this.accentColor,
-    this.imageAsset,
-    this.imageUrl,
-    this.highlighted = false,
-  });
-
-  final String id;
-  final String title;
-  final String description;
-  final DateTime date;
-  final String kindLabel;
-  final String sourceLabel;
-  final IconData icon;
-  final Color accentColor;
-  final String? imageAsset;
-  final String? imageUrl;
-  final bool highlighted;
-
-  bool get hasImage => imageAsset != null || imageUrl != null;
-  String get dateLabel => _formatNoticeDate(date);
-}
-
-class NoticeController extends ChangeNotifier {
-  NoticeController(List<AppNotice> notices) : _notices = List.of(notices) {
-    _sortNotices();
-  }
-
-  factory NoticeController.demo() {
-    final today = _dateOnly(DateTime.now());
-    return NoticeController([
-      AppNotice(
-        id: "viabilita-centro",
-        title: "Viabilita modificata in centro",
-        description:
-            "Dalle 9:00 alle 13:00 la circolazione nel tratto tra piazza San Martino e via XX Settembre viene regolata per lavori urgenti. Sono consigliati parcheggi esterni e accesso pedonale al centro storico.",
-        date: today.add(const Duration(hours: 9)),
-        kindLabel: "Viabilita",
-        sourceLabel: "Comune di Apecchio",
-        icon: Icons.traffic_rounded,
-        accentColor: const Color(0xFFB5472F),
-        imageAsset: "assets/images/appecchio_bg.png",
-        highlighted: true,
-      ),
-      AppNotice(
-        id: "raccolta-rifiuti",
-        title: "Raccolta rifiuti anticipata",
-        description:
-            "Per festivita e mercato settimanale il passaggio della raccolta organico viene anticipato al mattino. Esporre i mastelli entro le 6:30 nella propria zona.",
-        date: today.add(const Duration(days: 1)),
-        kindLabel: "Ambiente",
-        sourceLabel: "Ufficio Ambiente",
-        icon: Icons.recycling_rounded,
-        accentColor: const Color(0xFF2E7D57),
-      ),
-      AppNotice(
-        id: "acqua-pianello",
-        title: "Possibile calo pressione acqua",
-        description:
-            "Intervento programmato sulla rete idrica in localita Pianello. Durante la manutenzione possono verificarsi cali di pressione e brevi interruzioni.",
-        date: today.add(const Duration(days: 3)),
-        kindLabel: "Servizi",
-        sourceLabel: "Servizi tecnici",
-        icon: Icons.water_drop_rounded,
-        accentColor: const Color(0xFF2D6F88),
-      ),
-      AppNotice(
-        id: "biblioteca-orario",
-        title: "Biblioteca aperta nel pomeriggio",
-        description:
-            "Apertura straordinaria della biblioteca comunale con spazio studio, prestito libri e supporto per consultare i servizi digitali del Comune.",
-        date: today.add(const Duration(days: 5)),
-        kindLabel: "Comunita",
-        sourceLabel: "Biblioteca comunale",
-        icon: Icons.local_library_rounded,
-        accentColor: const Color(0xFF6E4AA0),
-      ),
-    ]);
-  }
-
-  final List<AppNotice> _notices;
-
-  List<AppNotice> get notices => List.unmodifiable(_notices);
-
-  List<AppNotice> get todayNotices {
-    final today = _dateOnly(DateTime.now());
-    return _notices
-        .where((notice) => _sameDay(notice.date, today))
-        .toList(growable: false);
-  }
-
-  AppNotice? get leadingNotice {
-    if (_notices.isEmpty) {
-      return null;
-    }
-    for (final notice in _notices) {
-      if (notice.highlighted) {
-        return notice;
-      }
-    }
-    return _notices.first;
-  }
-
-  void addNotice({
-    required String title,
-    required String description,
-    required DateTime date,
-    String? imageAsset,
-    String? imageUrl,
-  }) {
-    _notices.add(
-      AppNotice(
-        id: "notice-${DateTime.now().microsecondsSinceEpoch}",
-        title: title,
-        description: description,
-        date: _dateOnly(date),
-        kindLabel: "Segnalazione",
-        sourceLabel: "Inviata dall'app",
-        icon: Icons.report_problem_rounded,
-        accentColor: const Color(0xFFB5472F),
-        imageAsset: imageAsset,
-        imageUrl: imageUrl,
-        highlighted: true,
-      ),
-    );
-    _sortNotices();
-    notifyListeners();
-  }
-
-  void _sortNotices() {
-    _notices.sort((a, b) => b.date.compareTo(a.date));
-  }
-}
-
-class NoticesArchiveScreen extends StatelessWidget {
-  const NoticesArchiveScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F1),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7F1),
-        title: const Text("Archivio avvisi"),
-      ),
-      body: AnimatedBuilder(
-        animation: appNotices,
-        builder: (context, _) {
-          final notices = appNotices.notices;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-            children: [
-              _NoticeArchiveHeader(
-                noticeCount: notices.length,
-                onOpenCalendar: () => _openCalendar(context),
-                onCreateNotice: () => _openReport(context),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                "Tutti gli avvisi",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 10),
-              for (final notice in notices)
-                _NoticeArchiveTile(
-                  notice: notice,
-                  onTap: () => _openDetail(context, notice),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _openCalendar(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const NoticeCalendarScreen()),
-    );
-  }
-
-  Future<void> _openReport(BuildContext context) async {
-    final added = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (_) => const NoticeReportScreen()),
-    );
-    if (added == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Segnalazione salvata negli avvisi.")),
-      );
-    }
-  }
-
-  void _openDetail(BuildContext context, AppNotice notice) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => NoticeDetailScreen(notice: notice),
-      ),
-    );
-  }
-}
-
-class _NoticeArchiveHeader extends StatelessWidget {
-  const _NoticeArchiveHeader({
-    required this.noticeCount,
-    required this.onOpenCalendar,
-    required this.onCreateNotice,
-  });
-
-  final int noticeCount;
-  final VoidCallback onOpenCalendar;
-  final VoidCallback onCreateNotice;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF203B2C),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              IconButton.filledTonal(
-                onPressed: onOpenCalendar,
-                tooltip: "Apri calendario avvisi",
-                icon: const Icon(Icons.calendar_month_rounded),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF203B2C),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Avvisi e segnalazioni",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "$noticeCount elementi archiviati con data, descrizione e dettagli.",
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.82),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onCreateNotice,
-              icon: const Icon(Icons.add_alert_rounded),
-              label: const Text("Nuova segnalazione"),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFFFCF5A),
-                foregroundColor: const Color(0xFF203B2C),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NoticeArchiveTile extends StatelessWidget {
-  const _NoticeArchiveTile({required this.notice, required this.onTap});
-
-  final AppNotice notice;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: notice.highlighted ? const Color(0xFFFFF3CF) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                _NoticeThumb(notice: notice),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        notice.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "${notice.dateLabel} · ${notice.kindLabel}",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notice.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(height: 1.25),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NoticeThumb extends StatelessWidget {
-  const _NoticeThumb({required this.notice});
-
-  final AppNotice notice;
-
-  @override
-  Widget build(BuildContext context) {
-    if (notice.imageAsset != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.asset(
-          notice.imageAsset!,
-          width: 58,
-          height: 58,
-          fit: BoxFit.cover,
-        ),
-      );
-    }
-    return Container(
-      width: 58,
-      height: 58,
-      decoration: BoxDecoration(
-        color: notice.accentColor.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Icon(notice.icon, color: notice.accentColor),
-    );
-  }
-}
-
-class NoticeCalendarScreen extends StatefulWidget {
-  const NoticeCalendarScreen({super.key});
-
-  @override
-  State<NoticeCalendarScreen> createState() => _NoticeCalendarScreenState();
-}
-
-class _NoticeCalendarScreenState extends State<NoticeCalendarScreen> {
-  late DateTime _focusedMonth;
-  late DateTime _selectedDay;
-
-  @override
-  void initState() {
-    super.initState();
-    final today = _dateOnly(DateTime.now());
-    _focusedMonth = DateTime(today.year, today.month);
-    _selectedDay = today;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F1),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7F1),
-        title: const Text("Calendario avvisi"),
-      ),
-      body: AnimatedBuilder(
-        animation: appNotices,
-        builder: (context, _) {
-          final notices = appNotices.notices;
-          final selectedNotices = _noticesForDay(_selectedDay, notices);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-            children: [
-              _NoticeMonthCalendar(
-                focusedMonth: _focusedMonth,
-                selectedDay: _selectedDay,
-                notices: notices,
-                onPreviousMonth: () => setState(
-                  () => _focusedMonth = DateTime(
-                    _focusedMonth.year,
-                    _focusedMonth.month - 1,
-                  ),
-                ),
-                onNextMonth: () => setState(
-                  () => _focusedMonth = DateTime(
-                    _focusedMonth.year,
-                    _focusedMonth.month + 1,
-                  ),
-                ),
-                onDaySelected: (day) => setState(() {
-                  _selectedDay = day;
-                  _focusedMonth = DateTime(day.year, day.month);
-                }),
-              ),
-              const SizedBox(height: 14),
-              _SelectedDayNoticesPanel(
-                day: _selectedDay,
-                notices: selectedNotices,
-                onNoticeTap: (notice) => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => NoticeDetailScreen(notice: notice),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _NoticeMonthCalendar extends StatelessWidget {
-  const _NoticeMonthCalendar({
-    required this.focusedMonth,
-    required this.selectedDay,
-    required this.notices,
-    required this.onPreviousMonth,
-    required this.onNextMonth,
-    required this.onDaySelected,
-  });
-
-  final DateTime focusedMonth;
-  final DateTime selectedDay;
-  final List<AppNotice> notices;
-  final VoidCallback onPreviousMonth;
-  final VoidCallback onNextMonth;
-  final ValueChanged<DateTime> onDaySelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final days = _calendarDays(focusedMonth);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE1E8DD)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              IconButton.filledTonal(
-                onPressed: onPreviousMonth,
-                icon: const Icon(Icons.chevron_left_rounded),
-                tooltip: "Mese precedente",
-              ),
-              Expanded(
-                child: Text(
-                  _formatMonthYear(focusedMonth),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              IconButton.filledTonal(
-                onPressed: onNextMonth,
-                icon: const Icon(Icons.chevron_right_rounded),
-                tooltip: "Mese successivo",
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              for (final label in [
-                "Lun",
-                "Mar",
-                "Mer",
-                "Gio",
-                "Ven",
-                "Sab",
-                "Dom",
-              ])
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: days.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              childAspectRatio: 0.90,
-            ),
-            itemBuilder: (context, index) {
-              final day = days[index];
-              return _NoticeCalendarDayCell(
-                day: day,
-                inMonth: _sameMonth(day, focusedMonth),
-                selected: _sameDay(day, selectedDay),
-                notices: _noticesForDay(day, notices),
-                onTap: () => onDaySelected(day),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NoticeCalendarDayCell extends StatelessWidget {
-  const _NoticeCalendarDayCell({
-    required this.day,
-    required this.inMonth,
-    required this.selected,
-    required this.notices,
-    required this.onTap,
-  });
-
-  final DateTime day;
-  final bool inMonth;
-  final bool selected;
-  final List<AppNotice> notices;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasNotices = notices.isNotEmpty;
-    final highlighted = notices.any((notice) => notice.highlighted);
-    return Material(
-      color: selected
-          ? const Color(0xFFE4F2E8)
-          : highlighted
-              ? const Color(0xFFFFF3CF)
-              : inMonth
-                  ? const Color(0xFFFAFCF7)
-                  : const Color(0xFFF1F2EE),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected
-                  ? const Color(0xFF2E7D57)
-                  : hasNotices
-                      ? const Color(0xFFC9A13A)
-                      : const Color(0xFFE7ECE2),
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  "${day.day}",
-                  style: TextStyle(
-                    color: inMonth ? Colors.black87 : Colors.black38,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              if (hasNotices)
-                Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Row(
-                    children: [
-                      Icon(
-                        highlighted
-                            ? Icons.campaign_rounded
-                            : Icons.circle_rounded,
-                        color: highlighted
-                            ? const Color(0xFF9A5A00)
-                            : const Color(0xFF2E7D57),
-                        size: highlighted ? 16 : 9,
-                      ),
-                      if (notices.length > 1) ...[
-                        const SizedBox(width: 3),
-                        Text(
-                          "${notices.length}",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SelectedDayNoticesPanel extends StatelessWidget {
-  const _SelectedDayNoticesPanel({
-    required this.day,
-    required this.notices,
-    required this.onNoticeTap,
-  });
-
-  final DateTime day;
-  final List<AppNotice> notices;
-  final ValueChanged<AppNotice> onNoticeTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE1E8DD)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _formatDayLong(day),
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 10),
-          if (notices.isEmpty)
-            const Text(
-              "Nessun avviso per questa giornata.",
-              style: TextStyle(
-                color: Colors.black54,
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          else
-            for (final notice in notices)
-              _SelectedDayNoticeRow(
-                notice: notice,
-                onTap: () => onNoticeTap(notice),
-              ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectedDayNoticeRow extends StatelessWidget {
-  const _SelectedDayNoticeRow({required this.notice, required this.onTap});
-
-  final AppNotice notice;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: notice.accentColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                Icon(notice.icon, color: notice.accentColor),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        notice.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        notice.kindLabel,
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class NoticeDetailScreen extends StatelessWidget {
-  const NoticeDetailScreen({super.key, required this.notice});
-
-  final AppNotice notice;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F1),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7F1),
-        title: const Text("Dettaglio avviso"),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-        children: [
-          _NoticeHero(notice: notice),
-          const SizedBox(height: 18),
-          Text(
-            notice.title,
-            style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 14),
-          _NoticeInfoRow(
-            icon: Icons.calendar_month_rounded,
-            text: notice.dateLabel,
-          ),
-          _NoticeInfoRow(icon: notice.icon, text: notice.kindLabel),
-          _NoticeInfoRow(
-            icon: Icons.verified_rounded,
-            text: notice.sourceLabel,
-          ),
-          const SizedBox(height: 16),
-          _NoticeDetailSection(title: "Descrizione", body: notice.description),
-          const _NoticeDetailSection(
-            title: "Aggiornamenti",
-            body:
-                "La scheda resta collegata alle notifiche e al calendario degli avvisi, cosi ogni aggiornamento conserva data, contesto e archivio.",
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NoticeHero extends StatelessWidget {
-  const _NoticeHero({required this.notice});
-
-  final AppNotice notice;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(26),
-      child: SizedBox(
-        height: 236,
-        child: Stack(
-          children: [
-            Positioned.fill(child: _NoticeHeroBackground(notice: notice)),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.08),
-                      Colors.black.withValues(alpha: 0.62),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 18,
-              right: 18,
-              bottom: 18,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      notice.dateLabel,
-                      style: TextStyle(
-                        color: notice.accentColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    notice.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      height: 1,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NoticeHeroBackground extends StatelessWidget {
-  const _NoticeHeroBackground({required this.notice});
-
-  final AppNotice notice;
-
-  @override
-  Widget build(BuildContext context) {
-    if (notice.imageAsset != null) {
-      return Image.asset(notice.imageAsset!, fit: BoxFit.cover);
-    }
-    if (notice.imageUrl != null) {
-      return Image.network(
-        notice.imageUrl!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _NoticeGradientBackground(notice: notice),
-      );
-    }
-    return _NoticeGradientBackground(notice: notice);
-  }
-}
-
-class _NoticeGradientBackground extends StatelessWidget {
-  const _NoticeGradientBackground({required this.notice});
-
-  final AppNotice notice;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [notice.accentColor, const Color(0xFF203B2C)],
-        ),
-      ),
-      child: Align(
-        alignment: Alignment.topRight,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Icon(
-            notice.icon,
-            color: Colors.white.withValues(alpha: 0.42),
-            size: 82,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NoticeInfoRow extends StatelessWidget {
-  const _NoticeInfoRow({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: const Color(0xFF2E7D57)),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NoticeDetailSection extends StatelessWidget {
-  const _NoticeDetailSection({required this.title, required this.body});
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 6),
-          Text(body, style: const TextStyle(height: 1.35)),
-        ],
-      ),
-    );
-  }
-}
-
-class NoticeReportScreen extends StatefulWidget {
-  const NoticeReportScreen({super.key});
-
-  @override
-  State<NoticeReportScreen> createState() => _NoticeReportScreenState();
-}
-
-class _NoticeReportScreenState extends State<NoticeReportScreen> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _imageController = TextEditingController();
-  DateTime _selectedDate = _dateOnly(DateTime.now());
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _imageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F1),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7F1),
-        title: const Text("Nuova segnalazione"),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: "Titolo",
-                      prefixIcon: Icon(Icons.title_rounded),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return "Inserisci un titolo";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _descriptionController,
-                    minLines: 4,
-                    maxLines: 6,
-                    decoration: const InputDecoration(
-                      labelText: "Descrizione",
-                      prefixIcon: Icon(Icons.notes_rounded),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return "Inserisci una descrizione";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _pickDate,
-                    icon: const Icon(Icons.calendar_month_rounded),
-                    label: Text(_formatNoticeDate(_selectedDate)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _imageController,
-                    decoration: const InputDecoration(
-                      labelText: "Immagine opzionale",
-                      hintText: "URL o assets/images/appecchio_bg.png",
-                      prefixIcon: Icon(Icons.image_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    onPressed: _submit,
-                    icon: const Icon(Icons.send_rounded),
-                    label: const Text("Salva segnalazione"),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D57),
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() => _selectedDate = _dateOnly(picked));
-    }
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    final imageValue = _imageController.text.trim();
-    final imageAsset = imageValue.startsWith("assets/") ? imageValue : null;
-    final imageUrl =
-        imageValue.isNotEmpty && imageAsset == null ? imageValue : null;
-    appNotices.addNotice(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      date: _selectedDate,
-      imageAsset: imageAsset,
-      imageUrl: imageUrl,
-    );
-    Navigator.of(context).pop(true);
-  }
-}
-
-List<AppNotice> _noticesForDay(DateTime day, List<AppNotice> notices) {
-  return notices
-      .where((notice) => _sameDay(notice.date, day))
-      .toList(growable: false);
-}
-
-String _formatNoticeDate(DateTime date) {
-  return "${date.day} ${_monthName(date.month)} ${date.year}";
-}
-
-String _formatNoticeShortDate(DateTime date) {
-  final today = _dateOnly(DateTime.now());
-  final tomorrow = today.add(const Duration(days: 1));
-  if (_sameDay(date, today)) {
-    return "Oggi";
-  }
-  if (_sameDay(date, tomorrow)) {
-    return "Domani";
-  }
-  const months = [
-    "gen",
-    "feb",
-    "mar",
-    "apr",
-    "mag",
-    "giu",
-    "lug",
-    "ago",
-    "set",
-    "ott",
-    "nov",
-    "dic",
-  ];
-  return "${date.day} ${months[date.month - 1]}";
-}
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key, this.initialFilter});
@@ -15405,11 +14029,11 @@ class _BackofficeScreenState extends State<BackofficeScreen> {
             title: const Text("Backoffice APPecchio"),
             actions: [
               IconButton(
-                tooltip: "Esci",
+                tooltip: "Cambia ruolo",
                 onPressed: () => Navigator.of(context).pushReplacement(
                   MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
                 ),
-                icon: const Icon(Icons.logout_rounded),
+                icon: const Icon(Icons.switch_account_rounded),
               ),
             ],
           ),

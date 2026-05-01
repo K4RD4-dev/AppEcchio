@@ -120,18 +120,18 @@ function render() {
   document.getElementById("voucherList").innerHTML =
     state.vouchers.length === 0
       ? "<li>Nessun voucher disponibile</li>"
-<<<<<<< HEAD
+<<<<<<< codex/plan-gamification-feature-for-app-t32ze2
       : state.vouchers.map((v) => `<li>${v.label} (${v.percentage}%) - Codice: <strong>${v.code}</strong></li>`).join("");
 =======
       : state.vouchers
           .map((v) => `<li>${v.label} (${v.percentage}%) - Codice: <strong>${v.code}</strong> - Stato: ${v.status}</li>`)
           .join("");
->>>>>>> origin/codex/plan-gamification-feature-for-app
+>>>>>>> main
 
   document.getElementById("notifications").innerHTML =
     state.notifications.length === 0
       ? "<li>Nessuna scansione/click registrata</li>"
-<<<<<<< HEAD
+<<<<<<< codex/plan-gamification-feature-for-app-t32ze2
       : state.notifications
           .map((n) => `<li>[${n.at}] ${n.status}: ${n.message}</li>`)
           .join("");
@@ -150,7 +150,7 @@ function render() {
     : "Nessun pagamento eseguito";
 
   saveState();
->>>>>>> origin/codex/plan-gamification-feature-for-app
+>>>>>>> main
 }
 
 function initTabs() {
@@ -167,10 +167,10 @@ function initTabs() {
 document.getElementById("simulateCheckin").addEventListener("click", simulateCheckin);
 document.getElementById("buy5").addEventListener("click", () => buyDiscount(500, "Sconto 5%", 5));
 document.getElementById("buy10").addEventListener("click", () => buyDiscount(1000, "Sconto 10%", 10));
-<<<<<<< HEAD
+<<<<<<< codex/plan-gamification-feature-for-app-t32ze2
 =======
 document.getElementById("payNow").addEventListener("click", runCheckout);
->>>>>>> origin/codex/plan-gamification-feature-for-app
+>>>>>>> main
 
 initTabs();
 render();

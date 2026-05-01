@@ -43,6 +43,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
   }
 
+  Finder menuNode(String id) => find.byKey(ValueKey("menu-node-$id"));
+
   testWidgets('renders the profile login screen', (WidgetTester tester) async {
     await pumpApp(tester);
 
@@ -184,19 +186,19 @@ void main() {
     expect(find.text('Impostazioni'), findsNothing);
   });
 
-  testWidgets('uses the compact menu on a short landscape viewport', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('keeps the radial tree menu on a short landscape viewport',
+      (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await pumpApp(tester);
-    await loginAsTourist(tester);
+    await loginAsResident(tester);
     await openMenu(tester);
 
     expect(find.text('Eventi'), findsOneWidget);
     expect(find.text('Sport'), findsOneWidget);
-    expect(find.text('myApecchio'), findsNothing);
+    expect(find.text('myApecchio'), findsOneWidget);
+    expect(find.byType(GridView), findsNothing);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
@@ -231,11 +233,11 @@ void main() {
     await loginAsTourist(tester);
     await openMenu(tester);
 
-    await tester.tap(find.text('Sport'));
+    await tester.tap(menuNode("sport_prenotazioni"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Sentieri e percorsi naturalistici'));
+    await tester.tap(menuNode("sentieri"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Mappa sentieri'));
+    await tester.tap(menuNode("mappa_sentieri"));
     await tester.pumpAndSettle();
 
     expect(find.text('Sentieri e percorsi naturalistici'), findsOneWidget);
@@ -305,11 +307,11 @@ void main() {
     await loginAsResident(tester);
     await openMenu(tester);
 
-    await tester.tap(find.text('Sport'));
+    await tester.tap(menuNode("sport_prenotazioni"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Prenota impianti'));
+    await tester.tap(menuNode("prenotazioni_sport"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Campo da tennis'));
+    await tester.tap(menuNode("campo_tennis"));
     await tester.pumpAndSettle();
 
     expect(find.text('Prenota impianti'), findsOneWidget);
@@ -426,11 +428,9 @@ void main() {
     await loginAsResident(tester);
     await openMenu(tester);
 
-    await tester.ensureVisible(find.text('Servizi'));
-    await tester.tap(find.text('Servizi'));
+    await tester.tap(menuNode("servizi"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.ensureVisible(find.text('Farmacie'));
-    await tester.tap(find.text('Farmacie'));
+    await tester.tap(menuNode("farmacia"));
     await tester.pumpAndSettle();
 
     expect(find.text('Servizi utili'), findsOneWidget);
@@ -441,57 +441,5 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Chiama farmacia'), findsOneWidget);
-  });
-
-  testWidgets('renders notices archive, calendar, detail and report flow', (
-    WidgetTester tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(const MaterialApp(home: NoticesArchiveScreen()));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Archivio avvisi'), findsOneWidget);
-    expect(find.text('Avvisi e segnalazioni'), findsOneWidget);
-    expect(find.text('Viabilita modificata in centro'), findsWidgets);
-
-    await tester.tap(find.byTooltip('Apri calendario avvisi'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Calendario avvisi'), findsOneWidget);
-    expect(find.text('Lun'), findsOneWidget);
-    expect(find.text('Mar'), findsOneWidget);
-
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Viabilita modificata in centro').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Dettaglio avviso'), findsOneWidget);
-    expect(find.text('Descrizione'), findsOneWidget);
-    expect(find.text('Comune di Apecchio'), findsOneWidget);
-
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Nuova segnalazione'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextFormField).at(0), 'Lampione spento');
-    await tester.enterText(
-      find.byType(TextFormField).at(1),
-      'Segnalazione test dal mockup.',
-    );
-    await tester.ensureVisible(find.text('Salva segnalazione'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Salva segnalazione'));
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(
-      find.text('Lampione spento'),
-      260,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Lampione spento'), findsOneWidget);
   });
 }
