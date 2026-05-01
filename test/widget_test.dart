@@ -16,8 +16,22 @@ void main() {
   }
 
   Future<void> loginAsTourist(WidgetTester tester) async {
-    await tester.ensureVisible(find.text('Turisti'));
-    await tester.tap(find.text('Turisti'));
+    await tester.tap(find.byType(DropdownButtonFormField<UserProfile>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Turisti').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Accedi'));
+    await tester.tap(find.text('Accedi'));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> loginAsBackoffice(
+    WidgetTester tester,
+    String roleLabel,
+  ) async {
+    await tester.tap(find.byType(DropdownButtonFormField<UserProfile>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(roleLabel).last);
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Accedi'));
     await tester.tap(find.text('Accedi'));
@@ -35,13 +49,114 @@ void main() {
     expect(find.text('APPecchio'), findsOneWidget);
     expect(find.text('Email o codice utente'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Ruolo di accesso'), findsOneWidget);
     expect(find.text('Residenti'), findsOneWidget);
-    expect(find.text('Turisti'), findsOneWidget);
     expect(find.text('Accedi'), findsOneWidget);
   });
 
-  testWidgets('welcomes a resident user on the home screen',
+  testWidgets('logs in as merchant and opens the backoffice dashboard',
       (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester);
+    await loginAsBackoffice(tester, 'Esercente');
+
+    expect(find.text('Backoffice APPecchio'), findsWidgets);
+    expect(
+        find.text('Gestisci pagina, menu, offerte ed eventi'), findsOneWidget);
+    expect(find.text('Partecipazione eventi'), findsOneWidget);
+    expect(find.text('Cena degustazione del Monte Nerone'), findsOneWidget);
+    expect(find.text('Riunione direttivo Pro Loco'), findsNothing);
+  });
+
+  testWidgets('mayor sees institutional dashboard aggregates',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+          home: BackofficeScreen(initialProfile: UserProfile.mayor)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Priorità del territorio e comunicazioni pubbliche'),
+        findsOneWidget);
+    expect(find.text('Partecipazione eventi pubblici e istituzionali'),
+        findsOneWidget);
+    expect(find.text('Consiglio comunale'), findsOneWidget);
+    expect(find.text('Briefing staff weekend'), findsNothing);
+  });
+
+  testWidgets('supervisor can approve an event in review',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: BackofficeScreen(initialProfile: UserProfile.supervisor),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('backoffice-section-events')));
+    await tester.pumpAndSettle();
+    expect(find.text('In revisione'), findsWidgets);
+
+    await tester.tap(find.text('Approva').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Pubblicato'), findsWidgets);
+  });
+
+  testWidgets('organization page exposes cover controls',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: BackofficeScreen(initialProfile: UserProfile.merchant),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('backoffice-section-page')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Immagine pagina'), findsOneWidget);
+    expect(find.text('Mostra intera'), findsOneWidget);
+    expect(find.text('Fuoco orizzontale'), findsOneWidget);
+  });
+
+  testWidgets('created event appears in events and participation dashboard',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: BackofficeScreen(initialProfile: UserProfile.merchant),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('backoffice-section-events')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crea evento'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nuovo appuntamento'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey('backoffice-section-dashboard')));
+    await tester.pumpAndSettle();
+    expect(find.text('Nuovo appuntamento'), findsOneWidget);
+  });
+
+  testWidgets('welcomes a resident user on the home screen', (
+    WidgetTester tester,
+  ) async {
     await pumpApp(tester);
     await loginAsResident(tester);
 
@@ -53,8 +168,9 @@ void main() {
     expect(find.text('Vicino a me'), findsOneWidget);
   });
 
-  testWidgets('opens the radial menu on a phone portrait viewport',
-      (WidgetTester tester) async {
+  testWidgets('opens the radial menu on a phone portrait viewport', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -68,8 +184,9 @@ void main() {
     expect(find.text('Impostazioni'), findsNothing);
   });
 
-  testWidgets('uses the compact menu on a short landscape viewport',
-      (WidgetTester tester) async {
+  testWidgets('uses the compact menu on a short landscape viewport', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -83,8 +200,9 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
-  testWidgets('opens settings and profile pages from the home header',
-      (WidgetTester tester) async {
+  testWidgets('opens settings and profile pages from the home header', (
+    WidgetTester tester,
+  ) async {
     await pumpApp(tester);
     await loginAsResident(tester);
 
@@ -103,8 +221,9 @@ void main() {
     expect(find.text('Stato privacy'), findsOneWidget);
   });
 
-  testWidgets('opens trails from the sport menu tree',
-      (WidgetTester tester) async {
+  testWidgets('opens trails from the sport menu tree', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -124,18 +243,18 @@ void main() {
     expect(find.text('Apecchio - Bivio Sentiero Italia'), findsWidgets);
   });
 
-  testWidgets('selecting a trail opens its full-screen map',
-      (WidgetTester tester) async {
+  testWidgets('selecting a trail opens its full-screen map', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      const MaterialApp(home: TrailsScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: TrailsScreen()));
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const ValueKey("trail-map-button-sentiero_39")));
+    await tester.tap(
+      find.byKey(const ValueKey("trail-map-button-sentiero_39")),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Sentiero 39'), findsOneWidget);
@@ -143,14 +262,13 @@ void main() {
     expect(find.text('Apri scheda sentiero'), findsOneWidget);
   });
 
-  testWidgets('trails screen filters and opens a trail detail',
-      (WidgetTester tester) async {
+  testWidgets('trails screen filters and opens a trail detail', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      const MaterialApp(home: TrailsScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: TrailsScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('Tutti'), findsOneWidget);
@@ -177,8 +295,9 @@ void main() {
     expect(find.text('Scarica GPX'), findsOneWidget);
   });
 
-  testWidgets('opens sport booking from the sport menu tree',
-      (WidgetTester tester) async {
+  testWidgets('opens sport booking from the sport menu tree', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -201,12 +320,11 @@ void main() {
     expect(find.text('Mar'), findsOneWidget);
   });
 
-  testWidgets('opens sport rules and outdoor services screens',
-      (WidgetTester tester) async {
+  testWidgets('opens sport rules and outdoor services screens', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: SportRulesScreen(initialSectionId: 'tariffe'),
-      ),
+      const MaterialApp(home: SportRulesScreen(initialSectionId: 'tariffe')),
     );
     await tester.pumpAndSettle();
 
@@ -228,8 +346,9 @@ void main() {
     expect(find.text('Richiedi disponibilita'), findsOneWidget);
   });
 
-  testWidgets('renders final info pages on a phone viewport',
-      (WidgetTester tester) async {
+  testWidgets('renders final info pages on a phone viewport', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -297,8 +416,9 @@ void main() {
     expect(find.text('Apri mappa'), findsOneWidget);
   });
 
-  testWidgets('opens a final services page from the radial menu',
-      (WidgetTester tester) async {
+  testWidgets('opens a final services page from the radial menu', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 

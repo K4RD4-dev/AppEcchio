@@ -32,7 +32,15 @@ class AppEcchioApp extends StatelessWidget {
   }
 }
 
-enum UserProfile { resident, tourist }
+enum UserProfile {
+  resident,
+  tourist,
+  merchant,
+  organization,
+  supervisor,
+  mayor,
+  admin,
+}
 
 class AppUser {
   const AppUser({
@@ -53,8 +61,23 @@ class AppUser {
         return "Cittadino residente";
       case UserProfile.tourist:
         return "Turista";
+      case UserProfile.merchant:
+        return "Esercente";
+      case UserProfile.organization:
+        return "Organizzazione";
+      case UserProfile.supervisor:
+        return "Supervisore";
+      case UserProfile.mayor:
+        return "Sindaco";
+      case UserProfile.admin:
+        return "Amministratore";
     }
   }
+
+  bool get isBackoffice => switch (profile) {
+        UserProfile.resident || UserProfile.tourist => false,
+        _ => true,
+      };
 }
 
 class UserSettings {
@@ -206,11 +229,7 @@ class RewardLedgerEntry {
 class GamificationController extends ChangeNotifier {
   GamificationController.demo()
       : rewardTiers = const [
-          RewardTier(
-            threshold: 500,
-            label: "Sconto 5%",
-            discountPercentage: 5,
-          ),
+          RewardTier(threshold: 500, label: "Sconto 5%", discountPercentage: 5),
           RewardTier(
             threshold: 1000,
             label: "Sconto 10%",
@@ -219,11 +238,7 @@ class GamificationController extends ChangeNotifier {
         ];
 
   static const List<RewardLevel> levels = [
-    RewardLevel(
-      name: "Esploratore",
-      minPoints: 0,
-      icon: Icons.explore_rounded,
-    ),
+    RewardLevel(name: "Esploratore", minPoints: 0, icon: Icons.explore_rounded),
     RewardLevel(
       name: "Amico del borgo",
       minPoints: 300,
@@ -369,10 +384,7 @@ class GamificationController extends ChangeNotifier {
     );
   }
 
-  bool redeemVoucher({
-    required String code,
-    required String merchantName,
-  }) {
+  bool redeemVoucher({required String code, required String merchantName}) {
     final index = _vouchers.indexWhere(
       (voucher) => voucher.code == code && voucher.isActive,
     );
@@ -434,10 +446,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController =
-      TextEditingController(text: "utente@apppecchio.it");
-  final TextEditingController _passwordController =
-      TextEditingController(text: "demo");
+  final TextEditingController _emailController = TextEditingController(
+    text: "utente@apppecchio.it",
+  );
+  final TextEditingController _passwordController = TextEditingController(
+    text: "demo",
+  );
   UserProfile _selectedProfile = UserProfile.resident;
   bool _obscurePassword = true;
 
@@ -515,7 +529,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         _selectedProfile == UserProfile.resident
                             ? "Profilo residente: include myApecchio, pratiche, preferenze e permessi comunali."
-                            : "Profilo turista: mostra esperienze, luoghi, eventi e servizi pubblici essenziali.",
+                            : _selectedProfile == UserProfile.tourist
+                                ? "Profilo turista: mostra esperienze, luoghi, eventi e servizi pubblici essenziali."
+                                : "Profilo backoffice: apre cruscotto, pagina organizzazione, eventi, voucher e strumenti operativi.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.72),
@@ -536,7 +552,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _openHome(BuildContext context) {
     final user = AppUser(
-      name: _selectedProfile == UserProfile.resident ? "Giulia" : "Luca",
+      name: _demoNameForProfile(_selectedProfile),
       profile: _selectedProfile,
       email: _emailController.text.trim().isEmpty
           ? "utente@apppecchio.it"
@@ -551,9 +567,23 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(user: user),
+        builder: (_) => user.isBackoffice
+            ? BackofficeScreen(initialProfile: user.profile)
+            : HomeScreen(user: user),
       ),
     );
+  }
+
+  String _demoNameForProfile(UserProfile profile) {
+    return switch (profile) {
+      UserProfile.resident => "Giulia",
+      UserProfile.tourist => "Luca",
+      UserProfile.merchant => "Osteria Monte Nerone",
+      UserProfile.organization => "Pro Loco Apecchio",
+      UserProfile.supervisor => "Supervisore",
+      UserProfile.mayor => "Sindaco",
+      UserProfile.admin => "Admin APPecchio",
+    };
   }
 }
 
@@ -586,22 +616,39 @@ class _LoginFormCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SegmentedButton<UserProfile>(
-              segments: const [
-                ButtonSegment<UserProfile>(
-                  value: UserProfile.resident,
-                  icon: Icon(Icons.home_work_rounded),
-                  label: Text("Residenti"),
-                ),
-                ButtonSegment<UserProfile>(
-                  value: UserProfile.tourist,
-                  icon: Icon(Icons.hiking_rounded),
-                  label: Text("Turisti"),
-                ),
+            DropdownButtonFormField<UserProfile>(
+              initialValue: selectedProfile,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: "Ruolo di accesso",
+                helperText:
+                    "Scegli il profilo con cui vuoi entrare nel mockup.",
+                prefixIcon: Icon(Icons.badge_rounded),
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final option in _loginProfileOptions)
+                  DropdownMenuItem<UserProfile>(
+                    value: option.profile,
+                    child: Row(
+                      children: [
+                        Icon(option.icon, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            option.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
-              selected: {selectedProfile},
-              onSelectionChanged: (selection) =>
-                  onProfileChanged(selection.first),
+              onChanged: (value) {
+                if (value != null) {
+                  onProfileChanged(value);
+                }
+              },
             ),
             const SizedBox(height: 16),
             TextField(
@@ -656,11 +703,50 @@ class _LoginFormCard extends StatelessWidget {
   }
 }
 
+class _LoginProfileOption {
+  const _LoginProfileOption(this.profile, this.label, this.icon);
+
+  final UserProfile profile;
+  final String label;
+  final IconData icon;
+}
+
+const List<_LoginProfileOption> _loginProfileOptions = [
+  _LoginProfileOption(
+    UserProfile.resident,
+    "Residenti",
+    Icons.home_work_rounded,
+  ),
+  _LoginProfileOption(UserProfile.tourist, "Turisti", Icons.hiking_rounded),
+  _LoginProfileOption(
+    UserProfile.merchant,
+    "Esercente",
+    Icons.storefront_rounded,
+  ),
+  _LoginProfileOption(
+    UserProfile.organization,
+    "Organizzazione",
+    Icons.groups_rounded,
+  ),
+  _LoginProfileOption(
+    UserProfile.supervisor,
+    "Supervisore",
+    Icons.dashboard_rounded,
+  ),
+  _LoginProfileOption(
+    UserProfile.mayor,
+    "Sindaco",
+    Icons.account_balance_rounded,
+  ),
+  _LoginProfileOption(
+    UserProfile.admin,
+    "Amministratore",
+    Icons.admin_panel_settings_rounded,
+  ),
+];
+
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({
-    super.key,
-    required this.user,
-  });
+  const HomeScreen({super.key, required this.user});
 
   final AppUser user;
 
@@ -689,11 +775,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _activeQuickFilter = "oggi";
 
   static const List<HomeQuickAction> _quickActions = [
-    HomeQuickAction(
-      id: "oggi",
-      label: "Oggi",
-      icon: Icons.today_rounded,
-    ),
+    HomeQuickAction(id: "oggi", label: "Oggi", icon: Icons.today_rounded),
     HomeQuickAction(
       id: "aperti",
       label: "Aperti ora",
@@ -722,30 +804,36 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.celebration_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "calendario",
-              label: "Calendario",
-              icon: Icons.calendar_month_rounded),
+            id: "calendario",
+            label: "Calendario",
+            icon: Icons.calendar_month_rounded,
+          ),
           MenuNode(
-              id: "feste_tradizioni",
-              label: "Feste e tradizioni",
-              icon: Icons.celebration_rounded),
+            id: "feste_tradizioni",
+            label: "Feste e tradizioni",
+            icon: Icons.celebration_rounded,
+          ),
           MenuNode(
-              id: "eventi_gastronomici",
-              label: "Eventi gastronomici",
-              icon: Icons.restaurant_menu_rounded),
+            id: "eventi_gastronomici",
+            label: "Eventi gastronomici",
+            icon: Icons.restaurant_menu_rounded,
+          ),
           MenuNode(
-              id: "cultura_spettacoli",
-              label: "Cultura e spettacoli",
-              icon: Icons.theater_comedy_rounded),
+            id: "cultura_spettacoli",
+            label: "Cultura e spettacoli",
+            icon: Icons.theater_comedy_rounded,
+          ),
           MenuNode(id: "mostre", label: "Mostre", icon: Icons.museum_rounded),
           MenuNode(
-              id: "sport_outdoor",
-              label: "Sport e outdoor",
-              icon: Icons.terrain_rounded),
+            id: "sport_outdoor",
+            label: "Sport e outdoor",
+            icon: Icons.terrain_rounded,
+          ),
           MenuNode(
-              id: "comunita_spiritualita",
-              label: "Comunita e spiritualita",
-              icon: Icons.groups_rounded),
+            id: "comunita_spiritualita",
+            label: "Comunita e spiritualita",
+            icon: Icons.groups_rounded,
+          ),
         ],
       ),
       MenuNode(
@@ -754,37 +842,46 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.restaurant_menu_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "ristoranti",
-              label: "Ristoranti",
-              icon: Icons.restaurant_rounded),
+            id: "ristoranti",
+            label: "Ristoranti",
+            icon: Icons.restaurant_rounded,
+          ),
           MenuNode(
-              id: "agriturismi",
-              label: "Agriturismi",
-              icon: Icons.park_rounded),
+            id: "agriturismi",
+            label: "Agriturismi",
+            icon: Icons.park_rounded,
+          ),
           MenuNode(id: "bar", label: "Bar", icon: Icons.local_cafe_rounded),
           MenuNode(
-              id: "locali", label: "Locali", icon: Icons.storefront_rounded),
+            id: "locali",
+            label: "Locali",
+            icon: Icons.storefront_rounded,
+          ),
           MenuNode(
             id: "prodotti_locali",
             label: "Prodotti locali",
             icon: Icons.shopping_basket_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "prodotto_tartufo",
-                  label: "Tartufo",
-                  icon: Icons.spa_rounded),
+                id: "prodotto_tartufo",
+                label: "Tartufo",
+                icon: Icons.spa_rounded,
+              ),
               MenuNode(
-                  id: "prodotto_birra",
-                  label: "Birra artigianale",
-                  icon: Icons.sports_bar_rounded),
+                id: "prodotto_birra",
+                label: "Birra artigianale",
+                icon: Icons.sports_bar_rounded,
+              ),
               MenuNode(
-                  id: "tartufo_birra",
-                  label: "Alogastronomia",
-                  icon: Icons.local_bar_rounded),
+                id: "tartufo_birra",
+                label: "Alogastronomia",
+                icon: Icons.local_bar_rounded,
+              ),
               MenuNode(
-                  id: "tipicita_deco",
-                  label: "Tipicita De.C.O.",
-                  icon: Icons.verified_rounded),
+                id: "tipicita_deco",
+                label: "Tipicita De.C.O.",
+                icon: Icons.verified_rounded,
+              ),
             ],
           ),
         ],
@@ -797,9 +894,10 @@ class _HomeScreenState extends State<HomeScreen> {
           MenuNode(id: "bnb", label: "B&B", icon: Icons.home_work_rounded),
           MenuNode(id: "hotel", label: "Hotel", icon: Icons.hotel_rounded),
           MenuNode(
-              id: "agriturismi_dormire",
-              label: "Agriturismi",
-              icon: Icons.park_rounded),
+            id: "agriturismi_dormire",
+            label: "Agriturismi",
+            icon: Icons.park_rounded,
+          ),
         ],
       ),
       MenuNode(
@@ -808,7 +906,10 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.account_balance_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "musei", label: "Musei e mostre", icon: Icons.museum_rounded),
+            id: "musei",
+            label: "Musei e mostre",
+            icon: Icons.museum_rounded,
+          ),
           MenuNode(
             id: "arte_storia",
             label: "Arte e storia",
@@ -816,13 +917,15 @@ class _HomeScreenState extends State<HomeScreen> {
             children: <MenuNode>[
               MenuNode(id: "arte", label: "Arte", icon: Icons.palette_rounded),
               MenuNode(
-                  id: "storia",
-                  label: "Percorsi storici",
-                  icon: Icons.history_edu_rounded),
+                id: "storia",
+                label: "Percorsi storici",
+                icon: Icons.history_edu_rounded,
+              ),
               MenuNode(
-                  id: "vicolo_ebrei",
-                  label: "Vicolo degli Ebrei",
-                  icon: Icons.signpost_rounded),
+                id: "vicolo_ebrei",
+                label: "Vicolo degli Ebrei",
+                icon: Icons.signpost_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -831,17 +934,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.location_city_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "borghi",
-                  label: "Borghi",
-                  icon: Icons.location_city_rounded),
+                id: "borghi",
+                label: "Borghi",
+                icon: Icons.location_city_rounded,
+              ),
               MenuNode(
-                  id: "teatro_perugini",
-                  label: "Teatro G. Perugini",
-                  icon: Icons.theaters_rounded),
+                id: "teatro_perugini",
+                label: "Teatro G. Perugini",
+                icon: Icons.theaters_rounded,
+              ),
               MenuNode(
-                  id: "globo_pace",
-                  label: "Globo della Pace",
-                  icon: Icons.public_rounded),
+                id: "globo_pace",
+                label: "Globo della Pace",
+                icon: Icons.public_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -850,25 +956,30 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.map_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "dove_siamo",
-                  label: "Dove siamo",
-                  icon: Icons.location_on_rounded),
+                id: "dove_siamo",
+                label: "Dove siamo",
+                icon: Icons.location_on_rounded,
+              ),
               MenuNode(
-                  id: "monte_nerone",
-                  label: "Monte Nerone",
-                  icon: Icons.landscape_rounded),
+                id: "monte_nerone",
+                label: "Monte Nerone",
+                icon: Icons.landscape_rounded,
+              ),
               MenuNode(
-                  id: "citta_birra",
-                  label: "Citta della Birra",
-                  icon: Icons.sports_bar_rounded),
+                id: "citta_birra",
+                label: "Citta della Birra",
+                icon: Icons.sports_bar_rounded,
+              ),
               MenuNode(
-                  id: "mappa_turistica",
-                  label: "Mappa turistica",
-                  icon: Icons.map_outlined),
+                id: "mappa_turistica",
+                label: "Mappa turistica",
+                icon: Icons.map_outlined,
+              ),
               MenuNode(
-                  id: "webcam_meteo",
-                  label: "Webcam e meteo",
-                  icon: Icons.wb_cloudy_rounded),
+                id: "webcam_meteo",
+                label: "Webcam e meteo",
+                icon: Icons.wb_cloudy_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -877,29 +988,35 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.church_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "ss_crocifisso",
-                  label: "Santuario SS. Crocifisso",
-                  icon: Icons.church_rounded),
+                id: "ss_crocifisso",
+                label: "Santuario SS. Crocifisso",
+                icon: Icons.church_rounded,
+              ),
               MenuNode(
-                  id: "madonna_vita",
-                  label: "Madonna della Vita",
-                  icon: Icons.volunteer_activism_rounded),
+                id: "madonna_vita",
+                label: "Madonna della Vita",
+                icon: Icons.volunteer_activism_rounded,
+              ),
               MenuNode(
-                  id: "san_martino",
-                  label: "San Martino",
-                  icon: Icons.account_balance_rounded),
+                id: "san_martino",
+                label: "San Martino",
+                icon: Icons.account_balance_rounded,
+              ),
               MenuNode(
-                  id: "parrocchia",
-                  label: "Parrocchia",
-                  icon: Icons.diversity_3_rounded),
+                id: "parrocchia",
+                label: "Parrocchia",
+                icon: Icons.diversity_3_rounded,
+              ),
               MenuNode(
-                  id: "oratorio",
-                  label: "Oratorio San Martino",
-                  icon: Icons.child_care_rounded),
+                id: "oratorio",
+                label: "Oratorio San Martino",
+                icon: Icons.child_care_rounded,
+              ),
               MenuNode(
-                  id: "avvisi_parrocchiali",
-                  label: "Avvisi parrocchiali",
-                  icon: Icons.campaign_rounded),
+                id: "avvisi_parrocchiali",
+                label: "Avvisi parrocchiali",
+                icon: Icons.campaign_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -908,31 +1025,40 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.people_alt_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "notizie_paese",
-                  label: "Notizie del paese",
-                  icon: Icons.newspaper_rounded),
+                id: "notizie_paese",
+                label: "Notizie del paese",
+                icon: Icons.newspaper_rounded,
+              ),
               MenuNode(
-                  id: "pro_loco",
-                  label: "Pro Loco",
-                  icon: Icons.groups_2_rounded),
+                id: "pro_loco",
+                label: "Pro Loco",
+                icon: Icons.groups_2_rounded,
+              ),
               MenuNode(
-                  id: "associazioni",
-                  label: "Associazioni",
-                  icon: Icons.handshake_rounded),
+                id: "associazioni",
+                label: "Associazioni",
+                icon: Icons.handshake_rounded,
+              ),
               MenuNode(
-                  id: "avis", label: "AVIS", icon: Icons.bloodtype_rounded),
+                id: "avis",
+                label: "AVIS",
+                icon: Icons.bloodtype_rounded,
+              ),
               MenuNode(
-                  id: "biblioteca",
-                  label: "Biblioteca comunale",
-                  icon: Icons.local_library_rounded),
+                id: "biblioteca",
+                label: "Biblioteca comunale",
+                icon: Icons.local_library_rounded,
+              ),
               MenuNode(
-                  id: "mediateca",
-                  label: "Mediateca",
-                  icon: Icons.photo_library_rounded),
+                id: "mediateca",
+                label: "Mediateca",
+                icon: Icons.photo_library_rounded,
+              ),
               MenuNode(
-                  id: "foto_giorno",
-                  label: "Foto del giorno",
-                  icon: Icons.camera_alt_rounded),
+                id: "foto_giorno",
+                label: "Foto del giorno",
+                icon: Icons.camera_alt_rounded,
+              ),
             ],
           ),
         ],
@@ -943,18 +1069,21 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: Icons.miscellaneous_services_rounded,
         children: <MenuNode>[
           MenuNode(
-              id: "farmacia",
-              label: "Farmacie",
-              icon: Icons.local_hospital_rounded),
+            id: "farmacia",
+            label: "Farmacie",
+            icon: Icons.local_hospital_rounded,
+          ),
           MenuNode(
-              id: "trasporti",
-              label: "Trasporti",
-              icon: Icons.directions_bus_rounded),
+            id: "trasporti",
+            label: "Trasporti",
+            icon: Icons.directions_bus_rounded,
+          ),
           MenuNode(id: "bancomat", label: "Bancomat", icon: Icons.atm_rounded),
           MenuNode(
-              id: "salute",
-              label: "Salute",
-              icon: Icons.health_and_safety_rounded),
+            id: "salute",
+            label: "Salute",
+            icon: Icons.health_and_safety_rounded,
+          ),
         ],
       ),
       MenuNode(
@@ -968,17 +1097,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.apartment_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "sindaco_giunta",
-                  label: "Sindaco e Giunta",
-                  icon: Icons.groups_rounded),
+                id: "sindaco_giunta",
+                label: "Sindaco e Giunta",
+                icon: Icons.groups_rounded,
+              ),
               MenuNode(
-                  id: "uffici_orari",
-                  label: "Uffici e orari",
-                  icon: Icons.schedule_rounded),
+                id: "uffici_orari",
+                label: "Uffici e orari",
+                icon: Icons.schedule_rounded,
+              ),
               MenuNode(
-                  id: "rubrica",
-                  label: "Contatti rapidi",
-                  icon: Icons.contact_phone_rounded),
+                id: "rubrica",
+                label: "Contatti rapidi",
+                icon: Icons.contact_phone_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -987,17 +1119,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.how_to_vote_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "diretta",
-                  label: "Diretta sedute",
-                  icon: Icons.live_tv_rounded),
+                id: "diretta",
+                label: "Diretta sedute",
+                icon: Icons.live_tv_rounded,
+              ),
               MenuNode(
-                  id: "registrazioni",
-                  label: "Sedute registrate",
-                  icon: Icons.video_library_rounded),
+                id: "registrazioni",
+                label: "Sedute registrate",
+                icon: Icons.video_library_rounded,
+              ),
               MenuNode(
-                  id: "ordine_giorno",
-                  label: "Ordine del giorno",
-                  icon: Icons.list_alt_rounded),
+                id: "ordine_giorno",
+                label: "Ordine del giorno",
+                icon: Icons.list_alt_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -1006,17 +1141,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.gavel_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "albo_pretorio",
-                  label: "Albo pretorio",
-                  icon: Icons.folder_shared_rounded),
+                id: "albo_pretorio",
+                label: "Albo pretorio",
+                icon: Icons.folder_shared_rounded,
+              ),
               MenuNode(
-                  id: "delibere",
-                  label: "Delibere e determine",
-                  icon: Icons.description_rounded),
+                id: "delibere",
+                label: "Delibere e determine",
+                icon: Icons.description_rounded,
+              ),
               MenuNode(
-                  id: "bandi",
-                  label: "Bandi e concorsi",
-                  icon: Icons.campaign_rounded),
+                id: "bandi",
+                label: "Bandi e concorsi",
+                icon: Icons.campaign_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -1025,21 +1163,25 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.volunteer_activism_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "pagamenti",
-                  label: "Pagamenti e tributi",
-                  icon: Icons.payments_rounded),
+                id: "pagamenti",
+                label: "Pagamenti e tributi",
+                icon: Icons.payments_rounded,
+              ),
               MenuNode(
-                  id: "appuntamenti",
-                  label: "Prenota appuntamento",
-                  icon: Icons.event_available_rounded),
+                id: "appuntamenti",
+                label: "Prenota appuntamento",
+                icon: Icons.event_available_rounded,
+              ),
               MenuNode(
-                  id: "certificati",
-                  label: "Certificati anagrafici",
-                  icon: Icons.badge_rounded),
+                id: "certificati",
+                label: "Certificati anagrafici",
+                icon: Icons.badge_rounded,
+              ),
               MenuNode(
-                  id: "segnalazioni",
-                  label: "Segnalazioni al Comune",
-                  icon: Icons.report_problem_rounded),
+                id: "segnalazioni",
+                label: "Segnalazioni al Comune",
+                icon: Icons.report_problem_rounded,
+              ),
             ],
           ),
           MenuNode(
@@ -1048,17 +1190,20 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.public_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "scuola",
-                  label: "Servizi scolastici",
-                  icon: Icons.school_rounded),
+                id: "scuola",
+                label: "Servizi scolastici",
+                icon: Icons.school_rounded,
+              ),
               MenuNode(
-                  id: "mobilita",
-                  label: "Viabilita e trasporto locale",
-                  icon: Icons.traffic_rounded),
+                id: "mobilita",
+                label: "Viabilita e trasporto locale",
+                icon: Icons.traffic_rounded,
+              ),
               MenuNode(
-                  id: "rifiuti",
-                  label: "Raccolta rifiuti",
-                  icon: Icons.recycling_rounded),
+                id: "rifiuti",
+                label: "Raccolta rifiuti",
+                icon: Icons.recycling_rounded,
+              ),
             ],
           ),
         ],
@@ -1074,49 +1219,57 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.event_available_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "campetto_del_prete",
-                  label: "Campetto del prete",
-                  icon: Icons.grass_rounded),
+                id: "campetto_del_prete",
+                label: "Campetto del prete",
+                icon: Icons.grass_rounded,
+              ),
               MenuNode(
                 id: "palazzetto",
                 label: "Palazzetto",
                 icon: Icons.sports_handball_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "palazzetto_calcetto",
-                      label: "Calcetto",
-                      icon: Icons.sports_soccer_rounded),
+                    id: "palazzetto_calcetto",
+                    label: "Calcetto",
+                    icon: Icons.sports_soccer_rounded,
+                  ),
                   MenuNode(
-                      id: "palazzetto_city_tennis",
-                      label: "City tennis",
-                      icon: Icons.sports_handball_rounded),
+                    id: "palazzetto_city_tennis",
+                    label: "City tennis",
+                    icon: Icons.sports_handball_rounded,
+                  ),
                   MenuNode(
-                      id: "palazzetto_pallavolo",
-                      label: "Pallavolo",
-                      icon: Icons.sports_volleyball_rounded),
+                    id: "palazzetto_pallavolo",
+                    label: "Pallavolo",
+                    icon: Icons.sports_volleyball_rounded,
+                  ),
                 ],
               ),
               MenuNode(
-                  id: "campo_tennis",
-                  label: "Campo da tennis",
-                  icon: Icons.sports_tennis_rounded),
+                id: "campo_tennis",
+                label: "Campo da tennis",
+                icon: Icons.sports_tennis_rounded,
+              ),
               MenuNode(
                 id: "regole_prenotazione",
                 label: "Regolamenti e tariffe",
                 icon: Icons.rule_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "fasce_orarie",
-                      label: "Fasce orarie",
-                      icon: Icons.schedule_rounded),
+                    id: "fasce_orarie",
+                    label: "Fasce orarie",
+                    icon: Icons.schedule_rounded,
+                  ),
                   MenuNode(
-                      id: "tariffe",
-                      label: "Tariffe",
-                      icon: Icons.euro_rounded),
+                    id: "tariffe",
+                    label: "Tariffe",
+                    icon: Icons.euro_rounded,
+                  ),
                   MenuNode(
-                      id: "annulla_sposta",
-                      label: "Annulla o sposta prenotazione",
-                      icon: Icons.swap_horiz_rounded),
+                    id: "annulla_sposta",
+                    label: "Annulla o sposta prenotazione",
+                    icon: Icons.swap_horiz_rounded,
+                  ),
                 ],
               ),
             ],
@@ -1127,30 +1280,35 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.terrain_rounded,
             children: <MenuNode>[
               MenuNode(
-                  id: "mappa_sentieri",
-                  label: "Mappa sentieri",
-                  icon: Icons.map_rounded),
+                id: "mappa_sentieri",
+                label: "Mappa sentieri",
+                icon: Icons.map_rounded,
+              ),
               MenuNode(
-                  id: "difficolta_tempo",
-                  label: "Difficolta e tempi",
-                  icon: Icons.hiking_rounded),
+                id: "difficolta_tempo",
+                label: "Difficolta e tempi",
+                icon: Icons.hiking_rounded,
+              ),
               MenuNode(
                 id: "guide_noleggi",
                 label: "Guide e noleggi",
                 icon: Icons.support_agent_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "prenota_guida",
-                      label: "Prenota guida ambientale",
-                      icon: Icons.support_agent_rounded),
+                    id: "prenota_guida",
+                    label: "Prenota guida ambientale",
+                    icon: Icons.support_agent_rounded,
+                  ),
                   MenuNode(
-                      id: "prenota_istruttore",
-                      label: "Prenota istruttore outdoor",
-                      icon: Icons.fitness_center_rounded),
+                    id: "prenota_istruttore",
+                    label: "Prenota istruttore outdoor",
+                    icon: Icons.fitness_center_rounded,
+                  ),
                   MenuNode(
-                      id: "noleggio_ebike",
-                      label: "Noleggio bici elettriche",
-                      icon: Icons.electric_bike_rounded),
+                    id: "noleggio_ebike",
+                    label: "Noleggio bici elettriche",
+                    icon: Icons.electric_bike_rounded,
+                  ),
                 ],
               ),
               MenuNode(
@@ -1159,17 +1317,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.family_restroom_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "tour_famiglie",
-                      label: "Tour famiglie e scuole",
-                      icon: Icons.family_restroom_rounded),
+                    id: "tour_famiglie",
+                    label: "Tour famiglie e scuole",
+                    icon: Icons.family_restroom_rounded,
+                  ),
                   MenuNode(
-                      id: "canoa_trekking",
-                      label: "Canoa e trekking guidato",
-                      icon: Icons.kayaking_rounded),
+                    id: "canoa_trekking",
+                    label: "Canoa e trekking guidato",
+                    icon: Icons.kayaking_rounded,
+                  ),
                   MenuNode(
-                      id: "birdwatching",
-                      label: "Birdwatching",
-                      icon: Icons.visibility_rounded),
+                    id: "birdwatching",
+                    label: "Birdwatching",
+                    icon: Icons.visibility_rounded,
+                  ),
                 ],
               ),
               MenuNode(
@@ -1178,9 +1339,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.forest_rounded,
                 children: <MenuNode>[
                   MenuNode(
-                      id: "parco_avventura",
-                      label: "Parco Avventura Furlo",
-                      icon: Icons.forest_rounded),
+                    id: "parco_avventura",
+                    label: "Parco Avventura Furlo",
+                    icon: Icons.forest_rounded,
+                  ),
                 ],
               ),
             ],
@@ -1423,8 +1585,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool _isSportRulesNode(MenuNode node) {
-    return const {"fasce_orarie", "tariffe", "annulla_sposta"}
-        .contains(node.id);
+    return const {
+      "fasce_orarie",
+      "tariffe",
+      "annulla_sposta",
+    }.contains(node.id);
   }
 
   bool _isOutdoorServiceNode(MenuNode node) {
@@ -1473,8 +1638,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1495,8 +1662,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1525,8 +1694,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1547,8 +1718,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1569,17 +1742,16 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
               end: Offset.zero,
             ).animate(curved),
-            child: FadeTransition(
-              opacity: curved,
-              child: const TrailsScreen(),
-            ),
+            child: FadeTransition(opacity: curved, child: const TrailsScreen()),
           );
         },
       ),
@@ -1591,8 +1763,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1613,8 +1787,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1635,8 +1811,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1658,8 +1836,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1680,8 +1860,10 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, animation, __) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0.15, 0),
@@ -1718,7 +1900,7 @@ class _LivingMapLayer extends StatelessWidget {
                     colors: [
                       Color(0xFF4F7F62),
                       Color(0xFF769F80),
-                      Color(0xFFB1C8AF)
+                      Color(0xFFB1C8AF),
                     ],
                   ),
                 ),
@@ -1726,11 +1908,7 @@ class _LivingMapLayer extends StatelessWidget {
             },
           ),
         ),
-        Positioned.fill(
-          child: CustomPaint(
-            painter: _MapPathPainter(),
-          ),
-        ),
+        Positioned.fill(child: CustomPaint(painter: _MapPathPainter())),
         Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -1760,12 +1938,24 @@ class _MapPathPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     final path = Path()
       ..moveTo(20, size.height * 0.24)
-      ..quadraticBezierTo(size.width * 0.45, size.height * 0.22,
-          size.width - 30, size.height * 0.35)
       ..quadraticBezierTo(
-          size.width * 0.4, size.height * 0.54, 40, size.height * 0.68)
-      ..quadraticBezierTo(size.width * 0.6, size.height * 0.76, size.width - 40,
-          size.height * 0.9);
+        size.width * 0.45,
+        size.height * 0.22,
+        size.width - 30,
+        size.height * 0.35,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.4,
+        size.height * 0.54,
+        40,
+        size.height * 0.68,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.6,
+        size.height * 0.76,
+        size.width - 40,
+        size.height * 0.9,
+      );
     canvas.drawPath(path, paint);
   }
 
@@ -2155,10 +2345,7 @@ class _HomeInsightContent extends StatelessWidget {
                 else if (selectedAction == "aperti")
                   _OpenNowOverview(onOpenDining: onOpenDining)
                 else if (selectedAction == "vicino")
-                  _NearbyOverview(
-                    raining: raining,
-                    onOpenTrails: onOpenTrails,
-                  )
+                  _NearbyOverview(raining: raining, onOpenTrails: onOpenTrails)
                 else
                   const _NotificationsOverview(),
               ],
@@ -2210,8 +2397,10 @@ class _WeatherSuggestionBubble extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 3),
                 Text(message, style: const TextStyle(height: 1.25)),
               ],
@@ -2314,10 +2503,7 @@ class _OpenNowOverview extends StatelessWidget {
 }
 
 class _NearbyOverview extends StatelessWidget {
-  const _NearbyOverview({
-    required this.raining,
-    required this.onOpenTrails,
-  });
+  const _NearbyOverview({required this.raining, required this.onOpenTrails});
 
   final bool raining;
   final VoidCallback onOpenTrails;
@@ -2450,8 +2636,10 @@ class _InsightTile extends StatelessWidget {
                   ),
                 ),
                 if (onTap != null)
-                  const Icon(Icons.chevron_right_rounded,
-                      color: Color(0xFF2E7D57)),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF2E7D57),
+                  ),
               ],
             ),
           ),
@@ -2692,10 +2880,7 @@ class _CompactMenuStage extends StatelessWidget {
 }
 
 class _CompactBackButton extends StatelessWidget {
-  const _CompactBackButton({
-    required this.label,
-    required this.onTap,
-  });
+  const _CompactBackButton({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
@@ -2713,8 +2898,11 @@ class _CompactBackButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.arrow_back_rounded,
-                  color: Colors.white, size: 18),
+              const Icon(
+                Icons.arrow_back_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
               const SizedBox(width: 6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 116),
@@ -2723,7 +2911,9 @@ class _CompactBackButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w800),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -2735,10 +2925,7 @@ class _CompactBackButton extends StatelessWidget {
 }
 
 class _CompactMenuCard extends StatelessWidget {
-  const _CompactMenuCard({
-    required this.node,
-    required this.onTap,
-  });
+  const _CompactMenuCard({required this.node, required this.onTap});
 
   final MenuNode node;
   final VoidCallback onTap;
@@ -2825,8 +3012,10 @@ class _RadialMenuStage extends StatelessWidget {
         final nodeHeight = ((shortest * spec.nodeHeightFactor) * countFactor)
             .clamp(spec.minNodeHeight, spec.maxNodeHeight)
             .toDouble();
-        final center = Offset(constraints.maxWidth / 2,
-            constraints.maxHeight * spec.centerYFactor);
+        final center = Offset(
+          constraints.maxWidth / 2,
+          constraints.maxHeight * spec.centerYFactor,
+        );
         final targets = _computeTargets(
           size: Size(constraints.maxWidth, constraints.maxHeight),
           center: center,
@@ -2865,12 +3054,15 @@ class _RadialMenuStage extends StatelessWidget {
                       child: Center(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.22)),
+                              color: Colors.white.withValues(alpha: 0.22),
+                            ),
                           ),
                           child: Text(
                             currentNode.label,
@@ -3234,8 +3426,9 @@ class _ExploreOrbButton extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1F5D3E)
-                        .withValues(alpha: isOpen ? 0.45 : 0.60),
+                    color: const Color(
+                      0xFF1F5D3E,
+                    ).withValues(alpha: isOpen ? 0.45 : 0.60),
                     blurRadius: isOpen ? 22 : 34,
                     spreadRadius: isOpen ? 1 : 3,
                     offset: const Offset(0, 12),
@@ -3329,7 +3522,10 @@ class _RadialNode extends StatelessWidget {
               border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
               boxShadow: const [
                 BoxShadow(
-                    color: Colors.black38, blurRadius: 14, offset: Offset(0, 7))
+                  color: Colors.black38,
+                  blurRadius: 14,
+                  offset: Offset(0, 7),
+                ),
               ],
             ),
             child: Center(
@@ -3347,11 +3543,12 @@ class _RadialNode extends StatelessWidget {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(icon,
-                            size: adaptiveIconSize,
-                            color: selected
-                                ? Colors.white
-                                : const Color(0xFF1B2E21)),
+                        Icon(
+                          icon,
+                          size: adaptiveIconSize,
+                          color:
+                              selected ? Colors.white : const Color(0xFF1B2E21),
+                        ),
                         SizedBox(height: compact ? 2 : 5),
                         Expanded(
                           child: Center(
@@ -3385,10 +3582,7 @@ class _RadialNode extends StatelessWidget {
 }
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({
-    super.key,
-    required this.user,
-  });
+  const SettingsScreen({super.key, required this.user});
 
   final AppUser user;
 
@@ -3518,16 +3712,15 @@ class _SettingsSectionCard extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 10,
+        ),
         leading: CircleAvatar(
           backgroundColor: const Color(0xFFE4EFE8),
           child: Icon(icon, color: const Color(0xFF2E7D57)),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
@@ -3537,10 +3730,7 @@ class _SettingsSectionCard extends StatelessWidget {
 }
 
 class _SettingsDetailScreen extends StatefulWidget {
-  const _SettingsDetailScreen({
-    required this.user,
-    required this.kind,
-  });
+  const _SettingsDetailScreen({required this.user, required this.kind});
 
   final AppUser user;
   final _SettingsPageKind kind;
@@ -3721,10 +3911,7 @@ class _ReadonlySettingsTile extends StatelessWidget {
 }
 
 class RewardsScreen extends StatelessWidget {
-  const RewardsScreen({
-    super.key,
-    required this.controller,
-  });
+  const RewardsScreen({super.key, required this.controller});
 
   final GamificationController controller;
 
@@ -3860,10 +4047,7 @@ class RewardsScreen extends StatelessWidget {
 }
 
 class _RewardTierRow extends StatelessWidget {
-  const _RewardTierRow({
-    required this.tier,
-    required this.unlocked,
-  });
+  const _RewardTierRow({required this.tier, required this.unlocked});
 
   final RewardTier tier;
   final bool unlocked;
@@ -3939,10 +4123,7 @@ class _RewardLevelRow extends StatelessWidget {
 }
 
 class _RewardMedalRow extends StatelessWidget {
-  const _RewardMedalRow({
-    required this.medal,
-    required this.unlocked,
-  });
+  const _RewardMedalRow({required this.medal, required this.unlocked});
 
   final RewardMedal medal;
   final bool unlocked;
@@ -4067,10 +4248,7 @@ class _DropdownSettingsTile extends StatelessWidget {
         underline: const SizedBox.shrink(),
         items: [
           for (final item in values)
-            DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            ),
+            DropdownMenuItem<String>(value: item, child: Text(item)),
         ],
         onChanged: (value) {
           if (value != null) {
@@ -4236,7 +4414,7 @@ const List<TrailRoute> _trailRoutes = [
       "Apecchio",
       "Gorgaccia",
       "Fosso dei Tacconi",
-      "Sentiero Italia"
+      "Sentiero Italia",
     ],
     sourceLabel: "Pesaro Trekking - Sentiero 39 Monte Nerone",
     sourceUrl: "https://www.pesarotrekking.it/monte-nerone/sentiero-39.html",
@@ -4723,9 +4901,7 @@ class _TrailsScreenState extends State<TrailsScreen> {
 
   void _openTrailDetail(TrailRoute trail) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TrailDetailScreen(trail: trail),
-      ),
+      MaterialPageRoute<void>(builder: (_) => TrailDetailScreen(trail: trail)),
     );
   }
 
@@ -4733,10 +4909,7 @@ class _TrailsScreenState extends State<TrailsScreen> {
     setState(() => _selectedTrail = trail);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => TrailMapScreen(
-          trail: trail,
-          reliefMode: _reliefMode,
-        ),
+        builder: (_) => TrailMapScreen(trail: trail, reliefMode: _reliefMode),
       ),
     );
   }
@@ -4796,11 +4969,7 @@ class _TrailsHero extends StatelessWidget {
               bottom: 14,
               child: _TrailMapLegend(selectedTrail: selectedTrail),
             ),
-            const Positioned(
-              left: 16,
-              top: 16,
-              child: _TrailMapBadge(),
-            ),
+            const Positioned(left: 16, top: 16, child: _TrailMapBadge()),
           ],
         ),
       ),
@@ -4922,8 +5091,9 @@ class TrailGeometryRepository {
         return fallback(trail);
       }
       try {
-        final source =
-            await NetworkAssetBundle(Uri.parse(trail.gpxUrl)).loadString("");
+        final source = await NetworkAssetBundle(
+          Uri.parse(trail.gpxUrl),
+        ).loadString("");
         final points = _parseGpxTrack(source);
         if (points.length >= 2) {
           return TrailMapGeometry(
@@ -5075,8 +5245,9 @@ class _TrailOnlineMap extends StatelessWidget {
                       points: _apecchioBoundary,
                       color: const Color(0xFF2E7D57).withValues(alpha: 0.08),
                       borderStrokeWidth: 3.2,
-                      borderColor:
-                          const Color(0xFF0F5C43).withValues(alpha: 0.92),
+                      borderColor: const Color(
+                        0xFF0F5C43,
+                      ).withValues(alpha: 0.92),
                       label: "Comune di Apecchio",
                       labelStyle: const TextStyle(
                         color: Color(0xFF173B2B),
@@ -5230,11 +5401,7 @@ class _ReliefLinePainter extends CustomPainter {
 }
 
 class _TrailSourcePill extends StatelessWidget {
-  const _TrailSourcePill({
-    super.key,
-    required this.label,
-    required this.icon,
-  });
+  const _TrailSourcePill({super.key, required this.label, required this.icon});
 
   final String label;
   final IconData icon;
@@ -5343,10 +5510,7 @@ class _TrailMapModeSwitch extends StatelessWidget {
 }
 
 class _TrailMapModeChip extends StatelessWidget {
-  const _TrailMapModeChip({
-    required this.reliefMode,
-    required this.onTap,
-  });
+  const _TrailMapModeChip({required this.reliefMode, required this.onTap});
 
   final bool reliefMode;
   final VoidCallback onTap;
@@ -5423,10 +5587,7 @@ class _TrailQuickOpenRow extends StatelessWidget {
 }
 
 class _TrailSelectedPanel extends StatelessWidget {
-  const _TrailSelectedPanel({
-    required this.trail,
-    required this.onOpenDetail,
-  });
+  const _TrailSelectedPanel({required this.trail, required this.onOpenDetail});
 
   final TrailRoute trail;
   final VoidCallback onOpenDetail;
@@ -5488,13 +5649,21 @@ class _TrailSelectedPanel extends StatelessWidget {
             runSpacing: 8,
             children: [
               _TrailStatChip(
-                  icon: Icons.straighten_rounded, label: trail.distanceLabel),
+                icon: Icons.straighten_rounded,
+                label: trail.distanceLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.trending_up_rounded, label: trail.elevationLabel),
+                icon: Icons.trending_up_rounded,
+                label: trail.elevationLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.schedule_rounded, label: trail.timeLabel),
+                icon: Icons.schedule_rounded,
+                label: trail.timeLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.hiking_rounded, label: trail.difficulty),
+                icon: Icons.hiking_rounded,
+                label: trail.difficulty,
+              ),
               _TrailStatChip(
                 icon: Icons.filter_hdr_rounded,
                 label: "${trail.maxAltitudeM} m max",
@@ -5532,10 +5701,7 @@ class _TrailSelectedPanel extends StatelessWidget {
 }
 
 class _TrailStatChip extends StatelessWidget {
-  const _TrailStatChip({
-    required this.icon,
-    required this.label,
-  });
+  const _TrailStatChip({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -5865,18 +6031,25 @@ class TrailDetailScreen extends StatelessWidget {
             runSpacing: 8,
             children: [
               _TrailStatChip(
-                  icon: Icons.straighten_rounded, label: trail.distanceLabel),
+                icon: Icons.straighten_rounded,
+                label: trail.distanceLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.trending_up_rounded,
-                  label: "+${trail.elevationGainM} m"),
+                icon: Icons.trending_up_rounded,
+                label: "+${trail.elevationGainM} m",
+              ),
               _TrailStatChip(
-                  icon: Icons.trending_down_rounded,
-                  label: "-${trail.elevationLossM} m"),
+                icon: Icons.trending_down_rounded,
+                label: "-${trail.elevationLossM} m",
+              ),
               _TrailStatChip(
-                  icon: Icons.schedule_rounded, label: trail.timeLabel),
+                icon: Icons.schedule_rounded,
+                label: trail.timeLabel,
+              ),
               _TrailStatChip(
-                  icon: Icons.hiking_rounded,
-                  label: "Difficolta ${trail.difficulty}"),
+                icon: Icons.hiking_rounded,
+                label: "Difficolta ${trail.difficulty}",
+              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -5885,17 +6058,20 @@ class TrailDetailScreen extends StatelessWidget {
             child: Column(
               children: [
                 _TrailInfoRow(
-                    icon: Icons.flag_rounded,
-                    label: "Partenza",
-                    value: "${trail.start} · ${trail.startAltitudeM} m"),
+                  icon: Icons.flag_rounded,
+                  label: "Partenza",
+                  value: "${trail.start} · ${trail.startAltitudeM} m",
+                ),
                 _TrailInfoRow(
-                    icon: Icons.place_rounded,
-                    label: "Arrivo",
-                    value: "${trail.end} · ${trail.endAltitudeM} m"),
+                  icon: Icons.place_rounded,
+                  label: "Arrivo",
+                  value: "${trail.end} · ${trail.endAltitudeM} m",
+                ),
                 _TrailInfoRow(
-                    icon: Icons.filter_hdr_rounded,
-                    label: "Quota massima",
-                    value: "${trail.maxAltitudeM} m"),
+                  icon: Icons.filter_hdr_rounded,
+                  label: "Quota massima",
+                  value: "${trail.maxAltitudeM} m",
+                ),
               ],
             ),
           ),
@@ -5962,10 +6138,7 @@ class TrailDetailScreen extends StatelessWidget {
 }
 
 class _TrailDetailCard extends StatelessWidget {
-  const _TrailDetailCard({
-    required this.title,
-    required this.child,
-  });
+  const _TrailDetailCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -6229,21 +6402,23 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
                 slots: allSlots,
                 reservations: appSportReservations,
                 onPreviousMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month - 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month - 1,
+                  ),
                 ),
                 onNextMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month + 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month + 1,
+                  ),
                 ),
                 onDaySelected: (day) => setState(() {
                   _selectedDay = day;
                   _focusedMonth = DateTime(day.year, day.month);
                   final daySlots = _sportSlotsForDay(day, allSlots);
                   final preferred = daySlots
-                      .where(
-                        (slot) => slot.facility.id == _selectedFacility.id,
-                      )
+                      .where((slot) => slot.facility.id == _selectedFacility.id)
                       .toList(growable: false);
                   _selectedSlot = preferred.isNotEmpty
                       ? preferred.first
@@ -6313,21 +6488,25 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
             child: Column(
               children: [
                 _TrailInfoRow(
-                    icon: Icons.place_rounded,
-                    label: "Luogo",
-                    value: _selectedFacility.place),
+                  icon: Icons.place_rounded,
+                  label: "Luogo",
+                  value: _selectedFacility.place,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.layers_rounded,
-                    label: "Fondo",
-                    value: _selectedFacility.surface),
+                  icon: Icons.layers_rounded,
+                  label: "Fondo",
+                  value: _selectedFacility.surface,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.groups_rounded,
-                    label: "Formato",
-                    value: _selectedFacility.capacity),
+                  icon: Icons.groups_rounded,
+                  label: "Formato",
+                  value: _selectedFacility.capacity,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.euro_rounded,
-                    label: "Tariffa",
-                    value: _selectedFacility.priceLabel),
+                  icon: Icons.euro_rounded,
+                  label: "Tariffa",
+                  value: _selectedFacility.priceLabel,
+                ),
               ],
             ),
           ),
@@ -6488,7 +6667,7 @@ class _SportBookingCalendar extends StatelessWidget {
                 "Gio",
                 "Ven",
                 "Sab",
-                "Dom"
+                "Dom",
               ])
                 Expanded(
                   child: Center(
@@ -6774,8 +6953,9 @@ class _SportDaySlotsPanel extends StatelessWidget {
                           ? Colors.white
                           : slot.facility.color,
                     ),
-                    label:
-                        Text("${slot.timeLabel} · ${slot.facility.activity}"),
+                    label: Text(
+                      "${slot.timeLabel} · ${slot.facility.activity}",
+                    ),
                     selected: selectedSlot?.id == slot.id,
                     selectedColor: slot.facility.color,
                     labelStyle: TextStyle(
@@ -7062,7 +7242,7 @@ class _SportPricingRules extends StatelessWidget {
           icon: Icons.sports_handball_rounded,
           lines: [
             "City tennis da 14 euro/ora",
-            "Calcetto e volley da 18 euro/ora"
+            "Calcetto e volley da 18 euro/ora",
           ],
         ),
         _SportRuleBlock(
@@ -7070,7 +7250,7 @@ class _SportPricingRules extends StatelessWidget {
           icon: Icons.volunteer_activism_rounded,
           lines: [
             "Scuole e associazioni: tariffa convenzionata",
-            "Residenti: priorita sugli slot feriali"
+            "Residenti: priorita sugli slot feriali",
           ],
         ),
       ],
@@ -7090,7 +7270,7 @@ class _SportChangeRules extends StatelessWidget {
           icon: Icons.event_busy_rounded,
           lines: [
             "Gratuito fino a 6 ore prima",
-            "Dopo la scadenza resta visibile allo sportello"
+            "Dopo la scadenza resta visibile allo sportello",
           ],
         ),
         _SportRuleBlock(
@@ -7098,7 +7278,7 @@ class _SportChangeRules extends StatelessWidget {
           icon: Icons.swap_horiz_rounded,
           lines: [
             "Una modifica rapida per prenotazione",
-            "Conferma immediata se lo slot e libero"
+            "Conferma immediata se lo slot e libero",
           ],
         ),
         _SportRuleBlock(
@@ -7106,7 +7286,7 @@ class _SportChangeRules extends StatelessWidget {
           icon: Icons.water_drop_rounded,
           lines: [
             "Campi outdoor riprogrammabili",
-            "Palazzetto suggerito come alternativa"
+            "Palazzetto suggerito come alternativa",
           ],
         ),
       ],
@@ -7148,8 +7328,10 @@ class _SportRuleBlock extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 6),
                 for (final line in lines)
                   Padding(
@@ -7348,17 +7530,20 @@ class _OutdoorServicesScreenState extends State<OutdoorServicesScreen> {
             child: Column(
               children: [
                 _TrailInfoRow(
-                    icon: Icons.schedule_rounded,
-                    label: "Durata",
-                    value: _selectedService.duration),
+                  icon: Icons.schedule_rounded,
+                  label: "Durata",
+                  value: _selectedService.duration,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.euro_rounded,
-                    label: "Costo",
-                    value: _selectedService.priceLabel),
+                  icon: Icons.euro_rounded,
+                  label: "Costo",
+                  value: _selectedService.priceLabel,
+                ),
                 _TrailInfoRow(
-                    icon: Icons.groups_rounded,
-                    label: "Ideale per",
-                    value: _selectedService.bestFor),
+                  icon: Icons.groups_rounded,
+                  label: "Ideale per",
+                  value: _selectedService.bestFor,
+                ),
               ],
             ),
           ),
@@ -7377,7 +7562,8 @@ class _OutdoorServicesScreenState extends State<OutdoorServicesScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      "Mockup: richiesta inviata per ${_selectedService.title}."),
+                    "Mockup: richiesta inviata per ${_selectedService.title}.",
+                  ),
                 ),
               );
             },
@@ -7535,8 +7721,11 @@ class _SportBullet extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_rounded,
-              size: 18, color: Color(0xFF2E7D57)),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 18,
+            color: Color(0xFF2E7D57),
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: const TextStyle(height: 1.25))),
         ],
@@ -7890,12 +8079,16 @@ class _EventsScreenState extends State<EventsScreen> {
                 events: events,
                 participation: appEventParticipation,
                 onPreviousMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month - 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month - 1,
+                  ),
                 ),
                 onNextMonth: () => setState(
-                  () => _focusedMonth =
-                      DateTime(_focusedMonth.year, _focusedMonth.month + 1),
+                  () => _focusedMonth = DateTime(
+                    _focusedMonth.year,
+                    _focusedMonth.month + 1,
+                  ),
                 ),
                 onDaySelected: (day) => setState(() {
                   _selectedDay = day;
@@ -7971,9 +8164,7 @@ class _EventsScreenState extends State<EventsScreen> {
 
   void _openEventDetail(AppEvent event) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => EventDetailScreen(event: event),
-      ),
+      MaterialPageRoute<void>(builder: (_) => EventDetailScreen(event: event)),
     );
   }
 }
@@ -8271,7 +8462,7 @@ class _EventMonthCalendar extends StatelessWidget {
                 "Gio",
                 "Ven",
                 "Sab",
-                "Dom"
+                "Dom",
               ])
                 Expanded(
                   child: Center(
@@ -8303,8 +8494,9 @@ class _EventMonthCalendar extends StatelessWidget {
               final dayEvents = _eventsForDay(day, events);
               final inMonth = _sameMonth(day, focusedMonth);
               final selected = _sameDay(day, selectedDay);
-              final joined =
-                  dayEvents.any((event) => participation.isJoined(event));
+              final joined = dayEvents.any(
+                (event) => participation.isJoined(event),
+              );
               return _CalendarDayCell(
                 day: day,
                 inMonth: inMonth,
@@ -8543,8 +8735,10 @@ class _SelectedDayEventsPanel extends StatelessWidget {
           if (events.isEmpty)
             const Text(
               "Nessun evento marcato per questa giornata.",
-              style:
-                  TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: Colors.black54,
+                fontWeight: FontWeight.w700,
+              ),
             )
           else
             for (final event in events)
@@ -8742,7 +8936,7 @@ class EventPoster extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(height: 8),
                 Text(
                   event.posterTitle,
                   maxLines: compact ? 2 : 3,
@@ -8793,9 +8987,10 @@ class _EventListTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         leading: SizedBox(
-            width: 54,
-            height: 54,
-            child: EventPoster(event: event, micro: true)),
+          width: 54,
+          height: 54,
+          child: EventPoster(event: event, micro: true),
+        ),
         title: Text(
           event.title,
           maxLines: 1,
@@ -8880,7 +9075,9 @@ class EventDetailScreen extends StatelessWidget {
           const SizedBox(height: 14),
           _EventInfoRow(icon: Icons.schedule_rounded, text: event.timeLabel),
           _EventInfoRow(
-              icon: Icons.calendar_month_rounded, text: event.dateLabel),
+            icon: Icons.calendar_month_rounded,
+            text: event.dateLabel,
+          ),
           _EventInfoRow(icon: Icons.place_rounded, text: event.place),
           const SizedBox(height: 18),
           _EventParticipationCard(event: event),
@@ -9043,16 +9240,15 @@ class _EventCheckinRewardCard extends StatelessWidget {
                       color: const Color(0xFFF4F7F1),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: CustomPaint(
-                      painter: _MockQrPainter(seed: event.id),
-                    ),
+                    child: CustomPaint(painter: _MockQrPainter(seed: event.id)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: () {
-                        final awarded =
-                            appGamification.recordEventCheckin(event);
+                        final awarded = appGamification.recordEventCheckin(
+                          event,
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -9576,8 +9772,10 @@ class _ProductInfoTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
                 const SizedBox(height: 6),
                 Text(body, style: const TextStyle(height: 1.35)),
               ],
@@ -9605,8 +9803,11 @@ class _ProductHighlight extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded,
-              size: 19, color: Color(0xFF2E7D57)),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 19,
+            color: Color(0xFF2E7D57),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -10280,10 +10481,7 @@ const List<DiningVenue> _diningVenues = [
 ];
 
 class DiningScreen extends StatelessWidget {
-  const DiningScreen({
-    super.key,
-    this.initialKind = DiningKind.restaurant,
-  });
+  const DiningScreen({super.key, this.initialKind = DiningKind.restaurant});
 
   final DiningKind initialKind;
 
@@ -10459,10 +10657,7 @@ class _DiningSection extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final venue = venues[index];
-              return _DiningVenueCard(
-                venue: venue,
-                onTap: () => onTap(venue),
-              );
+              return _DiningVenueCard(venue: venue, onTap: () => onTap(venue));
             },
           ),
         ),
@@ -10507,8 +10702,10 @@ class _DiningVenueCard extends StatelessWidget {
                 venue.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -10567,10 +10764,7 @@ class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          _DiningHero(
-            highlightedVenue: widget.venue,
-            onTap: () {},
-          ),
+          _DiningHero(highlightedVenue: widget.venue, onTap: () {}),
           const SizedBox(height: 18),
           Text(
             widget.venue.name,
@@ -10586,12 +10780,17 @@ class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
           _VenueInfoRow(icon: Icons.map_rounded, text: widget.venue.address),
           _VenueInfoRow(icon: Icons.phone_rounded, text: widget.venue.contact),
           _VenueInfoRow(
-              icon: Icons.payments_rounded, text: widget.venue.priceHint),
+            icon: Icons.payments_rounded,
+            text: widget.venue.priceHint,
+          ),
           _VenueInfoRow(
-              icon: Icons.event_available_rounded,
-              text: widget.venue.todayStatus),
+            icon: Icons.event_available_rounded,
+            text: widget.venue.todayStatus,
+          ),
           _VenueInfoRow(
-              icon: Icons.verified_rounded, text: widget.venue.sourceLabel),
+            icon: Icons.verified_rounded,
+            text: widget.venue.sourceLabel,
+          ),
           _TrailDetailCard(
             title: "Token prenotazione",
             child: Text(
@@ -10888,7 +11087,7 @@ String _month(DateTime date) {
     "set",
     "ott",
     "nov",
-    "dic"
+    "dic",
   ];
   return months[date.month - 1];
 }
@@ -11659,11 +11858,7 @@ FinalInfoPage _finalPage({
     icon: icon,
     coverColors: coverColors,
     facts: [
-      FinalInfoFact(
-        icon: Icons.place_rounded,
-        title: "Accesso",
-        value: access,
-      ),
+      FinalInfoFact(icon: Icons.place_rounded, title: "Accesso", value: access),
       FinalInfoFact(
         icon: Icons.schedule_rounded,
         title: "Quando",
@@ -11952,11 +12147,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Canale streaming istituzionale",
     timing: "Solo durante sedute programmate",
     contact: "Segreteria consiglio",
-    highlights: const [
-      "Stato live",
-      "Prossima seduta",
-      "Ordine del giorno",
-    ],
+    highlights: const ["Stato live", "Prossima seduta", "Ordine del giorno"],
     actionBody:
         "La pagina mette insieme streaming e contesto, cosi la diretta non resta un link isolato.",
     actionItems: const [
@@ -12092,11 +12283,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Archivio atti amministrativi",
     timing: "Consultazione continua",
     contact: "Segreteria generale",
-    highlights: const [
-      "Ricerca per anno",
-      "Tipo atto",
-      "Documenti collegati",
-    ],
+    highlights: const ["Ricerca per anno", "Tipo atto", "Documenti collegati"],
     actionBody:
         "La pagina serve cittadini che cercano un atto specifico e cittadini che partono da un tema.",
     actionItems: const [
@@ -12162,11 +12349,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Portale pagamenti e ufficio tributi",
     timing: "Scadenze tributarie e avvisi",
     contact: "Ufficio tributi",
-    highlights: const [
-      "PagoPA",
-      "Avvisi",
-      "Scadenze",
-    ],
+    highlights: const ["PagoPA", "Avvisi", "Scadenze"],
     actionBody:
         "La pagina prepara il cittadino prima del portale esterno, riducendo errori e confusione.",
     actionItems: const [
@@ -12197,11 +12380,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Sportelli su appuntamento",
     timing: "Fasce disponibili secondo ufficio",
     contact: "Centralino e ufficio scelto",
-    highlights: const [
-      "Scelta motivo",
-      "Promemoria",
-      "Documenti necessari",
-    ],
+    highlights: const ["Scelta motivo", "Promemoria", "Documenti necessari"],
     actionBody:
         "Il flusso mette prima il bisogno del cittadino e poi l'ufficio competente.",
     actionItems: const [
@@ -12302,11 +12481,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Scuola, Comune, servizi famiglia",
     timing: "Anno scolastico e scadenze iscrizione",
     contact: "Ufficio scuola",
-    highlights: const [
-      "Mensa",
-      "Trasporto scolastico",
-      "Avvisi famiglie",
-    ],
+    highlights: const ["Mensa", "Trasporto scolastico", "Avvisi famiglie"],
     actionBody:
         "La pagina ordina servizi ricorrenti e scadenze stagionali per genitori e studenti.",
     actionItems: const [
@@ -12337,11 +12512,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Strade comunali, parcheggi, trasporto locale",
     timing: "Avvisi temporanei e ordinanze",
     contact: "Polizia locale e ufficio tecnico",
-    highlights: const [
-      "Cantieri",
-      "Ordinanze",
-      "Parcheggi evento",
-    ],
+    highlights: const ["Cantieri", "Ordinanze", "Parcheggi evento"],
     actionBody:
         "La pagina separa mobilita quotidiana e avvisi temporanei che cambiano il comportamento del cittadino.",
     actionItems: const [
@@ -12372,11 +12543,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Calendario e servizi ambientali",
     timing: "Giorni di raccolta e avvisi",
     contact: "Gestore rifiuti e Comune",
-    highlights: const [
-      "Calendario",
-      "Ingombranti",
-      "Regole conferimento",
-    ],
+    highlights: const ["Calendario", "Ingombranti", "Regole conferimento"],
     actionBody:
         "La pagina deve rispondere alla domanda pratica: cosa espongo, quando e dove.",
     actionItems: const [
@@ -12512,11 +12679,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Centro, cultura, servizi, natura",
     timing: "Prima e durante la visita",
     contact: "Ufficio turistico",
-    highlights: const [
-      "Tappe consigliate",
-      "Servizi vicini",
-      "Percorsi brevi",
-    ],
+    highlights: const ["Tappe consigliate", "Servizi vicini", "Percorsi brevi"],
     actionBody:
         "La mappa turistica deve essere piu selettiva della mappa base: poche cose, ben ordinate.",
     actionItems: const [
@@ -12547,11 +12710,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Borgo, frazioni, Monte Nerone",
     timing: "Da controllare prima di partire",
     contact: "Fonti meteo e Comune",
-    highlights: const [
-      "Webcam",
-      "Meteo in quota",
-      "Avvisi utili",
-    ],
+    highlights: const ["Webcam", "Meteo in quota", "Avvisi utili"],
     actionBody:
         "La pagina aiuta a scegliere attivita e abbigliamento con un colpo d'occhio.",
     actionItems: const [
@@ -12617,11 +12776,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Luogo devozionale del territorio",
     timing: "Visita breve o ricorrenze",
     contact: "Parrocchia",
-    highlights: const [
-      "Memoria locale",
-      "Percorso spirituale",
-      "Sosta breve",
-    ],
+    highlights: const ["Memoria locale", "Percorso spirituale", "Sosta breve"],
     actionBody:
         "La pagina aiuta a inserire la tappa in un percorso piu ampio senza perderne il valore.",
     actionItems: const [
@@ -12652,11 +12807,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Chiesa parrocchiale e centro storico",
     timing: "Orari e celebrazioni da verificare",
     contact: "Parrocchia di San Martino",
-    highlights: const [
-      "Chiesa principale",
-      "Avvisi",
-      "Percorso culturale",
-    ],
+    highlights: const ["Chiesa principale", "Avvisi", "Percorso culturale"],
     actionBody:
         "La pagina rende San Martino un punto di connessione tra cultura, fede e vita comunitaria.",
     actionItems: const [
@@ -12687,11 +12838,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Parrocchia e gruppi collegati",
     timing: "Celebrazioni, incontri, avvisi",
     contact: "Segreteria parrocchiale",
-    highlights: const [
-      "Orari celebrazioni",
-      "Gruppi",
-      "Avvisi",
-    ],
+    highlights: const ["Orari celebrazioni", "Gruppi", "Avvisi"],
     actionBody:
         "La pagina serve chi cerca orari, contatti o attivita senza dover seguire canali separati.",
     actionItems: const [
@@ -12722,11 +12869,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Oratorio e spazi parrocchiali",
     timing: "Pomeriggi, estate, appuntamenti speciali",
     contact: "Referenti oratorio",
-    highlights: const [
-      "Attivita ragazzi",
-      "Estate",
-      "Famiglie",
-    ],
+    highlights: const ["Attivita ragazzi", "Estate", "Famiglie"],
     actionBody:
         "La scheda rende visibili iniziative che spesso circolano solo nel passaparola.",
     actionItems: const [
@@ -12757,11 +12900,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Bacheca parrocchiale",
     timing: "Aggiornamento settimanale o straordinario",
     contact: "Parrocchia",
-    highlights: const [
-      "Ultimi avvisi",
-      "Ricorrenze",
-      "Gruppi",
-    ],
+    highlights: const ["Ultimi avvisi", "Ricorrenze", "Gruppi"],
     actionBody:
         "La pagina mette davanti gli avvisi recenti e permette di ritrovare quelli ancora validi.",
     actionItems: const [
@@ -12792,11 +12931,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Comune, associazioni, comunita",
     timing: "Aggiornamenti periodici",
     contact: "Redazione locale o Comune",
-    highlights: const [
-      "Avvisi brevi",
-      "Storie locali",
-      "Link a eventi",
-    ],
+    highlights: const ["Avvisi brevi", "Storie locali", "Link a eventi"],
     actionBody:
         "La pagina raccoglie contenuti piccoli ma importanti, senza trasformarli in notifiche invasive.",
     actionItems: const [
@@ -12827,11 +12962,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Associazioni e sedi operative",
     timing: "Eventi, sagre, iniziative stagionali",
     contact: "Referenti Pro Loco",
-    highlights: const [
-      "Eventi",
-      "Volontariato",
-      "Tradizioni",
-    ],
+    highlights: const ["Eventi", "Volontariato", "Tradizioni"],
     actionBody:
         "La pagina rende la Pro Loco un ponte tra eventi, territorio e partecipazione.",
     actionItems: const [
@@ -12862,11 +12993,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Associazioni culturali, sportive, sociali",
     timing: "Attivita durante l'anno",
     contact: "Referenti associativi",
-    highlights: const [
-      "Ambiti",
-      "Contatti",
-      "Iniziative aperte",
-    ],
+    highlights: const ["Ambiti", "Contatti", "Iniziative aperte"],
     actionBody:
         "La pagina deve aiutare a trovare il gruppo giusto, non solo elencare nomi.",
     actionItems: const [
@@ -12897,11 +13024,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Gruppo AVIS locale e punti donazione",
     timing: "Calendario raccolte e appuntamenti",
     contact: "Referenti AVIS",
-    highlights: const [
-      "Donazione",
-      "Appuntamenti",
-      "Sensibilizzazione",
-    ],
+    highlights: const ["Donazione", "Appuntamenti", "Sensibilizzazione"],
     actionBody:
         "La pagina rende immediato il contatto e spiega i passaggi senza entrare in ambito medico.",
     actionItems: const [
@@ -12932,11 +13055,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Biblioteca e spazi culturali",
     timing: "Orari di apertura e iniziative",
     contact: "Biblioteca comunale",
-    highlights: const [
-      "Prestiti",
-      "Eventi culturali",
-      "Spazi studio",
-    ],
+    highlights: const ["Prestiti", "Eventi culturali", "Spazi studio"],
     actionBody:
         "La pagina trasforma la biblioteca in un servizio vivo, collegato a cultura e comunita.",
     actionItems: const [
@@ -12967,11 +13086,7 @@ final List<FinalInfoPage> _finalInfoPages = [
     access: "Archivio digitale locale",
     timing: "Consultazione continua",
     contact: "Biblioteca o redazione locale",
-    highlights: const [
-      "Foto storiche",
-      "Video",
-      "Raccolte tematiche",
-    ],
+    highlights: const ["Foto storiche", "Video", "Raccolte tematiche"],
     actionBody:
         "La mediateca valorizza contenuti che altrimenti restano dispersi tra archivi e social.",
     actionItems: const [
@@ -13272,10 +13387,7 @@ class _FinalInfoFactGrid extends StatelessWidget {
 }
 
 class _FinalInfoFactCard extends StatelessWidget {
-  const _FinalInfoFactCard({
-    required this.width,
-    required this.fact,
-  });
+  const _FinalInfoFactCard({required this.width, required this.fact});
 
   final double width;
   final FinalInfoFact fact;
@@ -13402,6 +13514,1843 @@ class _FinalInfoSectionCard extends StatelessWidget {
   }
 }
 
+enum BackofficeSection {
+  dashboard,
+  page,
+  menu,
+  events,
+  vouchers,
+  members,
+  stats,
+  permissions,
+  support,
+}
+
+enum BackofficeEventVisibility {
+  public,
+  orgPage,
+  orgMembers,
+  group,
+  invite,
+  municipalInternal,
+  council,
+}
+
+class BackofficeOrganization {
+  BackofficeOrganization({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.shortDescription,
+    required this.longDescription,
+    required this.address,
+    required this.contact,
+    required this.opening,
+    required this.services,
+    required this.coverColors,
+    this.coverFitContain = false,
+    this.coverFocusX = 0.5,
+    this.coverFocusY = 0.5,
+  });
+
+  final String id;
+  String name;
+  String type;
+  String shortDescription;
+  String longDescription;
+  String address;
+  String contact;
+  String opening;
+  List<String> services;
+  List<Color> coverColors;
+  bool coverFitContain;
+  double coverFocusX;
+  double coverFocusY;
+}
+
+class BackofficeEvent {
+  BackofficeEvent({
+    required this.id,
+    required this.orgId,
+    required this.title,
+    required this.type,
+    required this.date,
+    required this.time,
+    required this.visibility,
+    required this.audience,
+    required this.status,
+    required this.capacity,
+    required this.rsvpCount,
+    required this.checkinCount,
+    required this.waitlistCount,
+    required this.participationTrend,
+  });
+
+  final String id;
+  final String orgId;
+  String title;
+  String type;
+  String date;
+  String time;
+  BackofficeEventVisibility visibility;
+  String audience;
+  String status;
+  int capacity;
+  int rsvpCount;
+  int checkinCount;
+  int waitlistCount;
+  String participationTrend;
+}
+
+class BackofficeMenuItem {
+  BackofficeMenuItem({
+    required this.id,
+    required this.orgId,
+    required this.category,
+    required this.name,
+    required this.description,
+    required this.price,
+    required this.active,
+  });
+
+  final String id;
+  final String orgId;
+  final String category;
+  final String name;
+  final String description;
+  final String price;
+  bool active;
+}
+
+class BackofficeMember {
+  const BackofficeMember({
+    required this.orgId,
+    required this.name,
+    required this.group,
+    required this.role,
+  });
+
+  final String orgId;
+  final String name;
+  final String group;
+  final String role;
+}
+
+class BackofficeGroup {
+  const BackofficeGroup({
+    required this.orgId,
+    required this.name,
+    required this.visibility,
+    required this.members,
+  });
+
+  final String orgId;
+  final String name;
+  final String visibility;
+  final int members;
+}
+
+class BackofficeVoucher {
+  const BackofficeVoucher({
+    required this.orgId,
+    required this.code,
+    required this.label,
+    required this.status,
+    required this.amount,
+  });
+
+  final String orgId;
+  final String code;
+  final String label;
+  final String status;
+  final String amount;
+}
+
+class BackofficeController extends ChangeNotifier {
+  BackofficeController.demo()
+      : organizations = [
+          BackofficeOrganization(
+            id: "osteria",
+            name: "Osteria Monte Nerone",
+            type: "Ristorante",
+            shortDescription: "Cucina tipica, prodotti locali e serate.",
+            longDescription:
+                "Locale nel centro di Apecchio con menu stagionale, piatti del territorio, birre artigianali e piccole degustazioni.",
+            address: "Via Roma 12, Apecchio",
+            contact: "info@osteria.example · +39 0722 000000",
+            opening: "Oggi 12:00-14:30, 19:00-22:00",
+            services: ["Prenotazione", "Voucher", "Menu stagionale"],
+            coverColors: const [Color(0xFF0B7285), Color(0xFFC97824)],
+          ),
+          BackofficeOrganization(
+            id: "proloco",
+            name: "Pro Loco Apecchio",
+            type: "Associazione",
+            shortDescription: "Eventi, volontariato e territorio.",
+            longDescription:
+                "Organizzazione locale per iniziative pubbliche, supporto eventi, volontari e valorizzazione della comunita.",
+            address: "Piazza del Comune, Apecchio",
+            contact: "proloco@apecchio.example",
+            opening: "Su appuntamento",
+            services: ["Eventi", "Volontari", "Assemblee"],
+            coverColors: const [Color(0xFF2F855A), Color(0xFF6A4C93)],
+            coverFocusY: 0.45,
+          ),
+          BackofficeOrganization(
+            id: "comune",
+            name: "Comune di Apecchio",
+            type: "Ente",
+            shortDescription: "Servizi comunali e vita pubblica.",
+            longDescription:
+                "Area istituzionale per coordinare servizi, uffici, comunicazioni, sedute e segnalazioni.",
+            address: "Piazza San Martino, Apecchio",
+            contact: "segreteria@comune.apecchio.example",
+            opening: "Uffici su appuntamento",
+            services: ["Segnalazioni", "Uffici", "Sedute"],
+            coverColors: const [Color(0xFF1D3557), Color(0xFF89C2D9)],
+            coverFocusY: 0.48,
+          ),
+        ],
+        events = [
+          BackofficeEvent(
+            id: "e1",
+            orgId: "osteria",
+            title: "Cena degustazione del Monte Nerone",
+            type: "Degustazione",
+            date: "16/05",
+            time: "20:30",
+            visibility: BackofficeEventVisibility.public,
+            audience: "Tutti",
+            status: "In revisione",
+            capacity: 42,
+            rsvpCount: 34,
+            checkinCount: 0,
+            waitlistCount: 3,
+            participationTrend: "+18%",
+          ),
+          BackofficeEvent(
+            id: "e2",
+            orgId: "osteria",
+            title: "Briefing staff weekend",
+            type: "Riunione interna",
+            date: "03/05",
+            time: "10:00",
+            visibility: BackofficeEventVisibility.orgMembers,
+            audience: "Staff attività",
+            status: "Pubblicato interno",
+            capacity: 8,
+            rsvpCount: 7,
+            checkinCount: 6,
+            waitlistCount: 0,
+            participationTrend: "+2",
+          ),
+          BackofficeEvent(
+            id: "e3",
+            orgId: "proloco",
+            title: "Riunione direttivo Pro Loco",
+            type: "Consiglio",
+            date: "08/05",
+            time: "21:00",
+            visibility: BackofficeEventVisibility.group,
+            audience: "Direttivo",
+            status: "Riservato",
+            capacity: 12,
+            rsvpCount: 9,
+            checkinCount: 0,
+            waitlistCount: 0,
+            participationTrend: "stabile",
+          ),
+          BackofficeEvent(
+            id: "e4",
+            orgId: "comune",
+            title: "Consiglio comunale",
+            type: "Consiglio",
+            date: "12/05",
+            time: "18:30",
+            visibility: BackofficeEventVisibility.council,
+            audience: "Cittadini e consiglieri",
+            status: "Pubblico con allegati interni",
+            capacity: 80,
+            rsvpCount: 28,
+            checkinCount: 0,
+            waitlistCount: 0,
+            participationTrend: "+6%",
+          ),
+        ],
+        menuItems = [
+          BackofficeMenuItem(
+            id: "m1",
+            orgId: "osteria",
+            category: "Primi",
+            name: "Tagliatelle al tartufo",
+            description: "Pasta fresca e tartufo locale.",
+            price: "14",
+            active: true,
+          ),
+          BackofficeMenuItem(
+            id: "m2",
+            orgId: "osteria",
+            category: "Secondi",
+            name: "Brasato alla birra",
+            description: "Cottura lenta con birra artigianale.",
+            price: "18",
+            active: true,
+          ),
+        ],
+        members = const [
+          BackofficeMember(
+            orgId: "proloco",
+            name: "Maria Rossi",
+            group: "Direttivo",
+            role: "Proprietario organizzazione",
+          ),
+          BackofficeMember(
+            orgId: "proloco",
+            name: "Luca Bianchi",
+            group: "Eventi",
+            role: "Editor eventi",
+          ),
+          BackofficeMember(
+            orgId: "osteria",
+            name: "Giulia Ferri",
+            group: "Staff attività",
+            role: "Editor menu",
+          ),
+          BackofficeMember(
+            orgId: "osteria",
+            name: "Paolo Neri",
+            group: "Staff attività",
+            role: "Scanner voucher",
+          ),
+        ],
+        groups = const [
+          BackofficeGroup(
+            orgId: "osteria",
+            name: "Staff attività",
+            visibility: "Eventi interni e turni",
+            members: 6,
+          ),
+          BackofficeGroup(
+            orgId: "proloco",
+            name: "Direttivo",
+            visibility: "Riunioni riservate",
+            members: 7,
+          ),
+          BackofficeGroup(
+            orgId: "proloco",
+            name: "Volontari",
+            visibility: "Turni e comunicazioni",
+            members: 34,
+          ),
+          BackofficeGroup(
+            orgId: "comune",
+            name: "Giunta",
+            visibility: "Agenda istituzionale",
+            members: 6,
+          ),
+        ],
+        vouchers = const [
+          BackofficeVoucher(
+            orgId: "osteria",
+            code: "VCH-5MONTE",
+            label: "Sconto 5%",
+            status: "Validato",
+            amount: "3,40",
+          ),
+          BackofficeVoucher(
+            orgId: "osteria",
+            code: "VCH-10NERONE",
+            label: "Sconto 10%",
+            status: "Disponibile",
+            amount: "7,80",
+          ),
+        ];
+
+  final List<BackofficeOrganization> organizations;
+  final List<BackofficeEvent> events;
+  final List<BackofficeMenuItem> menuItems;
+  final List<BackofficeMember> members;
+  final List<BackofficeGroup> groups;
+  final List<BackofficeVoucher> vouchers;
+
+  BackofficeOrganization organization(String id) =>
+      organizations.firstWhere((org) => org.id == id);
+
+  void addMenuItem(String orgId) {
+    menuItems.insert(
+      0,
+      BackofficeMenuItem(
+        id: "m${DateTime.now().millisecondsSinceEpoch}",
+        orgId: orgId,
+        category: "Specialità",
+        name: "Nuova proposta del giorno",
+        description: "Descrizione sintetica visibile nella scheda.",
+        price: "12",
+        active: true,
+      ),
+    );
+    notifyListeners();
+  }
+
+  void toggleMenuItem(BackofficeMenuItem item) {
+    item.active = !item.active;
+    notifyListeners();
+  }
+
+  void addEvent(String orgId) {
+    events.insert(
+      0,
+      BackofficeEvent(
+        id: "e${DateTime.now().millisecondsSinceEpoch}",
+        orgId: orgId,
+        title: "Nuovo appuntamento",
+        type: "Evento",
+        date: "15/05",
+        time: "20:30",
+        visibility: BackofficeEventVisibility.public,
+        audience: "Tutti",
+        status: "In revisione",
+        capacity: 0,
+        rsvpCount: 0,
+        checkinCount: 0,
+        waitlistCount: 0,
+        participationTrend: "nuovo",
+      ),
+    );
+    notifyListeners();
+  }
+
+  void setEventStatus(BackofficeEvent event, String status) {
+    event.status = status;
+    notifyListeners();
+  }
+}
+
+final BackofficeController appBackoffice = BackofficeController.demo();
+
+class BackofficeScreen extends StatefulWidget {
+  const BackofficeScreen({super.key, required this.initialProfile});
+
+  final UserProfile initialProfile;
+
+  @override
+  State<BackofficeScreen> createState() => _BackofficeScreenState();
+}
+
+class _BackofficeScreenState extends State<BackofficeScreen> {
+  late UserProfile _role;
+  late String _organizationId;
+  BackofficeSection _section = BackofficeSection.dashboard;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _shortController = TextEditingController();
+  final TextEditingController _servicesController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _role = widget.initialProfile;
+    _organizationId = _defaultOrganizationFor(_role);
+    _syncEditors();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _shortController.dispose();
+    _servicesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: appBackoffice,
+      builder: (context, _) {
+        final wide = MediaQuery.sizeOf(context).width >= 920;
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F7F1),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFF5F7F1),
+            title: const Text("Backoffice APPecchio"),
+            actions: [
+              IconButton(
+                tooltip: "Esci",
+                onPressed: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+                ),
+                icon: const Icon(Icons.logout_rounded),
+              ),
+            ],
+          ),
+          body: wide
+              ? Row(
+                  children: [
+                    SizedBox(width: 290, child: _sideRail()),
+                    const VerticalDivider(width: 1),
+                    Expanded(child: _content()),
+                  ],
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [_sideRail(compact: true), _contentBody()],
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _sideRail({bool compact = false}) {
+    return ListView(
+      padding: EdgeInsets.all(compact ? 0 : 16),
+      shrinkWrap: compact,
+      children: [
+        _BackofficeCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Ruolo",
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<UserProfile>(
+                isExpanded: true,
+                initialValue: _role,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                items: _backofficeProfiles
+                    .map(
+                      (profile) => DropdownMenuItem<UserProfile>(
+                        value: profile,
+                        child: Text(_profileBackofficeLabel(profile)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _role = value;
+                    _organizationId = _defaultOrganizationFor(_role);
+                    _section = BackofficeSection.dashboard;
+                    _syncEditors();
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Contesto",
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _organizationId,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                items: _visibleOrganizations()
+                    .map(
+                      (org) => DropdownMenuItem<String>(
+                        value: org.id,
+                        child: Text(org.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _canChangeOrganization()
+                    ? (value) {
+                        if (value == null) return;
+                        setState(() {
+                          _organizationId = value;
+                          _syncEditors();
+                        });
+                      }
+                    : null,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (compact)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final section in _sectionsForRole())
+                ChoiceChip(
+                  key: ValueKey("backoffice-section-${section.name}"),
+                  avatar: Icon(_sectionIcon(section), size: 18),
+                  label: Text(_sectionLabel(section)),
+                  selected: _section == section,
+                  selectedColor: const Color(0xFF2E7D57),
+                  labelStyle: TextStyle(
+                    color: _section == section ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  onSelected: (_) => setState(() => _section = section),
+                ),
+            ],
+          )
+        else
+          for (final section in _sectionsForRole())
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                key: ValueKey("backoffice-section-${section.name}"),
+                selected: _section == section,
+                selectedTileColor: const Color(0xFFE3F1E8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                leading: Icon(_sectionIcon(section)),
+                title: Text(
+                  _sectionLabel(section),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                onTap: () => setState(() => _section = section),
+              ),
+            ),
+      ],
+    );
+  }
+
+  Widget _content() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [_contentBody()],
+    );
+  }
+
+  Widget _contentBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _BackofficeHero(
+          title: _section == BackofficeSection.dashboard
+              ? _dashboardTitle()
+              : _sectionLabel(_section),
+          subtitle: _dashboardSubtitle(),
+          action: _role == UserProfile.mayor ? "Report eventi" : "Apri eventi",
+          onAction: () => setState(() => _section = BackofficeSection.events),
+        ),
+        const SizedBox(height: 16),
+        switch (_section) {
+          BackofficeSection.dashboard => _dashboard(),
+          BackofficeSection.page => _pageEditor(),
+          BackofficeSection.menu => _menuList(),
+          BackofficeSection.events => _events(),
+          BackofficeSection.vouchers => _vouchers(),
+          BackofficeSection.members => _members(),
+          BackofficeSection.stats => _stats(),
+          BackofficeSection.permissions => _permissions(),
+          BackofficeSection.support => _support(),
+        },
+      ],
+    );
+  }
+
+  Widget _dashboard() {
+    final metrics = _roleMetrics();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth > 780
+                ? 4
+                : constraints.maxWidth > 520
+                    ? 2
+                    : 1;
+            return GridView.count(
+              crossAxisCount: columns,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.02,
+              children: [
+                for (final metric in metrics)
+                  _MetricCard(
+                    label: metric.$1,
+                    value: metric.$2,
+                    trend: metric.$3,
+                  ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        _participationPanel(),
+        const SizedBox(height: 16),
+        _twoCards(
+          leftTitle: "Priorità",
+          left: _rolePriorities()
+              .map((text) => _InfoLine(text: text, trailing: "Da gestire"))
+              .toList(),
+          rightTitle: "Attività recenti",
+          right: const [
+            _InfoLine(
+              text: "Scheda organizzazione aggiornata",
+              trailing: "oggi",
+            ),
+            _InfoLine(
+              text: "Evento interno creato con visibilità limitata",
+              trailing: "oggi",
+            ),
+            _InfoLine(
+              text: "Voucher validato senza anomalie",
+              trailing: "oggi",
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _participationPanel() {
+    final events = _dashboardEvents();
+    final capacity = events.fold<int>(0, (sum, event) => sum + event.capacity);
+    final rsvp = events.fold<int>(0, (sum, event) => sum + event.rsvpCount);
+    final checkin = events.fold<int>(
+      0,
+      (sum, event) => sum + event.checkinCount,
+    );
+    final waitlist = events.fold<int>(
+      0,
+      (sum, event) => sum + event.waitlistCount,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth > 780;
+        final summary = _BackofficeCard(
+          title: _role == UserProfile.mayor
+              ? "Partecipazione eventi pubblici e istituzionali"
+              : "Partecipazione eventi",
+          child: Column(
+            children: [
+              _miniKpiGrid([
+                ("RSVP", "$rsvp", "${_percent(rsvp, capacity)}% capienza"),
+                (
+                  "Check-in",
+                  "$checkin",
+                  "${_percent(checkin, rsvp)}% presenze",
+                ),
+                (
+                  "Posti",
+                  "${math.max(capacity - rsvp, 0)}",
+                  "$capacity totali",
+                ),
+                ("Attesa", "$waitlist", "lista attesa"),
+              ]),
+            ],
+          ),
+        );
+        final list = _BackofficeCard(
+          title: "Prossimi eventi",
+          child: Column(
+            children: [
+              if (events.isEmpty)
+                const Text("Nessun evento con partecipazione visibile.")
+              else
+                for (final event in events) _ParticipationTile(event: event),
+            ],
+          ),
+        );
+        return wide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 4, child: summary),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 6, child: list),
+                ],
+              )
+            : Column(children: [summary, const SizedBox(height: 12), list]);
+      },
+    );
+  }
+
+  Widget _pageEditor() {
+    final org = appBackoffice.organization(_organizationId);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth > 820;
+        final editor = Column(
+          children: [
+            _BackofficeCard(
+              title: "Immagine pagina",
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _OrganizationCover(org: org, height: 210),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: org.coverFitContain,
+                    title: const Text("Mostra intera"),
+                    subtitle: const Text(
+                      "Disattiva per riempire l'area copertina.",
+                    ),
+                    onChanged: (value) => setState(() {
+                      org.coverFitContain = value;
+                    }),
+                  ),
+                  const Text(
+                    "Fuoco orizzontale",
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  Slider(
+                    value: org.coverFocusX,
+                    onChanged: (value) => setState(() {
+                      org.coverFocusX = value;
+                    }),
+                  ),
+                  const Text(
+                    "Fuoco verticale",
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  Slider(
+                    value: org.coverFocusY,
+                    onChanged: (value) => setState(() {
+                      org.coverFocusY = value;
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _BackofficeCard(
+              title: "Informazioni principali",
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Nome",
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => org.name = value,
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _shortController,
+                    decoration: const InputDecoration(
+                      labelText: "Descrizione breve",
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => org.shortDescription = value,
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _servicesController,
+                    decoration: const InputDecoration(
+                      labelText: "Servizi separati da virgola",
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => org.services = value
+                        .split(",")
+                        .map((item) => item.trim())
+                        .where((item) => item.isNotEmpty)
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+        final preview = _PhoneOrganizationPreview(org: org);
+        return wide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: editor),
+                  const SizedBox(width: 14),
+                  SizedBox(width: 360, child: preview),
+                ],
+              )
+            : Column(children: [editor, const SizedBox(height: 14), preview]);
+      },
+    );
+  }
+
+  Widget _menuList() {
+    final items = _scopedMenuItems();
+    return _BackofficeCard(
+      title: "Menu / listino",
+      trailing: FilledButton.icon(
+        onPressed: () => appBackoffice.addMenuItem(_organizationId),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text("Aggiungi voce"),
+      ),
+      child: Column(
+        children: [
+          if (items.isEmpty) const Text("Nessuna voce per questo contesto."),
+          for (final item in items)
+            _InfoLine(
+              text: "${item.name} · €${item.price}",
+              subtitle: "${item.category} · ${item.description}",
+              trailing: item.active ? "Attiva" : "Non disponibile",
+              onTap: () => appBackoffice.toggleMenuItem(item),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _events() {
+    final events = _visibleEvents();
+    final canReview =
+        _role == UserProfile.admin || _role == UserProfile.supervisor;
+    return Column(
+      children: [
+        _BackofficeCard(
+          title: "Eventi",
+          trailing: FilledButton.icon(
+            onPressed: () => appBackoffice.addEvent(_organizationId),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text("Crea evento"),
+          ),
+          child: Column(
+            children: [
+              for (final event in events)
+                _EventAdminTile(
+                  event: event,
+                  orgName: appBackoffice.organization(event.orgId).name,
+                  canReview: canReview && event.status == "In revisione",
+                  canManageOwn: event.orgId == _organizationId,
+                  onApprove: () =>
+                      appBackoffice.setEventStatus(event, "Pubblicato"),
+                  onChanges: () => appBackoffice.setEventStatus(
+                    event,
+                    "Correzioni richieste",
+                  ),
+                  onCancel: () =>
+                      appBackoffice.setEventStatus(event, "Annullato"),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _vouchers() {
+    final vouchers = _scopedVouchers();
+    return _twoCards(
+      leftTitle: "Storico voucher",
+      left: vouchers
+          .map(
+            (voucher) => _InfoLine(
+              text: "${voucher.label} · ${voucher.code}",
+              trailing: voucher.status,
+              subtitle: "Valore €${voucher.amount}",
+            ),
+          )
+          .toList(),
+      rightTitle: "Regole convenzione",
+      right: const [
+        _InfoLine(text: "Voucher 5% e 10%", trailing: "Accettati"),
+        _InfoLine(text: "Uso singolo per codice", trailing: "Obbligatorio"),
+        _InfoLine(text: "Problemi voucher", trailing: "Ticket supervisore"),
+      ],
+    );
+  }
+
+  Widget _members() {
+    final groups = _scopedGroups();
+    final members = _scopedMembers();
+    return _twoCards(
+      leftTitle: "Gruppi",
+      left: groups
+          .map(
+            (group) => _InfoLine(
+              text: group.name,
+              subtitle: group.visibility,
+              trailing: "${group.members} membri",
+            ),
+          )
+          .toList(),
+      rightTitle: "Membri",
+      right: members
+          .map(
+            (member) => _InfoLine(
+              text: member.name,
+              subtitle: "${member.group} · ${member.role}",
+              trailing: member.group,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _stats() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth > 760 ? 3 : 1;
+        return GridView.count(
+          crossAxisCount: columns,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.35,
+          children: const [
+            _BackofficeChartCard(title: "Visite", values: [82, 38, 56, 71]),
+            _BackofficeChartCard(title: "Eventi", values: [45, 25, 30, 60]),
+            _BackofficeChartCard(title: "Servizi", values: [81, 12, 37, 22]),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _permissions() {
+    return const _BackofficeCard(
+      title: "Ruoli e permessi",
+      child: Column(
+        children: [
+          _InfoLine(
+            text: "Admin",
+            subtitle: "Utenti, ruoli, audit",
+            trailing: "Tutto",
+          ),
+          _InfoLine(
+            text: "Supervisore",
+            subtitle: "Approva e coordina",
+            trailing: "Operativo",
+          ),
+          _InfoLine(
+            text: "Sindaco",
+            subtitle: "KPI e comunicazioni",
+            trailing: "Decisionale",
+          ),
+          _InfoLine(
+            text: "Esercente",
+            subtitle: "Pagina, menu, eventi",
+            trailing: "Proprio",
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _support() {
+    return _twoCards(
+      leftTitle: "Ticket rapidi",
+      left: const [
+        _InfoLine(text: "Problema voucher", trailing: "Apri"),
+        _InfoLine(text: "Cambio categoria", trailing: "Apri"),
+        _InfoLine(text: "Evento in revisione", trailing: "Apri"),
+      ],
+      rightTitle: "Stato richieste",
+      right: const [
+        _InfoLine(
+          text: "Validazione voucher non riuscita",
+          trailing: "In carico",
+        ),
+        _InfoLine(
+          text: "Foto copertina da approvare",
+          trailing: "In revisione",
+        ),
+      ],
+    );
+  }
+
+  Widget _twoCards({
+    required String leftTitle,
+    required List<Widget> left,
+    required String rightTitle,
+    required List<Widget> right,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final first = _BackofficeCard(
+          title: leftTitle,
+          child: Column(children: left),
+        );
+        final second = _BackofficeCard(
+          title: rightTitle,
+          child: Column(children: right),
+        );
+        return constraints.maxWidth > 760
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: first),
+                  const SizedBox(width: 12),
+                  Expanded(child: second),
+                ],
+              )
+            : Column(children: [first, const SizedBox(height: 12), second]);
+      },
+    );
+  }
+
+  Widget _miniKpiGrid(List<(String, String, String)> rows) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 8,
+      childAspectRatio: 1.05,
+      children: [
+        for (final row in rows)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7FAF7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE1E8DD)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  row.$1,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  row.$2,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  row.$3,
+                  style: const TextStyle(
+                    color: Color(0xFF2E7D57),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _syncEditors() {
+    final org = appBackoffice.organization(_organizationId);
+    _nameController.text = org.name;
+    _shortController.text = org.shortDescription;
+    _servicesController.text = org.services.join(", ");
+  }
+
+  List<BackofficeOrganization> _visibleOrganizations() {
+    if (_role == UserProfile.merchant) {
+      return [appBackoffice.organization("osteria")];
+    }
+    if (_role == UserProfile.organization) {
+      return [appBackoffice.organization("proloco")];
+    }
+    return appBackoffice.organizations;
+  }
+
+  bool _canChangeOrganization() =>
+      _role == UserProfile.admin ||
+      _role == UserProfile.supervisor ||
+      _role == UserProfile.mayor;
+
+  List<BackofficeEvent> _visibleEvents() {
+    if (_role == UserProfile.admin || _role == UserProfile.supervisor) {
+      return appBackoffice.events;
+    }
+    if (_role == UserProfile.mayor) {
+      return appBackoffice.events
+          .where(
+            (event) =>
+                event.visibility == BackofficeEventVisibility.public ||
+                event.visibility == BackofficeEventVisibility.council,
+          )
+          .toList(growable: false);
+    }
+    return appBackoffice.events
+        .where((event) => event.orgId == _organizationId)
+        .toList(growable: false);
+  }
+
+  List<BackofficeEvent> _dashboardEvents() => _visibleEvents().take(5).toList();
+  List<BackofficeMenuItem> _scopedMenuItems() => appBackoffice.menuItems
+      .where(
+        (item) => _canChangeOrganization() || item.orgId == _organizationId,
+      )
+      .toList(growable: false);
+  List<BackofficeVoucher> _scopedVouchers() => appBackoffice.vouchers
+      .where(
+        (item) => _canChangeOrganization() || item.orgId == _organizationId,
+      )
+      .toList(growable: false);
+  List<BackofficeMember> _scopedMembers() => appBackoffice.members
+      .where(
+        (item) => _canChangeOrganization() || item.orgId == _organizationId,
+      )
+      .toList(growable: false);
+  List<BackofficeGroup> _scopedGroups() => appBackoffice.groups
+      .where(
+        (item) => _canChangeOrganization() || item.orgId == _organizationId,
+      )
+      .toList(growable: false);
+
+  List<BackofficeSection> _sectionsForRole() {
+    if (_role == UserProfile.mayor) {
+      return const [
+        BackofficeSection.dashboard,
+        BackofficeSection.events,
+        BackofficeSection.stats,
+        BackofficeSection.support,
+      ];
+    }
+    return const [
+      BackofficeSection.dashboard,
+      BackofficeSection.page,
+      BackofficeSection.menu,
+      BackofficeSection.events,
+      BackofficeSection.vouchers,
+      BackofficeSection.members,
+      BackofficeSection.stats,
+      BackofficeSection.permissions,
+      BackofficeSection.support,
+    ];
+  }
+
+  List<(String, String, String)> _roleMetrics() {
+    return switch (_role) {
+      UserProfile.merchant => [
+          ("Visite pagina", "1.248", "+18%"),
+          ("Aperture menu", "432", "+9%"),
+          ("Voucher riscattati", "37", "+12%"),
+          ("Eventi attivi", "3", "2 privati"),
+        ],
+      UserProfile.organization => [
+          ("Eventi pubblici", "8", "+3"),
+          ("Riunioni interne", "5", "mese"),
+          ("Membri attivi", "64", "+6"),
+          ("Inviti in attesa", "12", "RSVP"),
+        ],
+      UserProfile.supervisor => [
+          ("Segnalazioni aperte", "23", "5 urgenti"),
+          ("Eventi in revisione", "7", "oggi"),
+          ("Notifiche pronte", "4", "2 comunali"),
+          ("Anomalie voucher", "2", "bassa"),
+        ],
+      UserProfile.mayor => [
+          ("Segnalazioni risolte", "81%", "+7%"),
+          ("Tempo medio risposta", "2,4 gg", "-0,6"),
+          ("Eventi mese", "19", "+5"),
+          ("Avvisi pubblici", "6", "2 da approvare"),
+        ],
+      _ => [
+          ("Utenti backoffice", "42", "+4"),
+          ("Ruoli configurati", "9", "RBAC"),
+          ("Schede pubblicate", "118", "+11"),
+          ("Azioni sensibili", "16", "audit"),
+        ],
+    };
+  }
+
+  List<String> _rolePriorities() {
+    return switch (_role) {
+      UserProfile.merchant => [
+          "Confermare orario speciale di domenica",
+          "Aggiornare due piatti stagionali",
+          "Evento degustazione in revisione URP",
+        ],
+      UserProfile.organization => [
+          "Assemblea soci da confermare",
+          "Turni volontari festa del paese",
+          "Comunicazione Pro Loco da inviare",
+        ],
+      UserProfile.supervisor => [
+          "Approvare calendario weekend",
+          "Smistare segnalazioni viabilità",
+          "Verificare doppia scansione voucher",
+        ],
+      UserProfile.mayor => [
+          "Comunicazione lavori viabilità",
+          "Report mensile servizi",
+          "Evento patrocinato in attesa",
+        ],
+      _ => [
+          "Rivedere permessi editor eventi",
+          "Aggiornare categorie attività",
+          "Controllare log esportazione dati",
+        ],
+    };
+  }
+
+  String _dashboardTitle() {
+    return switch (_role) {
+      UserProfile.merchant => "Gestisci pagina, menu, offerte ed eventi",
+      UserProfile.organization => "Eventi pubblici, riunioni interne e gruppi",
+      UserProfile.supervisor => "Code operative, approvazioni e anomalie",
+      UserProfile.mayor => "Priorità del territorio e comunicazioni pubbliche",
+      _ => "Ruoli, permessi, contenuti e audit",
+    };
+  }
+
+  String _dashboardSubtitle() {
+    return _role == UserProfile.mayor
+        ? "Vista istituzionale con aggregati pubblici e priorità."
+        : "Area demo frontend-only con dati in memoria.";
+  }
+
+  int _percent(int value, int max) {
+    if (max <= 0) return 0;
+    return math.min(100, ((value / max) * 100).round());
+  }
+}
+
+const List<UserProfile> _backofficeProfiles = [
+  UserProfile.merchant,
+  UserProfile.organization,
+  UserProfile.supervisor,
+  UserProfile.mayor,
+  UserProfile.admin,
+];
+
+String _defaultOrganizationFor(UserProfile profile) => switch (profile) {
+      UserProfile.merchant => "osteria",
+      UserProfile.organization => "proloco",
+      _ => "comune",
+    };
+
+String _profileBackofficeLabel(UserProfile profile) => switch (profile) {
+      UserProfile.merchant => "Esercente",
+      UserProfile.organization => "Organizzazione",
+      UserProfile.supervisor => "Supervisore",
+      UserProfile.mayor => "Sindaco",
+      UserProfile.admin => "Amministratore",
+      _ => "Backoffice",
+    };
+
+String _sectionLabel(BackofficeSection section) => switch (section) {
+      BackofficeSection.dashboard => "Cruscotto",
+      BackofficeSection.page => "La mia pagina",
+      BackofficeSection.menu => "Menu / listino",
+      BackofficeSection.events => "Eventi",
+      BackofficeSection.vouchers => "Voucher",
+      BackofficeSection.members => "Membri",
+      BackofficeSection.stats => "Statistiche",
+      BackofficeSection.permissions => "Permessi",
+      BackofficeSection.support => "Assistenza",
+    };
+
+IconData _sectionIcon(BackofficeSection section) => switch (section) {
+      BackofficeSection.dashboard => Icons.dashboard_rounded,
+      BackofficeSection.page => Icons.edit_note_rounded,
+      BackofficeSection.menu => Icons.restaurant_menu_rounded,
+      BackofficeSection.events => Icons.event_rounded,
+      BackofficeSection.vouchers => Icons.confirmation_number_rounded,
+      BackofficeSection.members => Icons.groups_rounded,
+      BackofficeSection.stats => Icons.bar_chart_rounded,
+      BackofficeSection.permissions => Icons.admin_panel_settings_rounded,
+      BackofficeSection.support => Icons.support_agent_rounded,
+    };
+
+String _visibilityLabel(BackofficeEventVisibility visibility) =>
+    switch (visibility) {
+      BackofficeEventVisibility.public => "Pubblico",
+      BackofficeEventVisibility.orgPage => "Pagina organizzazione",
+      BackofficeEventVisibility.orgMembers => "Solo membri",
+      BackofficeEventVisibility.group => "Gruppo",
+      BackofficeEventVisibility.invite => "Su invito",
+      BackofficeEventVisibility.municipalInternal => "Interno Comune",
+      BackofficeEventVisibility.council => "Consiglio / Giunta",
+    };
+
+class _BackofficeHero extends StatelessWidget {
+  const _BackofficeHero({
+    required this.title,
+    required this.subtitle,
+    required this.action,
+    required this.onAction,
+  });
+
+  final String title;
+  final String subtitle;
+  final String action;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE6F2EA), Color(0xFFF7ECD8)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFDDE7D8)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "APPecchio backoffice",
+                  style: TextStyle(
+                    color: Color(0xFF2E7D57),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(subtitle, style: const TextStyle(color: Colors.black54)),
+              ],
+            ),
+          ),
+          FilledButton(onPressed: onAction, child: Text(action)),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackofficeCard extends StatelessWidget {
+  const _BackofficeCard({this.title, this.trailing, required this.child});
+
+  final String? title;
+  final Widget? trailing;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE1E8DD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title!,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                if (trailing != null) trailing!,
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.trend,
+  });
+
+  final String label;
+  final String value;
+  final String trend;
+
+  @override
+  Widget build(BuildContext context) {
+    return _BackofficeCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+          ),
+          Text(
+            trend,
+            style: const TextStyle(
+              color: Color(0xFF2E7D57),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({
+    required this.text,
+    required this.trailing,
+    this.subtitle,
+    this.onTap,
+  });
+
+  final String text;
+  final String? subtitle;
+  final String trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    text,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Chip(label: Text(trailing)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ParticipationTile extends StatelessWidget {
+  const _ParticipationTile({required this.event});
+
+  final BackofficeEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final rsvpRate =
+        event.capacity == 0 ? 0.0 : event.rsvpCount / event.capacity;
+    final checkinRate =
+        event.rsvpCount == 0 ? 0.0 : event.checkinCount / event.rsvpCount;
+    final label = event.capacity > 0 && event.rsvpCount >= event.capacity
+        ? "Sold out"
+        : event.capacity > 0 && rsvpRate >= 0.85
+            ? "Quasi pieno"
+            : event.capacity > 0 && rsvpRate < 0.35
+                ? "Bassa partecipazione"
+                : "Posti disponibili";
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  event.title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Chip(label: Text(label)),
+            ],
+          ),
+          Text(
+            "${event.date} · ${event.time} · ${event.audience}",
+            style: const TextStyle(color: Colors.black54),
+          ),
+          const SizedBox(height: 8),
+          _ProgressLine(
+            label: "RSVP",
+            value: rsvpRate,
+            text: "${event.rsvpCount}/${event.capacity}",
+          ),
+          _ProgressLine(
+            label: "Check-in",
+            value: checkinRate,
+            text: "${event.checkinCount}/${event.rsvpCount}",
+          ),
+          Text(
+            "${event.waitlistCount} in attesa · Trend ${event.participationTrend}",
+            style: const TextStyle(
+              color: Color(0xFF2E7D57),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressLine extends StatelessWidget {
+  const _ProgressLine({
+    required this.label,
+    required this.value,
+    required this.text,
+  });
+
+  final String label;
+  final double value;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 72, child: Text(label)),
+        Expanded(child: LinearProgressIndicator(value: value.clamp(0, 1))),
+        const SizedBox(width: 8),
+        SizedBox(width: 54, child: Text(text, textAlign: TextAlign.end)),
+      ],
+    );
+  }
+}
+
+class _OrganizationCover extends StatelessWidget {
+  const _OrganizationCover({required this.org, required this.height});
+
+  final BackofficeOrganization org;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      padding: EdgeInsets.all(org.coverFitContain ? 26 : 0),
+      decoration: BoxDecoration(
+        color: org.coverFitContain ? const Color(0xFFEAF0E6) : null,
+        gradient: org.coverFitContain
+            ? null
+            : LinearGradient(
+                colors: org.coverColors,
+                begin: Alignment(-1 + org.coverFocusX, -1 + org.coverFocusY),
+                end: Alignment(1 - org.coverFocusX, 1 - org.coverFocusY),
+              ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: org.coverFitContain
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: org.coverColors),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            )
+          : Align(
+              alignment: Alignment(
+                -1 + org.coverFocusX * 2,
+                -1 + org.coverFocusY * 2,
+              ),
+              child: Icon(
+                Icons.image_rounded,
+                color: Colors.white.withValues(alpha: 0.56),
+                size: 62,
+              ),
+            ),
+    );
+  }
+}
+
+class _PhoneOrganizationPreview extends StatelessWidget {
+  const _PhoneOrganizationPreview({required this.org});
+
+  final BackofficeOrganization org;
+
+  @override
+  Widget build(BuildContext context) {
+    return _BackofficeCard(
+      title: "Anteprima mobile",
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F2D35),
+          borderRadius: BorderRadius.circular(26),
+        ),
+        padding: const EdgeInsets.all(8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: ColoredBox(
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _OrganizationCover(org: org, height: 150),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Chip(label: Text(org.type)),
+                      Text(
+                        org.name,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(org.shortDescription),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final service in org.services)
+                            Chip(label: Text(service)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EventAdminTile extends StatelessWidget {
+  const _EventAdminTile({
+    required this.event,
+    required this.orgName,
+    required this.canReview,
+    required this.canManageOwn,
+    required this.onApprove,
+    required this.onChanges,
+    required this.onCancel,
+  });
+
+  final BackofficeEvent event;
+  final String orgName;
+  final bool canReview;
+  final bool canManageOwn;
+  final VoidCallback onApprove;
+  final VoidCallback onChanges;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE1E8DD)),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    event.title,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                Chip(label: Text(_visibilityLabel(event.visibility))),
+              ],
+            ),
+            Text(
+              "$orgName · ${event.type} · ${event.date} ${event.time}",
+              style: const TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(label: Text(event.status)),
+                Chip(label: Text(event.audience)),
+                Chip(label: Text("${event.rsvpCount}/${event.capacity} RSVP")),
+              ],
+            ),
+            if (canReview || canManageOwn) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (canReview)
+                    FilledButton(
+                      onPressed: onApprove,
+                      child: const Text("Approva"),
+                    ),
+                  if (canReview)
+                    OutlinedButton(
+                      onPressed: onChanges,
+                      child: const Text("Correzioni"),
+                    ),
+                  if (canManageOwn)
+                    OutlinedButton(
+                      onPressed: onCancel,
+                      child: const Text("Annulla"),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackofficeChartCard extends StatelessWidget {
+  const _BackofficeChartCard({required this.title, required this.values});
+
+  final String title;
+  final List<int> values;
+
+  @override
+  Widget build(BuildContext context) {
+    return _BackofficeCard(
+      title: title,
+      child: Column(
+        children: [
+          for (final value in values)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: LinearProgressIndicator(value: value / 100),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class DetailScreen extends StatelessWidget {
   const DetailScreen({
     super.key,
@@ -13435,9 +15384,10 @@ class DetailScreen extends StatelessWidget {
                 child: Text(
                   title,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800),
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               SafeArea(
@@ -13454,9 +15404,13 @@ class DetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(type,
-                      style: const TextStyle(
-                          color: Colors.black54, fontWeight: FontWeight.w700)),
+                  Text(
+                    type,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   const Row(
                     children: [
@@ -13471,7 +15425,8 @@ class DetailScreen extends StatelessWidget {
                       Icon(Icons.place, size: 18),
                       SizedBox(width: 8),
                       Expanded(
-                          child: Text("Centro storico, territorio APPecchio")),
+                        child: Text("Centro storico, territorio APPecchio"),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
