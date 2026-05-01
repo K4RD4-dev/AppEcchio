@@ -74,3 +74,23 @@ button {
 }
 
 ul { padding-left: 18px; }
+<<<<<<< HEAD
+=======
+
+input, select {
+  display: block;
+  margin-top: 6px;
+  margin-bottom: 8px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ced4e5;
+}
+
+pre {
+  white-space: pre-wrap;
+  background: #f8faff;
+  border: 1px solid #e0e6f7;
+  border-radius: 8px;
+  padding: 10px;
+}
+>>>>>>> origin/codex/plan-gamification-feature-for-app
