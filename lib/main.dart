@@ -101,6 +101,7 @@ final EventParticipationController appEventParticipation =
     EventParticipationController();
 final SportReservationController appSportReservations =
     SportReservationController();
+final NoticeController appNotices = NoticeController.demo();
 
 class SportReservationController extends ChangeNotifier {
   final Set<String> _reservedSlotIds = {};
@@ -759,12 +760,14 @@ class MenuNode {
     required this.id,
     required this.label,
     required this.icon,
+    this.highlighted = false,
     this.children = const <MenuNode>[],
   });
 
   final String id;
   final String label;
   final IconData icon;
+  final bool highlighted;
   final List<MenuNode> children;
 
   bool get isLeaf => children.isEmpty;
@@ -776,6 +779,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const List<HomeQuickAction> _quickActions = [
     HomeQuickAction(id: "oggi", label: "Oggi", icon: Icons.today_rounded),
+    HomeQuickAction(
+      id: "avvisi",
+      label: "Avvisi",
+      icon: Icons.campaign_rounded,
+    ),
     HomeQuickAction(
       id: "aperti",
       label: "Aperti ora",
@@ -798,6 +806,12 @@ class _HomeScreenState extends State<HomeScreen> {
     label: "Esplora",
     icon: Icons.explore_rounded,
     children: <MenuNode>[
+      MenuNode(
+        id: "avvisi",
+        label: "Avvisi",
+        icon: Icons.campaign_rounded,
+        highlighted: true,
+      ),
       MenuNode(
         id: "eventi",
         label: "Eventi",
@@ -1362,6 +1376,7 @@ class _HomeScreenState extends State<HomeScreen> {
       id: _menuRoot.id,
       label: _menuRoot.label,
       icon: _menuRoot.icon,
+      highlighted: _menuRoot.highlighted,
       children: _menuRoot.children
           .where((node) => node.id != "myapecchio")
           .toList(growable: false),
@@ -1414,6 +1429,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _HomeInsightPanel(
                           selectedAction: _activeQuickFilter,
                           user: widget.user,
+                          onOpenNotices: _openNotices,
+                          onOpenNoticeDetail: _openNoticeDetail,
                           onOpenEvents: () => _openEvents(),
                           onOpenDining: () => _openDining(nodeId: "ristoranti"),
                           onOpenTrails: _openTrails,
@@ -1481,6 +1498,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openNotices() {
+    setState(() => _showRadialMenu = false);
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 280),
+        pageBuilder: (_, animation, __) {
+          final curved =
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.15, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: FadeTransition(
+              opacity: curved,
+              child: const NoticesArchiveScreen(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openNoticeDetail(AppNotice notice) {
+    setState(() => _showRadialMenu = false);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoticeDetailScreen(notice: notice),
+      ),
+    );
+  }
+
   void _onNodeTap(MenuNode node) {
     if (node.isLeaf) {
       setState(() => _showRadialMenu = false);
@@ -1490,6 +1539,10 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         if (_isEventNode(node)) {
           _openEvents(initialFilter: node.id == "calendario" ? null : node.id);
+          return;
+        }
+        if (_isNoticeNode(node)) {
+          _openNotices();
           return;
         }
         if (_isLocalProductNode(node)) {
@@ -1547,6 +1600,10 @@ class _HomeScreenState extends State<HomeScreen> {
       "sport_outdoor",
       "comunita_spiritualita",
     }.contains(node.id);
+  }
+
+  bool _isNoticeNode(MenuNode node) {
+    return node.id == "avvisi";
   }
 
   bool _isDiningNode(MenuNode node) {
@@ -2273,6 +2330,8 @@ class _HomeInsightPanel extends StatelessWidget {
   const _HomeInsightPanel({
     required this.selectedAction,
     required this.user,
+    required this.onOpenNotices,
+    required this.onOpenNoticeDetail,
     required this.onOpenEvents,
     required this.onOpenDining,
     required this.onOpenTrails,
@@ -2280,6 +2339,8 @@ class _HomeInsightPanel extends StatelessWidget {
 
   final String selectedAction;
   final AppUser user;
+  final VoidCallback onOpenNotices;
+  final ValueChanged<AppNotice> onOpenNoticeDetail;
   final VoidCallback onOpenEvents;
   final VoidCallback onOpenDining;
   final VoidCallback onOpenTrails;
@@ -2293,6 +2354,8 @@ class _HomeInsightPanel extends StatelessWidget {
         key: ValueKey<String>(selectedAction),
         selectedAction: selectedAction,
         user: user,
+        onOpenNotices: onOpenNotices,
+        onOpenNoticeDetail: onOpenNoticeDetail,
         onOpenEvents: onOpenEvents,
         onOpenDining: onOpenDining,
         onOpenTrails: onOpenTrails,
@@ -2306,6 +2369,8 @@ class _HomeInsightContent extends StatelessWidget {
     super.key,
     required this.selectedAction,
     required this.user,
+    required this.onOpenNotices,
+    required this.onOpenNoticeDetail,
     required this.onOpenEvents,
     required this.onOpenDining,
     required this.onOpenTrails,
@@ -2313,6 +2378,8 @@ class _HomeInsightContent extends StatelessWidget {
 
   final String selectedAction;
   final AppUser user;
+  final VoidCallback onOpenNotices;
+  final ValueChanged<AppNotice> onOpenNoticeDetail;
   final VoidCallback onOpenEvents;
   final VoidCallback onOpenDining;
   final VoidCallback onOpenTrails;
@@ -2341,16 +2408,26 @@ class _HomeInsightContent extends StatelessWidget {
                 if (selectedAction == "oggi")
                   _TodayOverview(
                     raining: raining,
+                    onOpenNotices: onOpenNotices,
+                    onOpenNoticeDetail: onOpenNoticeDetail,
                     onOpenEvents: onOpenEvents,
                     onOpenDining: onOpenDining,
                     onOpenTrails: onOpenTrails,
+                  )
+                else if (selectedAction == "avvisi")
+                  _NoticesOverview(
+                    onOpenNotices: onOpenNotices,
+                    onOpenNoticeDetail: onOpenNoticeDetail,
                   )
                 else if (selectedAction == "aperti")
                   _OpenNowOverview(onOpenDining: onOpenDining)
                 else if (selectedAction == "vicino")
                   _NearbyOverview(raining: raining, onOpenTrails: onOpenTrails)
                 else
-                  const _NotificationsOverview(),
+                  _NotificationsOverview(
+                    onOpenNotices: onOpenNotices,
+                    onOpenNoticeDetail: onOpenNoticeDetail,
+                  ),
               ],
             ),
           ),
@@ -2418,12 +2495,16 @@ class _WeatherSuggestionBubble extends StatelessWidget {
 class _TodayOverview extends StatelessWidget {
   const _TodayOverview({
     required this.raining,
+    required this.onOpenNotices,
+    required this.onOpenNoticeDetail,
     required this.onOpenEvents,
     required this.onOpenDining,
     required this.onOpenTrails,
   });
 
   final bool raining;
+  final VoidCallback onOpenNotices;
+  final ValueChanged<AppNotice> onOpenNoticeDetail;
   final VoidCallback onOpenEvents;
   final VoidCallback onOpenDining;
   final VoidCallback onOpenTrails;
@@ -2434,6 +2515,27 @@ class _TodayOverview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _PanelTitle(title: "Oggi in paese"),
+        AnimatedBuilder(
+          animation: appNotices,
+          builder: (context, _) {
+            final notice = appNotices.todayNotices.isNotEmpty
+                ? appNotices.todayNotices.first
+                : appNotices.leadingNotice;
+            if (notice == null) {
+              return _InsightTile(
+                icon: Icons.campaign_rounded,
+                title: "Nessun avviso urgente",
+                subtitle: "L'archivio resta pronto per nuove segnalazioni.",
+                onTap: onOpenNotices,
+              );
+            }
+            return _NoticeInsightTile(
+              notice: notice,
+              compactDate: true,
+              onTap: () => onOpenNoticeDetail(notice),
+            );
+          },
+        ),
         _InsightTile(
           icon: raining ? Icons.museum_rounded : Icons.hiking_rounded,
           title: raining
@@ -2535,32 +2637,179 @@ class _NearbyOverview extends StatelessWidget {
   }
 }
 
-class _NotificationsOverview extends StatelessWidget {
-  const _NotificationsOverview();
+class _NoticesOverview extends StatelessWidget {
+  const _NoticesOverview({
+    required this.onOpenNotices,
+    required this.onOpenNoticeDetail,
+  });
+
+  final VoidCallback onOpenNotices;
+  final ValueChanged<AppNotice> onOpenNoticeDetail;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _PanelTitle(title: "Notifiche"),
-        _InsightTile(
-          icon: Icons.notifications_active_rounded,
-          title: "Meteo aggiornato",
-          subtitle:
-              "Pioggia possibile nel pomeriggio: consigliati eventi al coperto.",
+    return AnimatedBuilder(
+      animation: appNotices,
+      builder: (context, _) {
+        final notices = appNotices.notices.take(4).toList(growable: false);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _PanelTitle(title: "Avvisi e segnalazioni"),
+            for (final notice in notices)
+              _NoticeInsightTile(
+                notice: notice,
+                onTap: () => onOpenNoticeDetail(notice),
+              ),
+            _InsightTile(
+              icon: Icons.archive_rounded,
+              title: "Archivio completo",
+              subtitle:
+                  "Apri tutti gli avvisi e consulta il calendario dedicato.",
+              onTap: onOpenNotices,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NotificationsOverview extends StatelessWidget {
+  const _NotificationsOverview({
+    required this.onOpenNotices,
+    required this.onOpenNoticeDetail,
+  });
+
+  final VoidCallback onOpenNotices;
+  final ValueChanged<AppNotice> onOpenNoticeDetail;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: appNotices,
+      builder: (context, _) {
+        final notices = appNotices.notices.take(2).toList(growable: false);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _PanelTitle(title: "Notifiche"),
+            for (final notice in notices)
+              _NoticeInsightTile(
+                notice: notice,
+                onTap: () => onOpenNoticeDetail(notice),
+              ),
+            const _InsightTile(
+              icon: Icons.notifications_active_rounded,
+              title: "Meteo aggiornato",
+              subtitle:
+                  "Pioggia possibile nel pomeriggio: consigliati eventi al coperto.",
+            ),
+            const _InsightTile(
+              icon: Icons.event_available_rounded,
+              title: "Prenotazioni",
+              subtitle: "Palazzetto libero dalle 18:30 per attivita indoor.",
+            ),
+            _InsightTile(
+              icon: Icons.archive_rounded,
+              title: "Tutti gli avvisi",
+              subtitle: "Consulta archivio e calendario delle segnalazioni.",
+              onTap: onOpenNotices,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NoticeInsightTile extends StatelessWidget {
+  const _NoticeInsightTile({
+    required this.notice,
+    required this.onTap,
+    this.compactDate = false,
+  });
+
+  final AppNotice notice;
+  final VoidCallback onTap;
+  final bool compactDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel =
+        compactDate ? _formatNoticeShortDate(notice.date) : notice.dateLabel;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: notice.highlighted
+            ? const Color(0xFFFFF1C7)
+            : Colors.white.withValues(alpha: 0.90),
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: notice.accentColor.withValues(alpha: 0.16),
+                  child: Icon(notice.icon, color: notice.accentColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              notice.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          if (notice.highlighted) ...[
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.priority_high_rounded,
+                              color: Color(0xFF9A5A00),
+                              size: 17,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        "$dateLabel · ${notice.kindLabel}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        notice.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(height: 1.2),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Color(0xFF2E7D57)),
+              ],
+            ),
+          ),
         ),
-        _InsightTile(
-          icon: Icons.event_available_rounded,
-          title: "Prenotazioni",
-          subtitle: "Palazzetto libero dalle 18:30 per attivita indoor.",
-        ),
-        _InsightTile(
-          icon: Icons.restaurant_rounded,
-          title: "Cena",
-          subtitle: "Nuovi slot disponibili da Civico 14+5.",
-        ),
-      ],
+      ),
     );
   }
 }
@@ -2915,8 +3164,11 @@ class _CompactMenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final highlighted = node.highlighted;
     return Material(
-      color: Colors.white.withValues(alpha: 0.94),
+      color: highlighted
+          ? const Color(0xFFFFF1C7)
+          : Colors.white.withValues(alpha: 0.94),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -2931,7 +3183,9 @@ class _CompactMenuCard extends StatelessWidget {
                 children: [
                   Icon(
                     node.icon,
-                    color: const Color(0xFF1B2E21),
+                    color: highlighted
+                        ? const Color(0xFF9A5A00)
+                        : const Color(0xFF1B2E21),
                     size: compact ? 20 : 26,
                   ),
                   SizedBox(height: compact ? 4 : 8),
@@ -3090,6 +3344,7 @@ class _RadialMenuStage extends StatelessWidget {
                       label: parentNode!.label,
                       icon: Icons.undo_rounded,
                       selected: false,
+                      highlighted: false,
                       progress: progress,
                       width: nodeWidth,
                       height: nodeHeight,
@@ -3104,6 +3359,7 @@ class _RadialMenuStage extends StatelessWidget {
                       label: currentNode.children[i].label,
                       icon: currentNode.children[i].icon,
                       selected: false,
+                      highlighted: currentNode.children[i].highlighted,
                       progress: progress,
                       width: nodeWidth,
                       height: nodeHeight,
@@ -3509,6 +3765,7 @@ class _RadialNode extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.selected,
+    required this.highlighted,
     required this.progress,
     required this.onTap,
     this.fixedAngle,
@@ -3523,6 +3780,7 @@ class _RadialNode extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool selected;
+  final bool highlighted;
   final double progress;
   final VoidCallback onTap;
   final double? fixedAngle;
@@ -3554,9 +3812,15 @@ class _RadialNode extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected
                   ? const Color(0xFF2E7D57)
-                  : Colors.white.withValues(alpha: 0.95),
+                  : highlighted
+                      ? const Color(0xFFFFF1C7)
+                      : Colors.white.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+              border: Border.all(
+                color: highlighted
+                    ? const Color(0xFFFFD46A)
+                    : Colors.white.withValues(alpha: 0.7),
+              ),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black38,
@@ -3583,8 +3847,11 @@ class _RadialNode extends StatelessWidget {
                         Icon(
                           icon,
                           size: adaptiveIconSize,
-                          color:
-                              selected ? Colors.white : const Color(0xFF1B2E21),
+                          color: selected
+                              ? Colors.white
+                              : highlighted
+                                  ? const Color(0xFF9A5A00)
+                                  : const Color(0xFF1B2E21),
                         ),
                         SizedBox(height: compact ? 2 : 5),
                         Expanded(
@@ -3600,7 +3867,9 @@ class _RadialNode extends StatelessWidget {
                                 fontSize: adaptiveTextSize,
                                 color: selected
                                     ? Colors.white
-                                    : const Color(0xFF1B2E21),
+                                    : highlighted
+                                        ? const Color(0xFF5F3C00)
+                                        : const Color(0xFF1B2E21),
                               ),
                             ),
                           ),
