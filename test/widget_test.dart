@@ -29,6 +29,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
   }
 
+  Finder menuNode(String id) => find.byKey(ValueKey("menu-node-$id"));
+
   testWidgets('renders the profile login screen', (WidgetTester tester) async {
     await pumpApp(tester);
 
@@ -68,18 +70,19 @@ void main() {
     expect(find.text('Impostazioni'), findsNothing);
   });
 
-  testWidgets('uses the compact menu on a short landscape viewport',
+  testWidgets('keeps the radial tree menu on a short landscape viewport',
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(720, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await pumpApp(tester);
-    await loginAsTourist(tester);
+    await loginAsResident(tester);
     await openMenu(tester);
 
     expect(find.text('Eventi'), findsOneWidget);
     expect(find.text('Sport'), findsOneWidget);
-    expect(find.text('myApecchio'), findsNothing);
+    expect(find.text('myApecchio'), findsOneWidget);
+    expect(find.byType(GridView), findsNothing);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
@@ -112,11 +115,11 @@ void main() {
     await loginAsTourist(tester);
     await openMenu(tester);
 
-    await tester.tap(find.text('Sport'));
+    await tester.tap(menuNode("sport_prenotazioni"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Sentieri e percorsi naturalistici'));
+    await tester.tap(menuNode("sentieri"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Mappa sentieri'));
+    await tester.tap(menuNode("mappa_sentieri"));
     await tester.pumpAndSettle();
 
     expect(find.text('Sentieri e percorsi naturalistici'), findsOneWidget);
@@ -186,11 +189,11 @@ void main() {
     await loginAsResident(tester);
     await openMenu(tester);
 
-    await tester.tap(find.text('Sport'));
+    await tester.tap(menuNode("sport_prenotazioni"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Prenota impianti'));
+    await tester.tap(menuNode("prenotazioni_sport"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.tap(find.text('Campo da tennis'));
+    await tester.tap(menuNode("campo_tennis"));
     await tester.pumpAndSettle();
 
     expect(find.text('Prenota impianti'), findsOneWidget);
@@ -306,11 +309,9 @@ void main() {
     await loginAsResident(tester);
     await openMenu(tester);
 
-    await tester.ensureVisible(find.text('Servizi'));
-    await tester.tap(find.text('Servizi'));
+    await tester.tap(menuNode("servizi"));
     await tester.pump(const Duration(milliseconds: 650));
-    await tester.ensureVisible(find.text('Farmacie'));
-    await tester.tap(find.text('Farmacie'));
+    await tester.tap(menuNode("farmacia"));
     await tester.pumpAndSettle();
 
     expect(find.text('Servizi utili'), findsOneWidget);

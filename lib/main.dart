@@ -2476,31 +2476,12 @@ class _RadialMenuOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 520),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final offsetAnim = Tween<Offset>(
-          begin: const Offset(0.06, 0),
-          end: Offset.zero,
-        ).animate(animation);
-        final scaleAnim = Tween<double>(begin: 0.96, end: 1).animate(animation);
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: offsetAnim,
-            child: ScaleTransition(scale: scaleAnim, child: child),
-          ),
-        );
-      },
-      child: _RadialMenuStage(
-        key: ValueKey<String>(currentNode.id),
-        currentNode: currentNode,
-        parentNode: parentNode,
-        onNodeTap: onNodeTap,
-        onBackTap: onBackTap,
-      ),
+    return _RadialMenuStage(
+      key: ValueKey<String>(currentNode.id),
+      currentNode: currentNode,
+      parentNode: parentNode,
+      onNodeTap: onNodeTap,
+      onBackTap: onBackTap,
     );
   }
 }
@@ -2563,11 +2544,10 @@ class _MenuLayoutSpec {
   factory _MenuLayoutSpec.from(Size size) {
     final shortest = math.min(size.width, size.height);
     final isLandscape = size.width > size.height;
-    final compact = size.width < 360 || size.height < 560;
     final tablet = shortest >= 600;
 
     return _MenuLayoutSpec(
-      useCompactMenu: compact || (isLandscape && size.height < 640),
+      useCompactMenu: false,
       edgePadding: shortest < 390 ? 10 : 16,
       bottomPadding: shortest < 390 ? 82 : 96,
       titleTop: isLandscape ? 24 : (shortest < 390 ? 54 : 70),
@@ -2575,9 +2555,9 @@ class _MenuLayoutSpec {
       centerYFactor: isLandscape ? 0.54 : 0.52,
       nodeWidthFactor: tablet ? 0.20 : 0.27,
       nodeHeightFactor: tablet ? 0.16 : 0.21,
-      minNodeWidth: shortest < 390 ? 76 : 86,
+      minNodeWidth: shortest <= 430 ? 62 : 86,
       maxNodeWidth: tablet ? 148 : 122,
-      minNodeHeight: shortest < 390 ? 66 : 74,
+      minNodeHeight: shortest <= 430 ? 50 : 74,
       maxNodeHeight: tablet ? 116 : 100,
       rootRadiusFactor: tablet ? 0.33 : 0.38,
       childRadiusFactor: tablet ? 0.30 : 0.34,
@@ -2803,6 +2783,8 @@ class _RadialMenuStage extends StatelessWidget {
   final ValueChanged<MenuNode> onNodeTap;
   final VoidCallback onBackTap;
 
+  static const double _goldenRatio = 1.618033988749895;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -2818,7 +2800,9 @@ class _RadialMenuStage extends StatelessWidget {
           );
         }
 
-        final countFactor = currentNode.children.length > 5 ? 0.88 : 1.0;
+        final countFactor = currentNode.children.length > 5
+            ? 0.68
+            : (currentNode.children.length > 3 ? 0.70 : 1.0);
         final nodeWidth = ((shortest * spec.nodeWidthFactor) * countFactor)
             .clamp(spec.minNodeWidth, spec.maxNodeWidth)
             .toDouble();
@@ -2827,6 +2811,12 @@ class _RadialMenuStage extends StatelessWidget {
             .toDouble();
         final center = Offset(constraints.maxWidth / 2,
             constraints.maxHeight * spec.centerYFactor);
+        final backRadius = (shortest * spec.backRadiusFactor)
+            .clamp(spec.minBackRadius, spec.maxBackRadius)
+            .toDouble();
+        final backTarget = parentNode != null
+            ? Offset(center.dx - backRadius, center.dy)
+            : null;
         final targets = _computeTargets(
           size: Size(constraints.maxWidth, constraints.maxHeight),
           center: center,
@@ -2834,6 +2824,7 @@ class _RadialMenuStage extends StatelessWidget {
           hasParent: parentNode != null,
           nodeWidth: nodeWidth,
           nodeHeight: nodeHeight,
+          backTarget: backTarget,
           spec: spec,
         );
         return Container(
@@ -2891,6 +2882,7 @@ class _RadialMenuStage extends StatelessWidget {
                       painter: _TreeBranchPainter(
                         center: center,
                         targets: targets,
+                        backTarget: backTarget,
                         progress: progress,
                         hasParent: parentNode != null,
                       ),
@@ -2900,9 +2892,8 @@ class _RadialMenuStage extends StatelessWidget {
                     _RadialNode(
                       center: center,
                       fixedAngle: math.pi,
-                      radius: (shortest * spec.backRadiusFactor)
-                          .clamp(spec.minBackRadius, spec.maxBackRadius)
-                          .toDouble(),
+                      radius: backRadius,
+                      nodeId: "back-${parentNode!.id}",
                       label: parentNode!.label,
                       icon: Icons.undo_rounded,
                       selected: false,
@@ -2916,6 +2907,7 @@ class _RadialMenuStage extends StatelessWidget {
                       center: center,
                       fixedOffset: targets[i],
                       radius: 0,
+                      nodeId: currentNode.children[i].id,
                       label: currentNode.children[i].label,
                       icon: currentNode.children[i].icon,
                       selected: false,
@@ -2940,13 +2932,19 @@ class _RadialMenuStage extends StatelessWidget {
     required bool hasParent,
     required double nodeWidth,
     required double nodeHeight,
+    required Offset? backTarget,
     required _MenuLayoutSpec spec,
   }) {
     if (total == 0) {
       return const <Offset>[];
     }
-    final start = hasParent ? -math.pi / 2.25 : -math.pi * 0.86;
-    final end = hasParent ? math.pi / 2.25 : math.pi * 0.86;
+    final useWideChildArc = hasParent && size.height < 520;
+    final start = hasParent
+        ? (useWideChildArc ? -math.pi * 0.78 : -math.pi / 2.65)
+        : -math.pi * 0.86;
+    final end = hasParent
+        ? (useWideChildArc ? math.pi * 0.78 : math.pi / 2.65)
+        : math.pi * 0.86;
     final shortest = math.min(size.width, size.height);
     var baseRadius = (hasParent
             ? shortest * spec.childRadiusFactor
@@ -2962,7 +2960,10 @@ class _RadialMenuStage extends StatelessWidget {
     final maxX = size.width - horizontalPadding - nodeWidth / 2;
     final minY = topPadding + nodeHeight / 2;
     final maxY = size.height - bottomPadding - nodeHeight / 2;
-    final childMinX = hasParent ? center.dx + nodeWidth * 0.10 : minX;
+    final openOrbSize = (shortest * 0.22).clamp(76.0, 86.0).toDouble();
+    final centerClearance = openOrbSize / 2 + nodeWidth / 2 + spec.nodeGap;
+    final childMinX =
+        hasParent && !useWideChildArc ? center.dx + centerClearance : minX;
 
     Offset clampToViewport(Offset point) {
       return Offset(
@@ -2998,39 +2999,47 @@ class _RadialMenuStage extends StatelessWidget {
     }
 
     List<Offset> buildPositions(double radius) {
-      final ringGap = (nodeHeight * spec.ringGapFactor)
-          .clamp(spec.minRingGap, spec.maxRingGap)
-          .toDouble();
+      final arc = (end - start).abs();
+      const goldenGapFactor =
+          1 / _goldenRatio + 1 / (_goldenRatio * _goldenRatio);
+      final ringGap =
+          (nodeHeight * ((spec.ringGapFactor + goldenGapFactor) / 2))
+              .clamp(spec.minRingGap, spec.maxRingGap)
+              .toDouble();
       final rings = <double>[radius];
-      if (total > 7) {
+      if (total > 4) {
         rings.add((radius - ringGap).clamp(74.0, radius).toDouble());
       }
-      if (total > 12) {
+      if (total > 8) {
         rings.add((radius - (ringGap * 2)).clamp(62.0, radius).toDouble());
       }
 
       var remaining = total;
       final points = <Offset>[];
-      final outerCount =
-          rings.length == 1 ? total : math.min(total, (total * 0.58).ceil());
 
       for (var ringIndex = 0; ringIndex < rings.length; ringIndex++) {
         final ringRadius = rings[ringIndex];
-        final take = ringIndex == 0 || ringIndex == rings.length - 1
-            ? math.min(remaining, outerCount)
-            : math.min(remaining, (remaining / 2).ceil());
+        final ringArcLength = arc * ringRadius;
+        final capacity =
+            math.max(1, (ringArcLength / (nodeWidth + spec.nodeGap)).floor());
+        final take = ringIndex == rings.length - 1
+            ? remaining
+            : math.min(remaining, capacity);
         if (take <= 0) {
           continue;
         }
 
-        final ringInset = ringIndex * 0.16;
+        final ringInset = ringIndex / (_goldenRatio * 5);
         final ringStart = start + (end - start) * ringInset;
         final ringEnd = end - (end - start) * ringInset;
-        final offsetStep = ringIndex.isOdd && take > 1 ? 0.5 / take : 0.0;
+        final offsetStep =
+            ringIndex.isOdd && take > 1 ? 1 / (_goldenRatio * take) : 0.0;
 
         for (var i = 0; i < take; i++) {
           final t = take == 1 ? 0.5 : (i + offsetStep) / (take - 1);
-          final angle = ringStart + (ringEnd - ringStart) * t.clamp(0.0, 1.0);
+          final angle = ringStart +
+              (ringEnd - ringStart) *
+                  _goldenArcProgress(t.clamp(0.0, 1.0).toDouble());
           final dx = center.dx + math.cos(angle) * ringRadius;
           final dy = center.dy + math.sin(angle) * ringRadius;
           points.add(clampToViewport(Offset(dx, dy)));
@@ -3041,7 +3050,6 @@ class _RadialMenuStage extends StatelessWidget {
         }
       }
 
-      // Fallback: if nodes still remain, place near center arc.
       if (remaining > 0) {
         final extraRadius = (radius - 10).clamp(58.0, radius).toDouble();
         for (var i = 0; i < remaining; i++) {
@@ -3059,20 +3067,14 @@ class _RadialMenuStage extends StatelessWidget {
       final ideals = List<Offset>.of(initial);
       var positions = List<Offset>.of(initial);
       final minDistance = math.max(nodeWidth, nodeHeight) + spec.nodeGap;
-      final backPoint = Offset(
-        center.dx -
-            (shortest * spec.backRadiusFactor)
-                .clamp(spec.minBackRadius, spec.maxBackRadius)
-                .toDouble(),
-        center.dy,
-      );
+      final backPoint = backTarget ?? Offset.zero;
 
       for (var iteration = 0; iteration < 96; iteration++) {
         var moved = false;
         final deltas = List<Offset>.filled(total, Offset.zero);
 
         for (var i = 0; i < total; i++) {
-          deltas[i] += (ideals[i] - positions[i]) * 0.025;
+          deltas[i] += (ideals[i] - positions[i]) * 0.12;
 
           if (hasParent) {
             final fromBack = positions[i] - backPoint;
@@ -3131,18 +3133,36 @@ class _RadialMenuStage extends StatelessWidget {
 
     return points;
   }
+
+  double _goldenArcProgress(double t) {
+    if (t <= 0) {
+      return 0;
+    }
+    if (t >= 1) {
+      return 1;
+    }
+    final mirrored = t <= 0.5 ? t * 2 : (1 - t) * 2;
+    final grown =
+        (math.pow(_goldenRatio, mirrored).toDouble() - 1) / (_goldenRatio - 1);
+    final eased = grown.clamp(0.0, 1.0).toDouble() / 2;
+    return t <= 0.5 ? eased : 1 - eased;
+  }
 }
 
 class _TreeBranchPainter extends CustomPainter {
   _TreeBranchPainter({
     required this.center,
     required this.targets,
+    required this.backTarget,
     required this.progress,
     required this.hasParent,
   });
 
+  static const double _goldenRatio = 1.618033988749895;
+
   final Offset center;
   final List<Offset> targets;
+  final Offset? backTarget;
   final double progress;
   final bool hasParent;
 
@@ -3156,38 +3176,52 @@ class _TreeBranchPainter extends CustomPainter {
 
     for (var i = 0; i < targets.length; i++) {
       final target = Offset.lerp(center, targets[i], progress) ?? targets[i];
-      final midX = (center.dx + target.dx) / 2;
-      final wave = (i.isEven ? 1 : -1) * 24.0;
-      final path = Path()
-        ..moveTo(center.dx, center.dy)
-        ..cubicTo(
-          midX - 38,
-          center.dy + wave,
-          midX + 16,
-          target.dy - wave,
-          target.dx,
-          target.dy,
-        );
-      canvas.drawPath(path, paint);
+      canvas.drawPath(_goldenBranchPath(center, target, i), paint);
     }
 
-    if (hasParent) {
-      final back = Offset(center.dx - 128 * progress, center.dy);
-      final backPath = Path()
-        ..moveTo(center.dx, center.dy)
-        ..quadraticBezierTo(center.dx - 72, center.dy - 14, back.dx, back.dy);
+    if (hasParent && backTarget != null) {
+      final back = Offset.lerp(center, backTarget!, progress) ?? backTarget!;
       canvas.drawPath(
-        backPath,
+        _goldenBranchPath(center, back, targets.length),
         paint
           ..color = const Color(0xFFE4EFE8).withValues(alpha: 0.35 * progress),
       );
     }
   }
 
+  Path _goldenBranchPath(Offset from, Offset to, int index) {
+    final vector = to - from;
+    final distance = vector.distance;
+    final path = Path()..moveTo(from.dx, from.dy);
+    if (distance < 0.1) {
+      return path..lineTo(to.dx, to.dy);
+    }
+
+    final baseAngle = math.atan2(vector.dy, vector.dx);
+    final turnSign =
+        baseAngle.abs() < 0.08 ? (index.isEven ? -1.0 : 1.0) : baseAngle.sign;
+    final turn = turnSign *
+        (math.pi / (5.5 * _goldenRatio)) *
+        (distance / 180).clamp(0.55, 1.0).toDouble();
+
+    for (var step = 1; step <= 18; step++) {
+      final t = step / 18;
+      final radius = distance *
+          ((math.pow(_goldenRatio, t).toDouble() - 1) / (_goldenRatio - 1));
+      final angle = baseAngle + math.sin(math.pi * t) * turn;
+      path.lineTo(
+        from.dx + math.cos(angle) * radius,
+        from.dy + math.sin(angle) * radius,
+      );
+    }
+    return path;
+  }
+
   @override
   bool shouldRepaint(covariant _TreeBranchPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.targets != targets ||
+        oldDelegate.backTarget != backTarget ||
         oldDelegate.center != center ||
         oldDelegate.hasParent != hasParent;
   }
@@ -3209,9 +3243,9 @@ class _ExploreOrbButton extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final spec = _MenuLayoutSpec.from(size);
     final shortest = size.shortestSide;
-    final openSize = (shortest * 0.31).clamp(98.0, 118.0).toDouble();
+    final openSize = (shortest * 0.22).clamp(76.0, 86.0).toDouble();
     final closedSize = (shortest * 0.24).clamp(80.0, 92.0).toDouble();
-    final openFont = (shortest * 0.030).clamp(10.0, 12.0).toDouble();
+    final openFont = (shortest * 0.026).clamp(9.0, 10.5).toDouble();
     final closedFont = (shortest * 0.038).clamp(12.0, 14.0).toDouble();
     final openAlignment =
         spec.useCompactMenu ? const Alignment(0, 0.92) : Alignment.center;
@@ -3248,7 +3282,7 @@ class _ExploreOrbButton extends StatelessWidget {
                   Icon(
                     isOpen ? Icons.close_rounded : Icons.explore_rounded,
                     color: Colors.white,
-                    size: isOpen ? 30 : 32,
+                    size: isOpen ? 24 : 32,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -3277,6 +3311,7 @@ class _RadialNode extends StatelessWidget {
     required this.radius,
     required this.width,
     required this.height,
+    required this.nodeId,
     required this.label,
     required this.icon,
     required this.selected,
@@ -3290,6 +3325,7 @@ class _RadialNode extends StatelessWidget {
   final double radius;
   final double width;
   final double height;
+  final String nodeId;
   final String label;
   final IconData icon;
   final bool selected;
@@ -3306,14 +3342,14 @@ class _RadialNode extends StatelessWidget {
         fixedOffset?.dx ?? (center.dx + math.cos(fixedAngle ?? 0) * radius);
     final targetDy =
         fixedOffset?.dy ?? (center.dy + math.sin(fixedAngle ?? 0) * radius);
-    final dx = center.dx + (targetDx - center.dx) * progress;
-    final dy = center.dy + (targetDy - center.dy) * progress;
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 520),
-      curve: Curves.easeOutCubic,
+    final dx = targetDx;
+    final dy = targetDy;
+    return Positioned(
       left: dx - (width / 2),
       top: dy - (height / 2),
       child: GestureDetector(
+        key: ValueKey("menu-node-$nodeId"),
+        behavior: HitTestBehavior.translucent,
         onTap: onTap,
         child: AnimatedScale(
           duration: const Duration(milliseconds: 280),
