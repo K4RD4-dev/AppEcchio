@@ -1358,6 +1358,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _openCulture(node.id);
           return;
         }
+        if (_isFinalInfoNode(node)) {
+          _openFinalInfo(node.id);
+          return;
+        }
         _openDetail(
           title: node.label,
           type: "Foglia di menu",
@@ -1392,7 +1396,6 @@ class _HomeScreenState extends State<HomeScreen> {
       "agriturismi_dormire",
       "hotel",
       "locali",
-      "musei",
     }.contains(node.id);
   }
 
@@ -1446,6 +1449,10 @@ class _HomeScreenState extends State<HomeScreen> {
       "teatro_perugini",
       "globo_pace",
     }.contains(node.id);
+  }
+
+  bool _isFinalInfoNode(MenuNode node) {
+    return _finalInfoPagesById.containsKey(node.id);
   }
 
   void _onBackTap() {
@@ -1661,6 +1668,28 @@ class _HomeScreenState extends State<HomeScreen> {
             child: FadeTransition(
               opacity: curved,
               child: CulturePageScreen(page: page),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openFinalInfo(String nodeId) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 280),
+        pageBuilder: (_, animation, __) {
+          final curved =
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.15, 0),
+              end: Offset.zero,
+            ).animate(curved),
+            child: FadeTransition(
+              opacity: curved,
+              child: FinalInfoPageScreen(initialPageId: nodeId),
             ),
           );
         },
@@ -6041,8 +6070,7 @@ class SportBookingSlot {
   final DateTime date;
   final String timeLabel;
 
-  String get id =>
-      "${facility.id}:${_formatSportSlotDate(date)}:$timeLabel";
+  String get id => "${facility.id}:${_formatSportSlotDate(date)}:$timeLabel";
 
   String get dayLabel => _formatSportSlotDay(date);
 }
@@ -6184,8 +6212,7 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
             onChanged: (facility) => setState(() {
               _selectedFacility = facility;
               final facilitySlots = _sportBookingSlotsForFacility(facility);
-              final daySlots =
-                  _sportSlotsForDay(_selectedDay, facilitySlots);
+              final daySlots = _sportSlotsForDay(_selectedDay, facilitySlots);
               _selectedSlot =
                   daySlots.isNotEmpty ? daySlots.first : facilitySlots.first;
               _selectedDay = _selectedSlot!.date;
@@ -6215,15 +6242,14 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
                   final daySlots = _sportSlotsForDay(day, allSlots);
                   final preferred = daySlots
                       .where(
-                    (slot) => slot.facility.id == _selectedFacility.id,
+                        (slot) => slot.facility.id == _selectedFacility.id,
                       )
                       .toList(growable: false);
-                  _selectedSlot =
-                      preferred.isNotEmpty
-                          ? preferred.first
-                          : daySlots.isNotEmpty
-                              ? daySlots.first
-                              : null;
+                  _selectedSlot = preferred.isNotEmpty
+                      ? preferred.first
+                      : daySlots.isNotEmpty
+                          ? daySlots.first
+                          : null;
                   if (_selectedSlot != null) {
                     _selectedFacility = _selectedSlot!.facility;
                   }
@@ -6315,6 +6341,453 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+List<SportBookingSlot> _sportBookingSlots() {
+  return [
+    for (final facility in _sportFacilities)
+      ..._sportBookingSlotsForFacility(facility),
+  ]..sort((a, b) {
+      final dateCompare = a.date.compareTo(b.date);
+      if (dateCompare != 0) {
+        return dateCompare;
+      }
+      return a.timeLabel.compareTo(b.timeLabel);
+    });
+}
+
+List<SportBookingSlot> _sportBookingSlotsForFacility(SportFacility facility) {
+  return [
+    for (final rawSlot in facility.nextSlots)
+      SportBookingSlot(
+        facility: facility,
+        date: _sportDateFromSlotLabel(rawSlot),
+        timeLabel: _sportTimeFromSlotLabel(rawSlot),
+      ),
+  ];
+}
+
+List<SportBookingSlot> _sportSlotsForDay(
+  DateTime day,
+  List<SportBookingSlot> slots,
+) {
+  return slots.where((slot) => _sameDay(slot.date, day)).toList();
+}
+
+DateTime _sportDateFromSlotLabel(String label) {
+  final now = _dateOnly(DateTime.now());
+  final pieces = label.split(" ");
+  final dayToken = pieces.first.toLowerCase();
+  if (dayToken == "oggi") {
+    return now;
+  }
+  if (dayToken == "domani") {
+    return now.add(const Duration(days: 1));
+  }
+  const weekdays = {
+    "lun": DateTime.monday,
+    "mar": DateTime.tuesday,
+    "mer": DateTime.wednesday,
+    "gio": DateTime.thursday,
+    "ven": DateTime.friday,
+    "sab": DateTime.saturday,
+    "dom": DateTime.sunday,
+  };
+  final targetWeekday =
+      weekdays[dayToken.substring(0, math.min(3, dayToken.length))];
+  if (targetWeekday == null) {
+    return now;
+  }
+  var daysUntil = targetWeekday - now.weekday;
+  if (daysUntil < 0) {
+    daysUntil += 7;
+  }
+  return now.add(Duration(days: daysUntil));
+}
+
+String _sportTimeFromSlotLabel(String label) {
+  final pieces = label.split(" ");
+  return pieces.isEmpty ? label : pieces.last;
+}
+
+String _formatSportSlotDate(DateTime date) {
+  return "${date.year}-${date.month.toString().padLeft(2, "0")}-${date.day.toString().padLeft(2, "0")}";
+}
+
+String _formatSportSlotDay(DateTime date) {
+  return "${date.day} ${_monthName(date.month)}";
+}
+
+class _SportBookingCalendar extends StatelessWidget {
+  const _SportBookingCalendar({
+    required this.focusedMonth,
+    required this.selectedDay,
+    required this.slots,
+    required this.reservations,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+    required this.onDaySelected,
+  });
+
+  final DateTime focusedMonth;
+  final DateTime selectedDay;
+  final List<SportBookingSlot> slots;
+  final SportReservationController reservations;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
+  final ValueChanged<DateTime> onDaySelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = _calendarDays(focusedMonth);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFDCE8DB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton.filledTonal(
+                onPressed: onPreviousMonth,
+                icon: const Icon(Icons.chevron_left_rounded),
+                tooltip: "Mese precedente",
+              ),
+              Expanded(
+                child: Text(
+                  _formatMonthYear(focusedMonth),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: onNextMonth,
+                icon: const Icon(Icons.chevron_right_rounded),
+                tooltip: "Mese successivo",
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final label in [
+                "Lun",
+                "Mar",
+                "Mer",
+                "Gio",
+                "Ven",
+                "Sab",
+                "Dom"
+              ])
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: days.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 0.88,
+            ),
+            itemBuilder: (context, index) {
+              final day = days[index];
+              final daySlots = _sportSlotsForDay(day, slots);
+              return _SportCalendarDayCell(
+                day: day,
+                inMonth: _sameMonth(day, focusedMonth),
+                selected: _sameDay(day, selectedDay),
+                reserved: daySlots.any((slot) => reservations.isReserved(slot)),
+                slots: daySlots,
+                onTap: () => onDaySelected(day),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          const _SportCalendarLegend(),
+        ],
+      ),
+    );
+  }
+}
+
+class _SportCalendarDayCell extends StatelessWidget {
+  const _SportCalendarDayCell({
+    required this.day,
+    required this.inMonth,
+    required this.selected,
+    required this.reserved,
+    required this.slots,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final bool inMonth;
+  final bool selected;
+  final bool reserved;
+  final List<SportBookingSlot> slots;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final slotCount = slots.length;
+    final bgColor = selected
+        ? const Color(0xFFE4F2E8)
+        : reserved
+            ? const Color(0xFFEAF5EA)
+            : inMonth
+                ? const Color(0xFFFAFCF7)
+                : const Color(0xFFF1F2EE);
+    final borderColor = selected
+        ? const Color(0xFF2E7D57)
+        : reserved
+            ? const Color(0xFF78A65D)
+            : slotCount > 0
+                ? const Color(0xFFCAD8C7)
+                : const Color(0xFFE7ECE2);
+
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: selected ? 2 : 1),
+          ),
+          child: Stack(
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  "${day.day}",
+                  style: TextStyle(
+                    color: inMonth ? Colors.black87 : Colors.black38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (slotCount > 1)
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    height: 19,
+                    constraints: const BoxConstraints(minWidth: 19),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF263E2B),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      "$slotCount",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              if (reserved)
+                const Align(
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: Color(0xFF2E7D57),
+                    size: 18,
+                  ),
+                ),
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: _SportSlotMarks(slots: slots),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SportSlotMarks extends StatelessWidget {
+  const _SportSlotMarks({required this.slots});
+
+  final List<SportBookingSlot> slots;
+
+  @override
+  Widget build(BuildContext context) {
+    if (slots.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final visible = slots.take(4).toList(growable: false);
+    return SizedBox(
+      width: 42,
+      height: 16,
+      child: Stack(
+        children: [
+          for (var i = 0; i < visible.length; i++)
+            Positioned(
+              left: i * 8,
+              bottom: 0,
+              child: Container(
+                width: 22,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: visible[i].facility.color,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white, width: 0.7),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SportCalendarLegend extends StatelessWidget {
+  const _SportCalendarLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final facility in _sportFacilities)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            decoration: BoxDecoration(
+              color: facility.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: facility.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  facility.activity,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SportDaySlotsPanel extends StatelessWidget {
+  const _SportDaySlotsPanel({
+    required this.day,
+    required this.slots,
+    required this.selectedSlot,
+    required this.reservations,
+    required this.onSlotSelected,
+  });
+
+  final DateTime day;
+  final List<SportBookingSlot> slots;
+  final SportBookingSlot? selectedSlot;
+  final SportReservationController reservations;
+  final ValueChanged<SportBookingSlot> onSlotSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFDCE8DB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Slot del ${_formatDayLong(day)}",
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          if (slots.isEmpty)
+            const Text(
+              "Nessuno slot disponibile in questa giornata.",
+              style: TextStyle(
+                color: Colors.black54,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final slot in slots)
+                  ChoiceChip(
+                    avatar: Icon(
+                      reservations.isReserved(slot)
+                          ? Icons.check_circle_rounded
+                          : slot.facility.icon,
+                      size: 18,
+                      color: selectedSlot?.id == slot.id
+                          ? Colors.white
+                          : slot.facility.color,
+                    ),
+                    label:
+                        Text("${slot.timeLabel} · ${slot.facility.activity}"),
+                    selected: selectedSlot?.id == slot.id,
+                    selectedColor: slot.facility.color,
+                    labelStyle: TextStyle(
+                      color: selectedSlot?.id == slot.id
+                          ? Colors.white
+                          : Colors.black,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    onSelected: (_) => onSlotSelected(slot),
+                  ),
+              ],
+            ),
         ],
       ),
     );
@@ -11050,6 +11523,1837 @@ class _CultureSectionCard extends StatelessWidget {
   const _CultureSectionCard(this.section);
 
   final CultureSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            section.title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Text(section.body, style: const TextStyle(height: 1.35)),
+          const SizedBox(height: 12),
+          for (final item in section.items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    size: 18,
+                    color: Color(0xFF2E7D57),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class FinalInfoPage {
+  const FinalInfoPage({
+    required this.id,
+    required this.familyId,
+    required this.familyLabel,
+    required this.title,
+    required this.eyebrow,
+    required this.summary,
+    required this.primaryActionLabel,
+    required this.actionFeedback,
+    required this.coverColors,
+    required this.icon,
+    required this.facts,
+    required this.highlights,
+    required this.sections,
+  });
+
+  final String id;
+  final String familyId;
+  final String familyLabel;
+  final String title;
+  final String eyebrow;
+  final String summary;
+  final String primaryActionLabel;
+  final String actionFeedback;
+  final List<Color> coverColors;
+  final IconData icon;
+  final List<FinalInfoFact> facts;
+  final List<String> highlights;
+  final List<FinalInfoSection> sections;
+}
+
+class FinalInfoFact {
+  const FinalInfoFact({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+}
+
+class FinalInfoSection {
+  const FinalInfoSection({
+    required this.title,
+    required this.body,
+    required this.items,
+  });
+
+  final String title;
+  final String body;
+  final List<String> items;
+}
+
+FinalInfoPage _finalPage({
+  required String id,
+  required String familyId,
+  required String familyLabel,
+  required String title,
+  required String eyebrow,
+  required String summary,
+  required String primaryActionLabel,
+  required String actionFeedback,
+  required IconData icon,
+  required List<Color> coverColors,
+  required String access,
+  required String timing,
+  required String contact,
+  required List<String> highlights,
+  required String actionBody,
+  required List<String> actionItems,
+  required String detailBody,
+  required List<String> detailItems,
+}) {
+  return FinalInfoPage(
+    id: id,
+    familyId: familyId,
+    familyLabel: familyLabel,
+    title: title,
+    eyebrow: eyebrow,
+    summary: summary,
+    primaryActionLabel: primaryActionLabel,
+    actionFeedback: actionFeedback,
+    icon: icon,
+    coverColors: coverColors,
+    facts: [
+      FinalInfoFact(
+        icon: Icons.place_rounded,
+        title: "Accesso",
+        value: access,
+      ),
+      FinalInfoFact(
+        icon: Icons.schedule_rounded,
+        title: "Quando",
+        value: timing,
+      ),
+      FinalInfoFact(
+        icon: Icons.support_agent_rounded,
+        title: "Contatto",
+        value: contact,
+      ),
+    ],
+    highlights: highlights,
+    sections: [
+      FinalInfoSection(
+        title: "Cosa puoi fare",
+        body: actionBody,
+        items: actionItems,
+      ),
+      FinalInfoSection(
+        title: "Dettagli operativi",
+        body: detailBody,
+        items: detailItems,
+      ),
+    ],
+  );
+}
+
+final List<FinalInfoPage> _finalInfoPages = [
+  _finalPage(
+    id: "farmacia",
+    familyId: "servizi_utili",
+    familyLabel: "Servizi utili",
+    title: "Farmacie",
+    eyebrow: "Salute quotidiana",
+    summary:
+        "Una scheda rapida per trovare farmacie, turni, orari e contatti sanitari essenziali senza cercare fuori dall'app.",
+    primaryActionLabel: "Chiama farmacia",
+    actionFeedback: "Mockup: chiamerebbe la farmacia di turno.",
+    icon: Icons.local_hospital_rounded,
+    coverColors: const [Color(0xFF1D5D57), Color(0xFF8BC5A1)],
+    access: "Farmacia del centro e turni territoriali",
+    timing: "Orari e reperibilita da verificare in giornata",
+    contact: "Farmacia, guardia medica, emergenza 112",
+    highlights: const [
+      "Turno in evidenza",
+      "Indicazioni rapide",
+      "Numeri sanitari utili",
+    ],
+    actionBody:
+        "La pagina mette davanti le azioni che servono quando il bisogno e immediato.",
+    actionItems: const [
+      "Aprire chiamata alla farmacia",
+      "Vedere indirizzo e percorso",
+      "Controllare note su turno e reperibilita",
+    ],
+    detailBody:
+        "Nel prodotto reale questa pagina puo agganciarsi a un feed comunale o regionale dei turni.",
+    detailItems: const [
+      "Mostrare ultimo aggiornamento disponibile",
+      "Separare farmacie, guardia medica e numeri di emergenza",
+      "Evitare prenotazioni sanitarie dentro il mockup",
+    ],
+  ),
+  _finalPage(
+    id: "trasporti",
+    familyId: "servizi_utili",
+    familyLabel: "Servizi utili",
+    title: "Trasporti",
+    eyebrow: "Muoversi ad Apecchio",
+    summary:
+        "Collegamenti, fermate, navette evento e alternative per raggiungere centro, frazioni e punti outdoor.",
+    primaryActionLabel: "Apri percorso",
+    actionFeedback: "Mockup: aprirebbe il percorso verso la fermata scelta.",
+    icon: Icons.directions_bus_rounded,
+    coverColors: const [Color(0xFF22577A), Color(0xFF80ED99)],
+    access: "Fermate locali, parcheggi, navette evento",
+    timing: "Linee feriali, festivi ed eventi speciali",
+    contact: "Comune, trasporto locale, info turistiche",
+    highlights: const [
+      "Fermata piu vicina",
+      "Navette per eventi",
+      "Parcheggi consigliati",
+    ],
+    actionBody:
+        "La scheda aiuta residenti e visitatori a scegliere subito come arrivare o rientrare.",
+    actionItems: const [
+      "Aprire percorso verso fermata o parcheggio",
+      "Vedere note per eventi affollati",
+      "Controllare collegamenti con frazioni e sentieri",
+    ],
+    detailBody:
+        "I dati sono predisposti per essere sostituiti da orari ufficiali quando saranno disponibili.",
+    detailItems: const [
+      "Separare mobilita ordinaria e mobilita evento",
+      "Evidenziare tratte con bassa frequenza",
+      "Tenere un contatto rapido per informazioni aggiornate",
+    ],
+  ),
+  _finalPage(
+    id: "bancomat",
+    familyId: "servizi_utili",
+    familyLabel: "Servizi utili",
+    title: "Bancomat",
+    eyebrow: "Pagamenti e contante",
+    summary:
+        "Punti dove ritirare contante, pagare e orientarsi tra sportelli, servizi bancari e modalita digitali.",
+    primaryActionLabel: "Trova sportello",
+    actionFeedback: "Mockup: aprirebbe la mappa degli sportelli disponibili.",
+    icon: Icons.atm_rounded,
+    coverColors: const [Color(0xFF264653), Color(0xFFE9C46A)],
+    access: "Sportelli e servizi pagamento nel territorio",
+    timing: "Disponibilita da verificare in tempo reale",
+    contact: "Istituti, esercenti, Comune",
+    highlights: const [
+      "Sportelli vicini",
+      "Pagamenti digitali",
+      "Avvisi su disponibilita",
+    ],
+    actionBody:
+        "La pagina evita giri inutili, soprattutto per visitatori e durante eventi con alta affluenza.",
+    actionItems: const [
+      "Aprire posizione dello sportello",
+      "Vedere alternative per pagamenti digitali",
+      "Segnalare sportello non disponibile",
+    ],
+    detailBody:
+        "La UI resta neutra e informativa: nessun dato bancario viene gestito dal mockup.",
+    detailItems: const [
+      "Nessuna raccolta di credenziali",
+      "Solo informazioni logistiche",
+      "Indicazioni compatibili con privacy e sicurezza",
+    ],
+  ),
+  _finalPage(
+    id: "salute",
+    familyId: "servizi_utili",
+    familyLabel: "Servizi utili",
+    title: "Salute",
+    eyebrow: "Numeri e presidi",
+    summary:
+        "Una pagina sobria per numeri sanitari, guardia medica, indicazioni di emergenza e presidi vicini.",
+    primaryActionLabel: "Chiama numero utile",
+    actionFeedback: "Mockup: aprirebbe il numero sanitario selezionato.",
+    icon: Icons.health_and_safety_rounded,
+    coverColors: const [Color(0xFF2D6A4F), Color(0xFF95D5B2)],
+    access: "Guardia medica, emergenze, presidi vicini",
+    timing: "Emergenze sempre 112; altri servizi su orario",
+    contact: "112, guardia medica, Comune",
+    highlights: const [
+      "Emergenza separata",
+      "Guardia medica",
+      "Presidi vicini",
+    ],
+    actionBody:
+        "La gerarchia distingue emergenze vere, bisogni non urgenti e informazioni logistiche.",
+    actionItems: const [
+      "Mettere il 112 sempre riconoscibile",
+      "Aprire scheda guardia medica",
+      "Mostrare indirizzo dei presidi piu vicini",
+    ],
+    detailBody:
+        "Il mockup non sostituisce indicazioni sanitarie: organizza contatti e percorsi.",
+    detailItems: const [
+      "Nessuna diagnosi o triage",
+      "Testi brevi e leggibili in stress",
+      "Ultimo aggiornamento ben visibile nel prodotto reale",
+    ],
+  ),
+  _finalPage(
+    id: "sindaco_giunta",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Sindaco e Giunta",
+    eyebrow: "Amministrazione comunale",
+    summary:
+        "Scheda istituzionale per conoscere amministratori, deleghe e riferimenti rapidi del Comune.",
+    primaryActionLabel: "Contatta segreteria",
+    actionFeedback: "Mockup: aprirebbe la segreteria comunale.",
+    icon: Icons.groups_rounded,
+    coverColors: const [Color(0xFF203B5B), Color(0xFF6AA1C8)],
+    access: "Palazzo comunale e canali istituzionali",
+    timing: "Ricevimento su appuntamento",
+    contact: "Segreteria del Comune",
+    highlights: const [
+      "Deleghe leggibili",
+      "Ricevimento",
+      "Contatto istituzionale",
+    ],
+    actionBody:
+        "Il cittadino deve capire a chi rivolgersi senza attraversare pagine amministrative dense.",
+    actionItems: const [
+      "Vedere composizione e deleghe",
+      "Aprire contatto segreteria",
+      "Prenotare un incontro quando previsto",
+    ],
+    detailBody:
+        "La pagina resta informativa, con rimando agli atti ufficiali quando servono contenuti formali.",
+    detailItems: const [
+      "Separare ruoli politici e uffici",
+      "Mantenere dati aggiornabili da fonte comunale",
+      "Collegare sedute e comunicazioni pubbliche",
+    ],
+  ),
+  _finalPage(
+    id: "uffici_orari",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Uffici e orari",
+    eyebrow: "Sportelli comunali",
+    summary:
+        "Orari, competenze e modalita di accesso agli uffici comunali, pensati per ridurre telefonate e passaggi a vuoto.",
+    primaryActionLabel: "Prenota sportello",
+    actionFeedback: "Mockup: aprirebbe la scelta dell'ufficio comunale.",
+    icon: Icons.schedule_rounded,
+    coverColors: const [Color(0xFF1F4E5F), Color(0xFF9AD1D4)],
+    access: "Uffici comunali e sportelli al cittadino",
+    timing: "Mattina, rientri e appuntamenti dedicati",
+    contact: "Centralino e uffici",
+    highlights: const [
+      "Orari per ufficio",
+      "Accesso su appuntamento",
+      "Documenti da portare",
+    ],
+    actionBody:
+        "La pagina trasforma l'elenco degli uffici in una scelta guidata per bisogno.",
+    actionItems: const [
+      "Scegliere ufficio o servizio",
+      "Vedere orari e documenti necessari",
+      "Prenotare una fascia disponibile",
+    ],
+    detailBody:
+        "Le informazioni possono essere collegate in futuro a disponibilita reali e notifiche di conferma.",
+    detailItems: const [
+      "Mostrare eventuali chiusure straordinarie",
+      "Rendere chiaro cosa e solo informativo",
+      "Evidenziare canali digitali alternativi",
+    ],
+  ),
+  _finalPage(
+    id: "rubrica",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Contatti rapidi",
+    eyebrow: "Rubrica comunale",
+    summary:
+        "Rubrica operativa con numeri, email e riferimenti divisi per ufficio, urgenza e tema.",
+    primaryActionLabel: "Apri contatto",
+    actionFeedback: "Mockup: aprirebbe il contatto comunale selezionato.",
+    icon: Icons.contact_phone_rounded,
+    coverColors: const [Color(0xFF24466B), Color(0xFF89C2D9)],
+    access: "Telefono, email, PEC, sportelli",
+    timing: "Contatti ordinari in orario d'ufficio",
+    contact: "Centralino comunale",
+    highlights: const [
+      "Uffici filtrabili",
+      "PEC in evidenza",
+      "Numeri essenziali",
+    ],
+    actionBody:
+        "La rubrica deve far arrivare al canale giusto in pochi tocchi.",
+    actionItems: const [
+      "Filtrare per ufficio",
+      "Aprire chiamata o email",
+      "Copiare PEC e riferimenti formali",
+    ],
+    detailBody:
+        "Nel mockup i contatti sono dimostrativi, ma la struttura e pronta per dati ufficiali.",
+    detailItems: const [
+      "Separare canali urgenti e ordinari",
+      "Mostrare responsabilita dell'ufficio",
+      "Evitare numeri duplicati senza contesto",
+    ],
+  ),
+  _finalPage(
+    id: "diretta",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Diretta sedute",
+    eyebrow: "Consiglio comunale",
+    summary:
+        "Accesso semplice alle sedute in diretta, con stato corrente, prossimo orario e canale video.",
+    primaryActionLabel: "Apri diretta",
+    actionFeedback: "Mockup: aprirebbe la diretta del consiglio.",
+    icon: Icons.live_tv_rounded,
+    coverColors: const [Color(0xFF2B4162), Color(0xFF7B9ACC)],
+    access: "Canale streaming istituzionale",
+    timing: "Solo durante sedute programmate",
+    contact: "Segreteria consiglio",
+    highlights: const [
+      "Stato live",
+      "Prossima seduta",
+      "Ordine del giorno",
+    ],
+    actionBody:
+        "La pagina mette insieme streaming e contesto, cosi la diretta non resta un link isolato.",
+    actionItems: const [
+      "Aprire il video live",
+      "Consultare ordine del giorno",
+      "Vedere note tecniche se la seduta non e iniziata",
+    ],
+    detailBody:
+        "Quando non c'e una seduta live, la stessa pagina orienta verso registrazioni e documenti.",
+    detailItems: const [
+      "Mostrare stato non in diretta",
+      "Rimandare alle sedute registrate",
+      "Non simulare votazioni o partecipazione",
+    ],
+  ),
+  _finalPage(
+    id: "registrazioni",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Sedute registrate",
+    eyebrow: "Consiglio comunale",
+    summary:
+        "Archivio consultabile delle sedute precedenti, con data, tema e link a materiali collegati.",
+    primaryActionLabel: "Apri archivio",
+    actionFeedback: "Mockup: aprirebbe l'archivio video delle sedute.",
+    icon: Icons.video_library_rounded,
+    coverColors: const [Color(0xFF293241), Color(0xFF98C1D9)],
+    access: "Archivio video e documenti",
+    timing: "Disponibile dopo pubblicazione",
+    contact: "Segreteria consiglio",
+    highlights: const [
+      "Ricerca per data",
+      "Temi principali",
+      "Documenti collegati",
+    ],
+    actionBody:
+        "L'archivio deve aiutare a ritrovare una seduta senza conoscere gia il numero dell'atto.",
+    actionItems: const [
+      "Filtrare per mese",
+      "Aprire video registrato",
+      "Collegare delibere e ordine del giorno",
+    ],
+    detailBody:
+        "La pagina mantiene separata la consultazione informale dagli atti con valore ufficiale.",
+    detailItems: const [
+      "Indicare stato di pubblicazione",
+      "Aggiungere trascrizioni solo se disponibili",
+      "Rimandare agli atti per versioni ufficiali",
+    ],
+  ),
+  _finalPage(
+    id: "ordine_giorno",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Ordine del giorno",
+    eyebrow: "Consiglio comunale",
+    summary:
+        "Punti in discussione, allegati e stato della prossima seduta organizzati per lettura veloce.",
+    primaryActionLabel: "Apri documento",
+    actionFeedback: "Mockup: aprirebbe l'ordine del giorno ufficiale.",
+    icon: Icons.list_alt_rounded,
+    coverColors: const [Color(0xFF264653), Color(0xFFA8DADC)],
+    access: "Documenti pubblicati dal Comune",
+    timing: "Prima della seduta",
+    contact: "Segreteria generale",
+    highlights: const [
+      "Punti numerati",
+      "Allegati",
+      "Collegamento alla seduta",
+    ],
+    actionBody:
+        "La scheda traduce il documento in un riepilogo navigabile senza togliere valore all'atto ufficiale.",
+    actionItems: const [
+      "Aprire PDF ufficiale",
+      "Vedere punti principali",
+      "Collegare diretta e registrazione",
+    ],
+    detailBody:
+        "Nel prodotto reale ogni punto puo aprire delibere, allegati e materiali correlati.",
+    detailItems: const [
+      "Mantenere il PDF come fonte primaria",
+      "Mostrare data e numero seduta",
+      "Evidenziare aggiornamenti o integrazioni",
+    ],
+  ),
+  _finalPage(
+    id: "albo_pretorio",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Albo pretorio",
+    eyebrow: "Atti e trasparenza",
+    summary:
+        "Accesso agli atti pubblicati, con categorie, scadenze e ricerca semplificata.",
+    primaryActionLabel: "Consulta albo",
+    actionFeedback: "Mockup: aprirebbe l'albo pretorio online.",
+    icon: Icons.folder_shared_rounded,
+    coverColors: const [Color(0xFF1D3557), Color(0xFFA8DADC)],
+    access: "Albo pretorio digitale",
+    timing: "Pubblicazioni con scadenza",
+    contact: "Segreteria e protocollo",
+    highlights: const [
+      "Atti in pubblicazione",
+      "Scadenze",
+      "Filtro per categoria",
+    ],
+    actionBody:
+        "L'utente deve capire se un atto e pubblicato, fino a quando e dove aprirlo.",
+    actionItems: const [
+      "Aprire elenco atti",
+      "Filtrare per categoria",
+      "Vedere scadenza di pubblicazione",
+    ],
+    detailBody:
+        "Il mockup non conserva atti: prepara solo una navigazione comprensibile verso la fonte ufficiale.",
+    detailItems: const [
+      "Fonte ufficiale sempre riconoscibile",
+      "Nessuna copia non verificata",
+      "Link a trasparenza quando pertinente",
+    ],
+  ),
+  _finalPage(
+    id: "delibere",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Delibere e determine",
+    eyebrow: "Atti e trasparenza",
+    summary:
+        "Archivio orientato ai bisogni: delibere, determine e documenti collegati con ricerca chiara.",
+    primaryActionLabel: "Cerca atto",
+    actionFeedback: "Mockup: aprirebbe la ricerca degli atti.",
+    icon: Icons.description_rounded,
+    coverColors: const [Color(0xFF2F3E46), Color(0xFF84A98C)],
+    access: "Archivio atti amministrativi",
+    timing: "Consultazione continua",
+    contact: "Segreteria generale",
+    highlights: const [
+      "Ricerca per anno",
+      "Tipo atto",
+      "Documenti collegati",
+    ],
+    actionBody:
+        "La pagina serve cittadini che cercano un atto specifico e cittadini che partono da un tema.",
+    actionItems: const [
+      "Cercare per parola chiave",
+      "Filtrare per anno e tipologia",
+      "Aprire allegati disponibili",
+    ],
+    detailBody:
+        "Il contenuto ufficiale resta nel sistema documentale del Comune.",
+    detailItems: const [
+      "Mostrare numero e data atto",
+      "Segnalare eventuale allegato assente",
+      "Collegare sedute quando utile",
+    ],
+  ),
+  _finalPage(
+    id: "bandi",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Bandi e concorsi",
+    eyebrow: "Atti e opportunita",
+    summary:
+        "Scadenze, requisiti e documenti per bandi, avvisi pubblici e concorsi comunali.",
+    primaryActionLabel: "Apri bando",
+    actionFeedback: "Mockup: aprirebbe il bando selezionato.",
+    icon: Icons.campaign_rounded,
+    coverColors: const [Color(0xFF3D405B), Color(0xFFE07A5F)],
+    access: "Avvisi e bandi pubblicati",
+    timing: "Scadenze in evidenza",
+    contact: "Ufficio competente",
+    highlights: const [
+      "Scadenza chiara",
+      "Documenti richiesti",
+      "Stato candidatura",
+    ],
+    actionBody:
+        "La pagina mette in primo piano la scadenza e i passaggi da fare.",
+    actionItems: const [
+      "Aprire avviso ufficiale",
+      "Vedere requisiti principali",
+      "Preparare documenti richiesti",
+    ],
+    detailBody:
+        "Nel mockup le candidature non vengono inviate; la CTA rimanda alla fonte ufficiale.",
+    detailItems: const [
+      "Distinguere aperto, in chiusura e scaduto",
+      "Mostrare ufficio responsabile",
+      "Rendere scaricabili allegati e moduli",
+    ],
+  ),
+  _finalPage(
+    id: "pagamenti",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Pagamenti e tributi",
+    eyebrow: "Servizi al cittadino",
+    summary:
+        "Accesso guidato a pagamenti, tributi, avvisi e informazioni prima di procedere su canali ufficiali.",
+    primaryActionLabel: "Avvia pagamento",
+    actionFeedback: "Mockup: aprirebbe il portale pagamenti ufficiale.",
+    icon: Icons.payments_rounded,
+    coverColors: const [Color(0xFF2A6F97), Color(0xFFBDE0FE)],
+    access: "Portale pagamenti e ufficio tributi",
+    timing: "Scadenze tributarie e avvisi",
+    contact: "Ufficio tributi",
+    highlights: const [
+      "PagoPA",
+      "Avvisi",
+      "Scadenze",
+    ],
+    actionBody:
+        "La pagina prepara il cittadino prima del portale esterno, riducendo errori e confusione.",
+    actionItems: const [
+      "Scegliere tipologia pagamento",
+      "Aprire canale ufficiale",
+      "Vedere cosa serve prima di iniziare",
+    ],
+    detailBody:
+        "Il mockup non tratta denaro: simula solo l'ingresso al servizio.",
+    detailItems: const [
+      "Nessun dato di carta salvato",
+      "Rimando esplicito al portale ufficiale",
+      "Riepilogo informativo prima del click",
+    ],
+  ),
+  _finalPage(
+    id: "appuntamenti",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Prenota appuntamento",
+    eyebrow: "Sportelli comunali",
+    summary:
+        "Prenotazione guidata per uffici e servizi, con motivo, documenti necessari e fascia richiesta.",
+    primaryActionLabel: "Scegli ufficio",
+    actionFeedback: "Mockup: aprirebbe la selezione della fascia.",
+    icon: Icons.event_available_rounded,
+    coverColors: const [Color(0xFF006D77), Color(0xFF83C5BE)],
+    access: "Sportelli su appuntamento",
+    timing: "Fasce disponibili secondo ufficio",
+    contact: "Centralino e ufficio scelto",
+    highlights: const [
+      "Scelta motivo",
+      "Promemoria",
+      "Documenti necessari",
+    ],
+    actionBody:
+        "Il flusso mette prima il bisogno del cittadino e poi l'ufficio competente.",
+    actionItems: const [
+      "Scegliere servizio",
+      "Selezionare fascia desiderata",
+      "Ricevere promemoria in app",
+    ],
+    detailBody:
+        "Il mockup simula l'invio; nel prodotto reale servira conferma dal calendario comunale.",
+    detailItems: const [
+      "Gestire annullamento e spostamento",
+      "Mostrare documenti da portare",
+      "Evitare doppie prenotazioni",
+    ],
+  ),
+  _finalPage(
+    id: "certificati",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Certificati anagrafici",
+    eyebrow: "Servizi al cittadino",
+    summary:
+        "Guida ai certificati disponibili, con differenza tra richiesta online, sportello e documenti necessari.",
+    primaryActionLabel: "Richiedi certificato",
+    actionFeedback: "Mockup: aprirebbe la richiesta del certificato.",
+    icon: Icons.badge_rounded,
+    coverColors: const [Color(0xFF355070), Color(0xFFB8C0FF)],
+    access: "Servizi anagrafici",
+    timing: "Secondo tipologia e canale",
+    contact: "Ufficio anagrafe",
+    highlights: const [
+      "Tipi certificato",
+      "Online o sportello",
+      "Documenti richiesti",
+    ],
+    actionBody:
+        "La pagina aiuta a scegliere il certificato corretto prima di iniziare la richiesta.",
+    actionItems: const [
+      "Scegliere tipologia",
+      "Vedere canale disponibile",
+      "Preparare documento di identita",
+    ],
+    detailBody:
+        "Per richieste con valore legale il mockup rimanda sempre ai canali ufficiali.",
+    detailItems: const [
+      "Indicare eventuali costi o marche",
+      "Mostrare tempi stimati",
+      "Non generare certificati nel mockup",
+    ],
+  ),
+  _finalPage(
+    id: "segnalazioni",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Segnalazioni al Comune",
+    eyebrow: "Cura del territorio",
+    summary:
+        "Invio guidato di segnalazioni su manutenzione, decoro, viabilita e servizi pubblici.",
+    primaryActionLabel: "Invia segnalazione",
+    actionFeedback: "Mockup: salverebbe la segnalazione per l'ufficio.",
+    icon: Icons.report_problem_rounded,
+    coverColors: const [Color(0xFF6A4C93), Color(0xFFFFCA3A)],
+    access: "Modulo segnalazioni e uffici competenti",
+    timing: "Presa in carico secondo priorita",
+    contact: "URP o ufficio tecnico",
+    highlights: const [
+      "Categoria problema",
+      "Foto e posizione",
+      "Stato pratica",
+    ],
+    actionBody:
+        "Il cittadino deve poter inviare una segnalazione chiara senza conoscere l'ufficio responsabile.",
+    actionItems: const [
+      "Scegliere categoria",
+      "Aggiungere posizione e foto",
+      "Seguire stato di lavorazione",
+    ],
+    detailBody:
+        "Nel mockup non viene inviata una pratica reale, ma il flusso definisce l'esperienza finale.",
+    detailItems: const [
+      "Separare emergenze da segnalazioni ordinarie",
+      "Mostrare privacy per foto e posizione",
+      "Notificare aggiornamenti di stato",
+    ],
+  ),
+  _finalPage(
+    id: "scuola",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Servizi scolastici",
+    eyebrow: "Scuola e famiglie",
+    summary:
+        "Mensa, trasporto, calendario e avvisi utili alle famiglie, raccolti in un unico punto.",
+    primaryActionLabel: "Apri servizi scuola",
+    actionFeedback: "Mockup: aprirebbe i servizi scolastici.",
+    icon: Icons.school_rounded,
+    coverColors: const [Color(0xFF006D77), Color(0xFFFFDDD2)],
+    access: "Scuola, Comune, servizi famiglia",
+    timing: "Anno scolastico e scadenze iscrizione",
+    contact: "Ufficio scuola",
+    highlights: const [
+      "Mensa",
+      "Trasporto scolastico",
+      "Avvisi famiglie",
+    ],
+    actionBody:
+        "La pagina ordina servizi ricorrenti e scadenze stagionali per genitori e studenti.",
+    actionItems: const [
+      "Consultare calendario e avvisi",
+      "Aprire richiesta mensa o trasporto",
+      "Vedere contatti scuola-Comune",
+    ],
+    detailBody:
+        "Quando collegata ai sistemi reali, la pagina puo diventare un cruscotto famiglia.",
+    detailItems: const [
+      "Mostrare solo contenuti pertinenti all'anno corrente",
+      "Distinguere moduli da semplici avvisi",
+      "Prevedere notifiche per scadenze",
+    ],
+  ),
+  _finalPage(
+    id: "mobilita",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Viabilita e trasporto locale",
+    eyebrow: "Mobilita pubblica",
+    summary:
+        "Avvisi su strade, cantieri, ordinanze, parcheggi e collegamenti locali.",
+    primaryActionLabel: "Vedi avvisi",
+    actionFeedback: "Mockup: aprirebbe gli avvisi di mobilita.",
+    icon: Icons.traffic_rounded,
+    coverColors: const [Color(0xFF495057), Color(0xFFFFD166)],
+    access: "Strade comunali, parcheggi, trasporto locale",
+    timing: "Avvisi temporanei e ordinanze",
+    contact: "Polizia locale e ufficio tecnico",
+    highlights: const [
+      "Cantieri",
+      "Ordinanze",
+      "Parcheggi evento",
+    ],
+    actionBody:
+        "La pagina separa mobilita quotidiana e avvisi temporanei che cambiano il comportamento del cittadino.",
+    actionItems: const [
+      "Consultare avvisi attivi",
+      "Aprire mappa delle modifiche",
+      "Vedere alternative consigliate",
+    ],
+    detailBody:
+        "La stessa struttura serve per eventi, neve, lavori e chiusure stradali.",
+    detailItems: const [
+      "Mostrare periodo di validita",
+      "Evidenziare ordinanze ufficiali",
+      "Collegare notifiche locali",
+    ],
+  ),
+  _finalPage(
+    id: "rifiuti",
+    familyId: "myapecchio",
+    familyLabel: "myApecchio",
+    title: "Raccolta rifiuti",
+    eyebrow: "Ambiente",
+    summary:
+        "Calendario raccolta, regole di conferimento, ingombranti e avvisi ambientali.",
+    primaryActionLabel: "Apri calendario",
+    actionFeedback: "Mockup: aprirebbe il calendario della raccolta.",
+    icon: Icons.recycling_rounded,
+    coverColors: const [Color(0xFF386641), Color(0xFFA7C957)],
+    access: "Calendario e servizi ambientali",
+    timing: "Giorni di raccolta e avvisi",
+    contact: "Gestore rifiuti e Comune",
+    highlights: const [
+      "Calendario",
+      "Ingombranti",
+      "Regole conferimento",
+    ],
+    actionBody:
+        "La pagina deve rispondere alla domanda pratica: cosa espongo, quando e dove.",
+    actionItems: const [
+      "Vedere prossima raccolta",
+      "Consultare regole per frazione",
+      "Richiedere ritiro ingombranti",
+    ],
+    detailBody:
+        "Nel prodotto reale notifiche e calendario potranno adattarsi alla zona dell'utente.",
+    detailItems: const [
+      "Mostrare variazioni festive",
+      "Separare centro e frazioni",
+      "Evidenziare numero per segnalazioni ambientali",
+    ],
+  ),
+  _finalPage(
+    id: "dove_siamo",
+    familyId: "territorio",
+    familyLabel: "Territorio",
+    title: "Dove siamo",
+    eyebrow: "Orientamento",
+    summary:
+        "Una scheda geografica per collocare Apecchio tra Marche, Appennino, valle del Biscubio e Monte Nerone.",
+    primaryActionLabel: "Apri indicazioni",
+    actionFeedback: "Mockup: aprirebbe le indicazioni verso Apecchio.",
+    icon: Icons.location_on_rounded,
+    coverColors: const [Color(0xFF31572C), Color(0xFFA7C957)],
+    access: "Centro, frazioni e principali direttrici",
+    timing: "Utile prima della visita",
+    contact: "Ufficio turistico",
+    highlights: const [
+      "Centro storico",
+      "Valle del Biscubio",
+      "Strade verso il Nerone",
+    ],
+    actionBody:
+        "La pagina orienta chi arriva da fuori e chi deve spiegare dove si trova un luogo.",
+    actionItems: const [
+      "Aprire indicazioni verso il centro",
+      "Vedere distanze indicative",
+      "Collegare parcheggi e punti informativi",
+    ],
+    detailBody:
+        "Nel mockup la mappa resta informativa, ma pronta per coordinate reali.",
+    detailItems: const [
+      "Distinguere centro e frazioni",
+      "Collegare sentieri e punti panoramici",
+      "Evidenziare accessi in caso di eventi",
+    ],
+  ),
+  _finalPage(
+    id: "monte_nerone",
+    familyId: "territorio",
+    familyLabel: "Territorio",
+    title: "Monte Nerone",
+    eyebrow: "Natura e paesaggio",
+    summary:
+        "Punto cardine del territorio: sentieri, panorami, rifugi, meteo e accessi verso la montagna.",
+    primaryActionLabel: "Apri mappa",
+    actionFeedback: "Mockup: aprirebbe la mappa del Monte Nerone.",
+    icon: Icons.landscape_rounded,
+    coverColors: const [Color(0xFF1B4332), Color(0xFF74C69D)],
+    access: "Strade, sentieri e rifugi del Nerone",
+    timing: "Controllare meteo e luce prima di partire",
+    contact: "Guide, rifugi, ufficio turistico",
+    highlights: const [
+      "Sentieri collegati",
+      "Meteo in quota",
+      "Rifugi e punti panoramici",
+    ],
+    actionBody:
+        "La scheda collega contenuti turistici, outdoor e sicurezza base prima dell'uscita.",
+    actionItems: const [
+      "Aprire mappa sentieri",
+      "Vedere servizi outdoor collegati",
+      "Controllare avvisi e meteo",
+    ],
+    detailBody:
+        "Il Monte Nerone e gia presente in eventi, dining e sentieri: qui diventa una porta unificata.",
+    detailItems: const [
+      "Rimandare ai sentieri gia implementati",
+      "Mostrare rifugi e soste",
+      "Evidenziare prudenza in caso di meteo instabile",
+    ],
+  ),
+  _finalPage(
+    id: "citta_birra",
+    familyId: "territorio",
+    familyLabel: "Territorio",
+    title: "Citta della Birra",
+    eyebrow: "Identita locale",
+    summary:
+        "La vocazione brassicola di Apecchio raccontata tra acqua, birrifici, ristorazione e alogastronomia.",
+    primaryActionLabel: "Scopri itinerario",
+    actionFeedback: "Mockup: aprirebbe l'itinerario alogastronomico.",
+    icon: Icons.sports_bar_rounded,
+    coverColors: const [Color(0xFF6B4F3A), Color(0xFFE4B56A)],
+    access: "Birrifici, ristoranti, eventi a tema",
+    timing: "Tutto l'anno, forte durante eventi gastronomici",
+    contact: "Ufficio turistico e operatori locali",
+    highlights: const [
+      "Alogastronomia",
+      "Birra artigianale",
+      "Abbinamenti locali",
+    ],
+    actionBody:
+        "La pagina collega racconto identitario, prodotti locali e luoghi dove vivere l'esperienza.",
+    actionItems: const [
+      "Aprire prodotti locali",
+      "Vedere ristoranti e locali collegati",
+      "Scoprire eventi gastronomici",
+    ],
+    detailBody:
+        "Il contenuto valorizza la narrazione senza diventare catalogo commerciale.",
+    detailItems: const [
+      "Rimandare alle schede food gia presenti",
+      "Evidenziare abbinamenti De.C.O.",
+      "Collegare calendario eventi",
+    ],
+  ),
+  _finalPage(
+    id: "mappa_turistica",
+    familyId: "territorio",
+    familyLabel: "Territorio",
+    title: "Mappa turistica",
+    eyebrow: "Esplora il paese",
+    summary:
+        "Punti di interesse, servizi, percorsi e tappe consigliate in una mappa pensata per la visita.",
+    primaryActionLabel: "Apri mappa turistica",
+    actionFeedback: "Mockup: aprirebbe la mappa turistica.",
+    icon: Icons.map_outlined,
+    coverColors: const [Color(0xFF264653), Color(0xFF2A9D8F)],
+    access: "Centro, cultura, servizi, natura",
+    timing: "Prima e durante la visita",
+    contact: "Ufficio turistico",
+    highlights: const [
+      "Tappe consigliate",
+      "Servizi vicini",
+      "Percorsi brevi",
+    ],
+    actionBody:
+        "La mappa turistica deve essere piu selettiva della mappa base: poche cose, ben ordinate.",
+    actionItems: const [
+      "Filtrare per cultura, food, servizi",
+      "Salvare tappe in un percorso",
+      "Aprire schede gia presenti",
+    ],
+    detailBody:
+        "Nel mockup si collega alla mappa immersiva della home e alle pagine specialistiche.",
+    detailItems: const [
+      "Mostrare tappe con tempo stimato",
+      "Evitare sovraccarico di pin",
+      "Adattare suggerimenti a turista o residente",
+    ],
+  ),
+  _finalPage(
+    id: "webcam_meteo",
+    familyId: "territorio",
+    familyLabel: "Territorio",
+    title: "Webcam e meteo",
+    eyebrow: "Condizioni locali",
+    summary:
+        "Meteo del borgo e della montagna, webcam, avvisi e suggerimenti prima di eventi o uscite outdoor.",
+    primaryActionLabel: "Aggiorna meteo",
+    actionFeedback: "Mockup: aggiornerebbe webcam e meteo.",
+    icon: Icons.wb_cloudy_rounded,
+    coverColors: const [Color(0xFF457B9D), Color(0xFFA8DADC)],
+    access: "Borgo, frazioni, Monte Nerone",
+    timing: "Da controllare prima di partire",
+    contact: "Fonti meteo e Comune",
+    highlights: const [
+      "Webcam",
+      "Meteo in quota",
+      "Avvisi utili",
+    ],
+    actionBody:
+        "La pagina aiuta a scegliere attivita e abbigliamento con un colpo d'occhio.",
+    actionItems: const [
+      "Controllare meteo borgo",
+      "Vedere condizioni in montagna",
+      "Aprire suggerimenti indoor/outdoor",
+    ],
+    detailBody:
+        "I dati meteo reali potranno arrivare da API dedicate; ora il mockup definisce priorita e layout.",
+    detailItems: const [
+      "Mostrare ultimo aggiornamento",
+      "Separare webcam da previsioni",
+      "Collegare eventi al coperto se piove",
+    ],
+  ),
+  _finalPage(
+    id: "ss_crocifisso",
+    familyId: "spiritualita",
+    familyLabel: "Spiritualita",
+    title: "Santuario SS. Crocifisso",
+    eyebrow: "Luoghi spirituali",
+    summary:
+        "Scheda di visita, culto e tradizione per uno dei riferimenti religiosi piu sentiti del territorio.",
+    primaryActionLabel: "Apri indicazioni",
+    actionFeedback: "Mockup: aprirebbe le indicazioni verso il santuario.",
+    icon: Icons.church_rounded,
+    coverColors: const [Color(0xFF4B3D6B), Color(0xFFD7B46A)],
+    access: "Santuario e percorso di visita",
+    timing: "Orari da verificare con parrocchia",
+    contact: "Parrocchia e ufficio turistico",
+    highlights: const [
+      "Festa religiosa",
+      "Visita raccolta",
+      "Collegamento agli eventi",
+    ],
+    actionBody:
+        "La pagina unisce informazioni spirituali, logistiche e calendario delle ricorrenze.",
+    actionItems: const [
+      "Aprire indicazioni",
+      "Vedere eventi collegati",
+      "Contattare la parrocchia",
+    ],
+    detailBody:
+        "La scheda mantiene tono rispettoso e pratico, senza sovraccaricare la visita.",
+    detailItems: const [
+      "Separare culto e visita turistica",
+      "Mostrare eventuali accessibilita",
+      "Collegare avvisi parrocchiali",
+    ],
+  ),
+  _finalPage(
+    id: "madonna_vita",
+    familyId: "spiritualita",
+    familyLabel: "Spiritualita",
+    title: "Madonna della Vita",
+    eyebrow: "Luoghi spirituali",
+    summary:
+        "Una tappa devozionale da raccontare con contesto, indicazioni e collegamenti agli itinerari del borgo.",
+    primaryActionLabel: "Vedi luogo",
+    actionFeedback: "Mockup: aprirebbe la scheda del luogo.",
+    icon: Icons.volunteer_activism_rounded,
+    coverColors: const [Color(0xFF66545E), Color(0xFFE8C7A9)],
+    access: "Luogo devozionale del territorio",
+    timing: "Visita breve o ricorrenze",
+    contact: "Parrocchia",
+    highlights: const [
+      "Memoria locale",
+      "Percorso spirituale",
+      "Sosta breve",
+    ],
+    actionBody:
+        "La pagina aiuta a inserire la tappa in un percorso piu ampio senza perderne il valore.",
+    actionItems: const [
+      "Vedere posizione",
+      "Leggere breve contesto",
+      "Collegare San Martino e santuario",
+    ],
+    detailBody:
+        "La scheda e pensata per essere arricchita con foto e testi verificati dalla comunita.",
+    detailItems: const [
+      "Mantenere testi brevi",
+      "Indicare accesso e rispetto del luogo",
+      "Collegare eventi o ricorrenze",
+    ],
+  ),
+  _finalPage(
+    id: "san_martino",
+    familyId: "spiritualita",
+    familyLabel: "Spiritualita",
+    title: "San Martino",
+    eyebrow: "Parrocchia e arte",
+    summary:
+        "Chiesa, comunita e patrimonio locale: una scheda per visita, avvisi e riferimenti parrocchiali.",
+    primaryActionLabel: "Apri avvisi",
+    actionFeedback: "Mockup: aprirebbe gli avvisi di San Martino.",
+    icon: Icons.account_balance_rounded,
+    coverColors: const [Color(0xFF3D405B), Color(0xFFF2CC8F)],
+    access: "Chiesa parrocchiale e centro storico",
+    timing: "Orari e celebrazioni da verificare",
+    contact: "Parrocchia di San Martino",
+    highlights: const [
+      "Chiesa principale",
+      "Avvisi",
+      "Percorso culturale",
+    ],
+    actionBody:
+        "La pagina rende San Martino un punto di connessione tra cultura, fede e vita comunitaria.",
+    actionItems: const [
+      "Aprire avvisi parrocchiali",
+      "Vedere informazioni di visita",
+      "Collegare arte e percorso storico",
+    ],
+    detailBody:
+        "Contenuti liturgici e turistici restano separati ma raggiungibili dalla stessa scheda.",
+    detailItems: const [
+      "Mostrare contatto parrocchia",
+      "Indicare rispetto durante celebrazioni",
+      "Collegare eventi spirituali",
+    ],
+  ),
+  _finalPage(
+    id: "parrocchia",
+    familyId: "spiritualita",
+    familyLabel: "Spiritualita",
+    title: "Parrocchia",
+    eyebrow: "Comunita religiosa",
+    summary:
+        "Contatti, celebrazioni, gruppi e avvisi parrocchiali organizzati per residenti e visitatori.",
+    primaryActionLabel: "Contatta parrocchia",
+    actionFeedback: "Mockup: aprirebbe i contatti parrocchiali.",
+    icon: Icons.diversity_3_rounded,
+    coverColors: const [Color(0xFF5A4E7C), Color(0xFFC9ADA7)],
+    access: "Parrocchia e gruppi collegati",
+    timing: "Celebrazioni, incontri, avvisi",
+    contact: "Segreteria parrocchiale",
+    highlights: const [
+      "Orari celebrazioni",
+      "Gruppi",
+      "Avvisi",
+    ],
+    actionBody:
+        "La pagina serve chi cerca orari, contatti o attivita senza dover seguire canali separati.",
+    actionItems: const [
+      "Aprire contatto",
+      "Vedere ultimi avvisi",
+      "Scoprire gruppi e attivita",
+    ],
+    detailBody:
+        "Nel prodotto reale puo collegarsi a un feed parrocchiale moderato.",
+    detailItems: const [
+      "Mostrare data dell'avviso",
+      "Separare eventi ricorrenti e straordinari",
+      "Lasciare chiara la fonte",
+    ],
+  ),
+  _finalPage(
+    id: "oratorio",
+    familyId: "spiritualita",
+    familyLabel: "Spiritualita",
+    title: "Oratorio San Martino",
+    eyebrow: "Giovani e famiglie",
+    summary:
+        "Attivita, incontri, spazi educativi e appuntamenti per bambini, ragazzi e famiglie.",
+    primaryActionLabel: "Vedi attivita",
+    actionFeedback: "Mockup: aprirebbe il calendario dell'oratorio.",
+    icon: Icons.child_care_rounded,
+    coverColors: const [Color(0xFF7A5AA6), Color(0xFFFFD6A5)],
+    access: "Oratorio e spazi parrocchiali",
+    timing: "Pomeriggi, estate, appuntamenti speciali",
+    contact: "Referenti oratorio",
+    highlights: const [
+      "Attivita ragazzi",
+      "Estate",
+      "Famiglie",
+    ],
+    actionBody:
+        "La scheda rende visibili iniziative che spesso circolano solo nel passaparola.",
+    actionItems: const [
+      "Vedere calendario attivita",
+      "Contattare referenti",
+      "Salvare appuntamenti per famiglia",
+    ],
+    detailBody:
+        "Nel prodotto reale serviranno attenzione a privacy e contenuti per minori.",
+    detailItems: const [
+      "Niente dati personali dei minori nel mockup",
+      "Comunicazioni gestite da referenti",
+      "Calendario semplice e controllato",
+    ],
+  ),
+  _finalPage(
+    id: "avvisi_parrocchiali",
+    familyId: "spiritualita",
+    familyLabel: "Spiritualita",
+    title: "Avvisi parrocchiali",
+    eyebrow: "Comunicazioni",
+    summary:
+        "Bacheca ordinata per messe, incontri, ricorrenze, raccolte e appuntamenti della comunita.",
+    primaryActionLabel: "Leggi avvisi",
+    actionFeedback: "Mockup: aprirebbe la bacheca degli avvisi.",
+    icon: Icons.campaign_rounded,
+    coverColors: const [Color(0xFF6D597A), Color(0xFFE9C46A)],
+    access: "Bacheca parrocchiale",
+    timing: "Aggiornamento settimanale o straordinario",
+    contact: "Parrocchia",
+    highlights: const [
+      "Ultimi avvisi",
+      "Ricorrenze",
+      "Gruppi",
+    ],
+    actionBody:
+        "La pagina mette davanti gli avvisi recenti e permette di ritrovare quelli ancora validi.",
+    actionItems: const [
+      "Leggere ultimi avvisi",
+      "Filtrare per celebrazioni o incontri",
+      "Salvare un appuntamento",
+    ],
+    detailBody:
+        "Gli avvisi non devono confondersi con eventi pubblici turistici, ma possono collegarsi al calendario.",
+    detailItems: const [
+      "Mostrare fonte e data",
+      "Evidenziare avvisi scaduti",
+      "Collegare solo eventi aperti al pubblico",
+    ],
+  ),
+  _finalPage(
+    id: "notizie_paese",
+    familyId: "comunita",
+    familyLabel: "Comunita",
+    title: "Notizie del paese",
+    eyebrow: "Bacheca locale",
+    summary:
+        "Notizie brevi, avvisi civici e racconti dal territorio raccolti in un feed leggibile.",
+    primaryActionLabel: "Apri notizie",
+    actionFeedback: "Mockup: aprirebbe il feed delle notizie locali.",
+    icon: Icons.newspaper_rounded,
+    coverColors: const [Color(0xFF5A3E2B), Color(0xFFE1A85F)],
+    access: "Comune, associazioni, comunita",
+    timing: "Aggiornamenti periodici",
+    contact: "Redazione locale o Comune",
+    highlights: const [
+      "Avvisi brevi",
+      "Storie locali",
+      "Link a eventi",
+    ],
+    actionBody:
+        "La pagina raccoglie contenuti piccoli ma importanti, senza trasformarli in notifiche invasive.",
+    actionItems: const [
+      "Leggere notizie recenti",
+      "Aprire evento collegato",
+      "Filtrare per tema",
+    ],
+    detailBody:
+        "Il feed dovra distinguere comunicazioni ufficiali e racconti di comunita.",
+    detailItems: const [
+      "Mostrare fonte chiara",
+      "Evitare contenuti non verificati",
+      "Tenere storico breve e navigabile",
+    ],
+  ),
+  _finalPage(
+    id: "pro_loco",
+    familyId: "comunita",
+    familyLabel: "Comunita",
+    title: "Pro Loco",
+    eyebrow: "Associazioni",
+    summary:
+        "Scheda per iniziative, contatti, volontariato e calendario degli appuntamenti promossi dalla Pro Loco.",
+    primaryActionLabel: "Contatta Pro Loco",
+    actionFeedback: "Mockup: aprirebbe il contatto della Pro Loco.",
+    icon: Icons.groups_2_rounded,
+    coverColors: const [Color(0xFF386641), Color(0xFFDDA15E)],
+    access: "Associazioni e sedi operative",
+    timing: "Eventi, sagre, iniziative stagionali",
+    contact: "Referenti Pro Loco",
+    highlights: const [
+      "Eventi",
+      "Volontariato",
+      "Tradizioni",
+    ],
+    actionBody:
+        "La pagina rende la Pro Loco un ponte tra eventi, territorio e partecipazione.",
+    actionItems: const [
+      "Vedere prossimi eventi",
+      "Aprire contatto referenti",
+      "Scoprire come collaborare",
+    ],
+    detailBody:
+        "La scheda puo collegare sagre, calendario eventi e richieste operative.",
+    detailItems: const [
+      "Separare informazioni pubbliche da gestione interna",
+      "Mostrare iniziative attive",
+      "Collegare eventi gastronomici",
+    ],
+  ),
+  _finalPage(
+    id: "associazioni",
+    familyId: "comunita",
+    familyLabel: "Comunita",
+    title: "Associazioni",
+    eyebrow: "Vita locale",
+    summary:
+        "Panoramica delle associazioni del territorio, con ambiti, contatti e iniziative aperte.",
+    primaryActionLabel: "Esplora associazioni",
+    actionFeedback: "Mockup: aprirebbe l'elenco delle associazioni.",
+    icon: Icons.handshake_rounded,
+    coverColors: const [Color(0xFF4A5759), Color(0xFFB0C4B1)],
+    access: "Associazioni culturali, sportive, sociali",
+    timing: "Attivita durante l'anno",
+    contact: "Referenti associativi",
+    highlights: const [
+      "Ambiti",
+      "Contatti",
+      "Iniziative aperte",
+    ],
+    actionBody:
+        "La pagina deve aiutare a trovare il gruppo giusto, non solo elencare nomi.",
+    actionItems: const [
+      "Filtrare per ambito",
+      "Vedere iniziative attive",
+      "Aprire contatto referente",
+    ],
+    detailBody:
+        "Il mockup prepara una struttura aggiornabile anche da fonti associative.",
+    detailItems: const [
+      "Mostrare stato attivo",
+      "Rendere chiaro chi gestisce la scheda",
+      "Collegare eventi e spazi comunali",
+    ],
+  ),
+  _finalPage(
+    id: "avis",
+    familyId: "comunita",
+    familyLabel: "Comunita",
+    title: "AVIS",
+    eyebrow: "Volontariato",
+    summary:
+        "Informazioni su donazione, appuntamenti, contatti e iniziative di sensibilizzazione.",
+    primaryActionLabel: "Contatta AVIS",
+    actionFeedback: "Mockup: aprirebbe il contatto AVIS.",
+    icon: Icons.bloodtype_rounded,
+    coverColors: const [Color(0xFF9B2226), Color(0xFFFFB4A2)],
+    access: "Gruppo AVIS locale e punti donazione",
+    timing: "Calendario raccolte e appuntamenti",
+    contact: "Referenti AVIS",
+    highlights: const [
+      "Donazione",
+      "Appuntamenti",
+      "Sensibilizzazione",
+    ],
+    actionBody:
+        "La pagina rende immediato il contatto e spiega i passaggi senza entrare in ambito medico.",
+    actionItems: const [
+      "Aprire contatto AVIS",
+      "Vedere prossimi appuntamenti",
+      "Leggere requisiti generali da fonte ufficiale",
+    ],
+    detailBody:
+        "Per indicazioni sanitarie specifiche si rimanda sempre ai canali AVIS ufficiali.",
+    detailItems: const [
+      "Nessun questionario sanitario nel mockup",
+      "Fonte ufficiale evidenziata",
+      "Collegamento a eventi di comunita",
+    ],
+  ),
+  _finalPage(
+    id: "biblioteca",
+    familyId: "comunita",
+    familyLabel: "Comunita",
+    title: "Biblioteca comunale",
+    eyebrow: "Cultura quotidiana",
+    summary:
+        "Orari, servizi, prestiti, iniziative e contatti della biblioteca come presidio culturale del paese.",
+    primaryActionLabel: "Apri biblioteca",
+    actionFeedback: "Mockup: aprirebbe la scheda biblioteca.",
+    icon: Icons.local_library_rounded,
+    coverColors: const [Color(0xFF3A506B), Color(0xFFBEE3DB)],
+    access: "Biblioteca e spazi culturali",
+    timing: "Orari di apertura e iniziative",
+    contact: "Biblioteca comunale",
+    highlights: const [
+      "Prestiti",
+      "Eventi culturali",
+      "Spazi studio",
+    ],
+    actionBody:
+        "La pagina trasforma la biblioteca in un servizio vivo, collegato a cultura e comunita.",
+    actionItems: const [
+      "Vedere orari",
+      "Scoprire iniziative",
+      "Contattare la biblioteca",
+    ],
+    detailBody:
+        "In futuro potra collegarsi a catalogo, prenotazioni e mediateca.",
+    detailItems: const [
+      "Separare servizi ordinari ed eventi",
+      "Mostrare chiusure straordinarie",
+      "Collegare mediateca e percorsi culturali",
+    ],
+  ),
+  _finalPage(
+    id: "mediateca",
+    familyId: "comunita",
+    familyLabel: "Comunita",
+    title: "Mediateca",
+    eyebrow: "Archivio e memoria",
+    summary:
+        "Foto, video, materiali digitali e memoria locale organizzati per tema e raccolta.",
+    primaryActionLabel: "Esplora mediateca",
+    actionFeedback: "Mockup: aprirebbe la mediateca.",
+    icon: Icons.photo_library_rounded,
+    coverColors: const [Color(0xFF343A40), Color(0xFFCED4DA)],
+    access: "Archivio digitale locale",
+    timing: "Consultazione continua",
+    contact: "Biblioteca o redazione locale",
+    highlights: const [
+      "Foto storiche",
+      "Video",
+      "Raccolte tematiche",
+    ],
+    actionBody:
+        "La mediateca valorizza contenuti che altrimenti restano dispersi tra archivi e social.",
+    actionItems: const [
+      "Esplorare raccolte",
+      "Aprire contenuti collegati ai luoghi",
+      "Proporre materiali da verificare",
+    ],
+    detailBody:
+        "Il prodotto reale dovra gestire diritti, liberatorie e fonti dei materiali.",
+    detailItems: const [
+      "Mostrare autore o fonte",
+      "Gestire permessi immagini",
+      "Collegare foto a luoghi e storie",
+    ],
+  ),
+  _finalPage(
+    id: "foto_giorno",
+    familyId: "comunita",
+    familyLabel: "Comunita",
+    title: "Foto del giorno",
+    eyebrow: "Racconto visivo",
+    summary:
+        "Una piccola finestra quotidiana su paesaggi, dettagli, eventi e vita del paese.",
+    primaryActionLabel: "Guarda foto",
+    actionFeedback: "Mockup: aprirebbe la foto del giorno.",
+    icon: Icons.camera_alt_rounded,
+    coverColors: const [Color(0xFF1D3557), Color(0xFFF4A261)],
+    access: "Contributi della comunita e archivio",
+    timing: "Aggiornamento giornaliero o editoriale",
+    contact: "Redazione locale",
+    highlights: const [
+      "Scatto in evidenza",
+      "Luogo collegato",
+      "Archivio visuale",
+    ],
+    actionBody:
+        "La pagina e leggera ma utile per far sentire l'app viva ogni giorno.",
+    actionItems: const [
+      "Vedere foto e luogo",
+      "Aprire scheda collegata",
+      "Salvare tra preferiti",
+    ],
+    detailBody:
+        "Nel prodotto reale servira moderazione prima della pubblicazione.",
+    detailItems: const [
+      "Mostrare credito fotografico",
+      "Evitare volti non autorizzati",
+      "Collegare mediateca e notizie",
+    ],
+  ),
+];
+
+final Map<String, FinalInfoPage> _finalInfoPagesById = {
+  for (final page in _finalInfoPages) page.id: page,
+};
+
+class FinalInfoPageScreen extends StatefulWidget {
+  const FinalInfoPageScreen({super.key, required this.initialPageId});
+
+  final String initialPageId;
+
+  @override
+  State<FinalInfoPageScreen> createState() => _FinalInfoPageScreenState();
+}
+
+class _FinalInfoPageScreenState extends State<FinalInfoPageScreen> {
+  late FinalInfoPage _selectedPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPage =
+        _finalInfoPagesById[widget.initialPageId] ?? _finalInfoPages.first;
+  }
+
+  @override
+  void didUpdateWidget(covariant FinalInfoPageScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialPageId != widget.initialPageId) {
+      _selectedPage =
+          _finalInfoPagesById[widget.initialPageId] ?? _finalInfoPages.first;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final relatedPages = _finalInfoPages
+        .where((page) => page.familyId == _selectedPage.familyId)
+        .toList(growable: false);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5EF),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF3F5EF),
+        title: Text(_selectedPage.familyLabel),
+      ),
+      body: ListView(
+        key: ValueKey(_selectedPage.id),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        children: [
+          _FinalInfoHero(page: _selectedPage),
+          const SizedBox(height: 16),
+          if (relatedPages.length > 1) ...[
+            _FinalInfoSelector(
+              pages: relatedPages,
+              selectedPage: _selectedPage,
+              onChanged: (page) => setState(() => _selectedPage = page),
+            ),
+            const SizedBox(height: 16),
+          ],
+          _FinalInfoFactGrid(facts: _selectedPage.facts),
+          const SizedBox(height: 22),
+          const Text(
+            "In evidenza",
+            style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          _FinalInfoHighlights(items: _selectedPage.highlights),
+          const SizedBox(height: 22),
+          for (final section in _selectedPage.sections)
+            _FinalInfoSectionCard(section: section),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(_selectedPage.actionFeedback)),
+              );
+            },
+            icon: const Icon(Icons.touch_app_rounded),
+            label: Text(_selectedPage.primaryActionLabel),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D57),
+              padding: const EdgeInsets.symmetric(vertical: 15),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinalInfoHero extends StatelessWidget {
+  const _FinalInfoHero({required this.page});
+
+  final FinalInfoPage page;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 246,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: page.coverColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: Icon(
+              page.icon,
+              color: Colors.white.withValues(alpha: 0.46),
+              size: 76,
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                page.eyebrow.toUpperCase(),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.84),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                page.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  height: 0.98,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                page.summary,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.88),
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinalInfoSelector extends StatelessWidget {
+  const _FinalInfoSelector({
+    required this.pages,
+    required this.selectedPage,
+    required this.onChanged,
+  });
+
+  final List<FinalInfoPage> pages;
+  final FinalInfoPage selectedPage;
+  final ValueChanged<FinalInfoPage> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 106,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: pages.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final page = pages[index];
+          final selected = page.id == selectedPage.id;
+          return SizedBox(
+            width: 154,
+            child: Material(
+              color: selected ? const Color(0xFF243C2A) : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () => onChanged(page),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        page.icon,
+                        color:
+                            selected ? Colors.white : const Color(0xFF2E7D57),
+                      ),
+                      const Spacer(),
+                      Text(
+                        page.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: selected ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w900,
+                          height: 1.04,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FinalInfoFactGrid extends StatelessWidget {
+  const _FinalInfoFactGrid({required this.facts});
+
+  final List<FinalInfoFact> facts;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 520;
+        final width =
+            compact ? constraints.maxWidth : (constraints.maxWidth - 10) / 2;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final fact in facts)
+              _FinalInfoFactCard(width: width, fact: fact),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FinalInfoFactCard extends StatelessWidget {
+  const _FinalInfoFactCard({
+    required this.width,
+    required this.fact,
+  });
+
+  final double width;
+  final FinalInfoFact fact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 92),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(fact.icon, color: const Color(0xFF2E7D57)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fact.title,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fact.value,
+                    style: const TextStyle(
+                      height: 1.25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FinalInfoHighlights extends StatelessWidget {
+  const _FinalInfoHighlights({required this.items});
+
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final item in items)
+          Chip(
+            avatar: const Icon(Icons.check_circle_rounded, size: 17),
+            label: Text(item),
+            backgroundColor: Colors.white,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w800),
+            side: BorderSide.none,
+          ),
+      ],
+    );
+  }
+}
+
+class _FinalInfoSectionCard extends StatelessWidget {
+  const _FinalInfoSectionCard({required this.section});
+
+  final FinalInfoSection section;
 
   @override
   Widget build(BuildContext context) {

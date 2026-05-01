@@ -195,9 +195,10 @@ void main() {
 
     expect(find.text('Prenota impianti'), findsOneWidget);
     expect(find.text('Tennis outdoor'), findsWidgets);
-    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.binding.setSurfaceSize(const Size(720, 1100));
     await tester.pumpAndSettle();
-    expect(find.text('Conferma prenotazione'), findsOneWidget);
+    expect(find.text('Lun'), findsOneWidget);
+    expect(find.text('Mar'), findsOneWidget);
   });
 
   testWidgets('opens sport rules and outdoor services screens',
@@ -225,5 +226,100 @@ void main() {
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
     expect(find.text('Richiedi disponibilita'), findsOneWidget);
+  });
+
+  testWidgets('renders final info pages on a phone viewport',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FinalInfoPageScreen(
+          key: ValueKey('farmacia-page'),
+          initialPageId: 'farmacia',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Servizi utili'), findsOneWidget);
+    expect(find.text('Farmacie'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Cosa puoi fare'),
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Cosa puoi fare'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Chiama farmacia'),
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Chiama farmacia'), findsOneWidget);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FinalInfoPageScreen(
+          key: ValueKey('segnalazioni-page'),
+          initialPageId: 'segnalazioni',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('myApecchio'), findsOneWidget);
+    expect(find.text('Segnalazioni al Comune'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Invia segnalazione'),
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Invia segnalazione'), findsOneWidget);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FinalInfoPageScreen(
+          key: ValueKey('monte-nerone-page'),
+          initialPageId: 'monte_nerone',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Territorio'), findsOneWidget);
+    expect(find.text('Monte Nerone'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Apri mappa'),
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Apri mappa'), findsOneWidget);
+  });
+
+  testWidgets('opens a final services page from the radial menu',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(720, 390));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester);
+    await loginAsResident(tester);
+    await openMenu(tester);
+
+    await tester.ensureVisible(find.text('Servizi'));
+    await tester.tap(find.text('Servizi'));
+    await tester.pump(const Duration(milliseconds: 650));
+    await tester.ensureVisible(find.text('Farmacie'));
+    await tester.tap(find.text('Farmacie'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Servizi utili'), findsOneWidget);
+    expect(find.text('Farmacie'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Chiama farmacia'),
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Chiama farmacia'), findsOneWidget);
   });
 }
