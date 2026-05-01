@@ -64,6 +64,12 @@ Vedi `APPecchio_UX_Blueprint.md` per wireframe, flow e stati interazione.
 - [Implementazione gamification](docs/gamification/)
 - [Mockup UI gamification](mockup/index.html)
 
+
+### Proposte funzionali
+- [Piano area gamification](docs/gamification-plan.md)
+- [Implementazione gamification](docs/gamification/)
+- [Mockup UI gamification](mockup/index.html)
+
 ## Avvertenze
 Questa documentazione è una guida tecnica. Non sostituisce in alcun modo il parere di consulenti legali, DPO o specialisti di settore.
 - [Implementazione gamification](docs/gamification/)
