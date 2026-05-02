@@ -3964,32 +3964,33 @@ class _RadialNode extends StatelessWidget {
         fixedOffset?.dx ?? (center.dx + math.cos(fixedAngle ?? 0) * radius);
     final targetDy =
         fixedOffset?.dy ?? (center.dy + math.sin(fixedAngle ?? 0) * radius);
+    final target = Offset(targetDx, targetDy);
     final frame = _petalBloomFrame(
       center: center,
-      target: Offset(targetDx, targetDy),
+      target: target,
       progress: progress,
       index: animationIndex,
       total: siblingCount,
       backNode: backNode,
     );
-    final dx = frame.position.dx;
-    final dy = frame.position.dy;
     final nodeOpacity = frame.easedReveal.clamp(0.0, 1.0).toDouble();
+    final visualOffset = frame.position - target;
     final rotation = (1 - frame.easedReveal) *
         (backNode ? -0.10 : -0.28 - (animationIndex * 0.012));
     return Positioned(
-      left: dx - (width / 2),
-      top: dy - (height / 2),
-      child: IgnorePointer(
-        ignoring: frame.reveal < 0.86,
+      left: target.dx - (width / 2),
+      top: target.dy - (height / 2),
+      child: GestureDetector(
+        key: ValueKey("menu-node-$nodeId"),
+        behavior: HitTestBehavior.translucent,
+        onTap: onTap,
         child: Opacity(
           opacity: nodeOpacity,
-          child: Transform.rotate(
-            angle: rotation,
-            child: GestureDetector(
-              key: ValueKey("menu-node-$nodeId"),
-              behavior: HitTestBehavior.translucent,
-              onTap: onTap,
+          child: Transform.translate(
+            offset: visualOffset,
+            transformHitTests: false,
+            child: Transform.rotate(
+              angle: rotation,
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 280),
                 scale: 0.92 + (frame.easedReveal * 0.08),
