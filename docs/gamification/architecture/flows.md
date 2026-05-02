@@ -1,17 +1,17 @@
 # Flussi operativi
 
-## 1. Accumulo punti da check-in evento
+## 1. Accumulo token e XP da check-in evento
 1. L'utente apre “Il mio QR” e ottiene token breve durata firmato.
 2. Lo staff scansiona tramite app incaricati.
 3. Backend verifica: firma token, scadenza, autorizzazione staff, iscrizione evento, unicità check-in.
 4. Se valido, salva `event_checkins` con `scan_result=valid`.
 5. Pubblica evento dominio `EVENT_CHECKIN_CONFIRMED`.
-6. Gamification Engine crea ledger entry con `idempotency_key=checkin:{eventId}:{userId}`.
-7. Wallet projector aggiorna saldo.
+6. Gamification Engine crea ledger entry con `token_delta`, `experience_delta` e `idempotency_key=checkin:{eventId}:{userId}`.
+7. Wallet projector aggiorna saldo token e saldo XP.
 
-## 2. Emissione voucher a soglia
+## 2. Emissione voucher a soglia XP
 1. A ogni ledger confermato, il motore ricalcola soglia raggiunta.
-2. Se supera soglia non ancora premiata, emette voucher.
+2. Se gli XP superano una soglia non ancora premiata, emette voucher.
 3. Crea record `reward_vouchers` con `status=issued` e `expires_at`.
 4. Notifica utente in app.
 

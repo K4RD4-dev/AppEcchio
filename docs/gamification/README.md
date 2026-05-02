@@ -3,8 +3,8 @@
 Questa cartella traduce il piano in artefatti pronti per implementazione.
 
 ## Contenuto
-- `db/schema.sql`: schema SQL MVP (wallet, ledger, check-in, voucher).
-- `api/openapi.yaml`: contratto API iniziale (check-in, punti, voucher, admin).
+- `db/schema.sql`: schema SQL MVP (wallet token/XP, ledger, check-in, voucher).
+- `api/openapi.yaml`: contratto API iniziale (check-in, progress token/XP, voucher, admin).
 - `architecture/flows.md`: flussi operativi end-to-end.
 - `operations/rollout-checklist.md`: checklist di rilascio per fasi.
 

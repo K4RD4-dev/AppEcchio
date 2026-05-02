@@ -39,4 +39,6 @@ class PaymentReceipt:
     net_amount: float
     voucher_code: str | None = None
     points_earned: int = 0
+    experience_earned: int = 0
+    tokens_earned: int = 0
     metadata: dict = field(default_factory=dict)

@@ -8,8 +8,12 @@ class GamificationSimulatorTest(unittest.TestCase):
         self.engine = GamificationEngine(secret_key="dev-secret", checkin_points=500)
         self.sim = GamificationSimulator(self.engine)
 
-        self.customer = User(id="u1", role="customer", display_name="Mario", cash_balance=100.0)
-        self.supervisor = User(id="s1", role="supervisor", display_name="Laura", cash_balance=0.0)
+        self.customer = User(
+            id="u1", role="customer", display_name="Mario", cash_balance=100.0
+        )
+        self.supervisor = User(
+            id="s1", role="supervisor", display_name="Laura", cash_balance=0.0
+        )
         self.merchant = Merchant(id="m1", name="Bar Centro", cash_balance=0.0)
 
         self.sim.add_user(self.customer)
@@ -24,11 +28,15 @@ class GamificationSimulatorTest(unittest.TestCase):
         self.assertEqual(note.status, "valid")
         self.assertEqual(len(self.sim.get_notifications()), 1)
         self.assertEqual(self.engine.get_user_points("u1")["balance"], 500)
+        self.assertEqual(self.engine.get_user_points("u1")["token_balance"], 50)
 
     def test_payment_debits_customer_and_credits_merchant(self):
-        receipt = self.sim.pay_with_optional_voucher(customer_id="u1", merchant_id="m1", gross_amount=10.0)
+        receipt = self.sim.pay_with_optional_voucher(
+            customer_id="u1", merchant_id="m1", gross_amount=10.0
+        )
         self.assertEqual(receipt.net_amount, 10.0)
         self.assertEqual(receipt.points_earned, 20)
+        self.assertEqual(receipt.tokens_earned, 2)
         self.assertEqual(self.sim.users["u1"].cash_balance, 90.0)
         self.assertEqual(self.sim.merchants["m1"].cash_balance, 10.0)
 
