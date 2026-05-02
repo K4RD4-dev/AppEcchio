@@ -202,6 +202,29 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
+  testWidgets('shows spirituality and symbolic villages inside community', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(720, 390));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpApp(tester);
+    await loginAsResident(tester);
+    await openMenu(tester);
+
+    await tester.tap(menuNode("cultura"));
+    await tester.pump(const Duration(milliseconds: 650));
+    expect(menuNode("spiritualita"), findsNothing);
+    expect(menuNode("borgo_simboli"), findsNothing);
+
+    await tester.tap(menuNode("comunita"));
+    await tester.pump(const Duration(milliseconds: 650));
+    expect(menuNode("spiritualita"), findsOneWidget);
+    expect(find.text("Spiritualita"), findsOneWidget);
+    expect(menuNode("borgo_simboli"), findsOneWidget);
+    expect(find.text("Borghi simbolo"), findsOneWidget);
+  });
+
   testWidgets('opens settings and profile pages from the home header', (
     WidgetTester tester,
   ) async {
