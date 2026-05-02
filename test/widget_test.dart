@@ -274,6 +274,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tutti'), findsOneWidget);
+    expect(find.text('Gorgaccia'), findsOneWidget);
     expect(find.text('Famiglie'), findsOneWidget);
     expect(find.textContaining('Sentiero Italia'), findsWidgets);
 
