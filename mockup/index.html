@@ -9,7 +9,10 @@
   <body>
     <header class="topbar">
       <h1>AppEcchio</h1>
-      <div class="points-pill">Token: <span id="headerPoints">0</span></div>
+      <div class="wallet-pills">
+        <div class="points-pill">Token: <span id="headerTokens">0</span></div>
+        <div class="points-pill">XP: <span id="headerXp">0</span></div>
+      </div>
     </header>
 
     <nav class="tabs">
@@ -23,10 +26,11 @@
     <main>
       <section id="home" class="panel active">
         <h2>Pagina principale</h2>
-        <p>I token sono visibili anche qui, con avanzamento verso la prossima soglia.</p>
+        <p>Token e XP hanno comportamenti separati: i token alimentano opportunita' economiche, gli XP fanno avanzare livelli e premi.</p>
         <div class="card">
-          <p>Saldo token: <strong id="homePoints">0</strong></p>
-          <p>Prossima soglia: <strong id="nextThreshold">500</strong></p>
+          <p>Saldo token: <strong id="homeTokens">0</strong></p>
+          <p>Experience (XP): <strong id="homeXp">0</strong></p>
+          <p>Prossima soglia premio XP: <strong id="nextThreshold">500</strong></p>
           <progress id="thresholdProgress" max="500" value="0"></progress>
         </div>
 
@@ -40,18 +44,19 @@
       <section id="profile" class="panel">
         <h2>Profilo</h2>
         <div class="card">
-          <p>Token attuali: <strong id="profilePoints">0</strong></p>
+          <p>Token attuali: <strong id="profileTokens">0</strong></p>
+          <p>XP accumulati: <strong id="profileXp">0</strong></p>
           <p>Storico movimenti:</p>
           <ul id="ledgerList"></ul>
         </div>
       </section>
 
       <section id="discounts" class="panel">
-        <h2>Sconti e token</h2>
+        <h2>Premi e XP</h2>
         <div class="card">
-          <p>Puoi “comprare” (riscattare) sconti con i token accumulati.</p>
-          <button id="buy5" data-cost="500">Compra sconto 5% (500 token)</button>
-          <button id="buy10" data-cost="1000">Compra sconto 10% (1000 token)</button>
+          <p>I voucher si sbloccano con gli XP. I token non vengono consumati: restano nel wallet per opportunita' di guadagno.</p>
+          <button id="buy5" data-cost="500">Verifica sconto 5% (500 XP)</button>
+          <button id="buy10" data-cost="1000">Verifica sconto 10% (1000 XP)</button>
         </div>
         <div class="card">
           <h3>I tuoi voucher</h3>

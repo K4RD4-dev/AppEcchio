@@ -1,7 +1,14 @@
-const STORAGE_KEY = "appecchio_gamification_state_v1";
+const STORAGE_KEY = "appecchio_gamification_state_v2";
+
+const REWARD_TIERS = [
+  { threshold: 500, label: "Sconto 5%", percentage: 5 },
+  { threshold: 1000, label: "Sconto 10%", percentage: 10 },
+];
+const CHECKIN_XP = 120;
 
 const state = loadState() || {
-  points: 0,
+  tokens: 0,
+  xp: 0,
   ledger: [],
   vouchers: [],
   notifications: [],
@@ -10,8 +17,12 @@ const state = loadState() || {
   lastReceipt: null,
 };
 
-const CHECKIN_REWARD = 120;
-const THRESHOLDS = [500, 1000];
+function tokensForExperience(xp) {
+  if (xp <= 0) {
+    return 0;
+  }
+  return Math.max(Math.ceil(xp / 10), 1);
+}
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -26,44 +37,65 @@ function loadState() {
   }
 }
 
-function addLedger(label, delta) {
-  state.ledger.unshift({ label, delta, at: new Date().toLocaleTimeString() });
+function addLedger(label, { tokens = 0, xp = 0, note = "" } = {}) {
+  state.ledger.unshift({
+    label,
+    tokens,
+    xp,
+    note,
+    at: new Date().toLocaleTimeString(),
+  });
 }
 
-function addPoints(amount, sourceLabel) {
-  state.points += amount;
-  addLedger(sourceLabel, `+${amount}`);
-  render();
-}
-
-function spendPoints(amount, sourceLabel) {
-  state.points = Math.max(state.points - amount, 0);
-  addLedger(sourceLabel, `-${amount}`);
+function addProgress(xp, sourceLabel) {
+  const tokens = tokensForExperience(xp);
+  state.xp += xp;
+  state.tokens += tokens;
+  addLedger(sourceLabel, { tokens, xp });
+  issueVouchersIfNeeded();
   render();
 }
 
 function getNextThreshold() {
-  return THRESHOLDS.find((t) => t > state.points) || THRESHOLDS[THRESHOLDS.length - 1];
+  return REWARD_TIERS.find((tier) => tier.threshold > state.xp) || null;
+}
+
+function issueVouchersIfNeeded() {
+  REWARD_TIERS.forEach((tier) => {
+    const alreadyIssued = state.vouchers.some((voucher) => voucher.threshold === tier.threshold);
+    if (state.xp < tier.threshold || alreadyIssued) {
+      return;
+    }
+    const code = `VCH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    state.vouchers.unshift({
+      code,
+      label: tier.label,
+      percentage: tier.percentage,
+      threshold: tier.threshold,
+      status: "attivo",
+    });
+    addLedger(`Voucher ${tier.label} sbloccato con XP`, { note: "premio" });
+  });
 }
 
 function simulateCheckin() {
   const notification = {
     at: new Date().toLocaleTimeString(),
     status: "valid",
-    message: "Codice cliccato: presenza verificata e token assegnati.",
+    message: `Codice cliccato: presenza verificata, +${tokensForExperience(CHECKIN_XP)} token e +${CHECKIN_XP} XP.`,
   };
   state.notifications.unshift(notification);
-  addPoints(CHECKIN_REWARD, "Check-in evento");
+  addProgress(CHECKIN_XP, "Check-in evento");
 }
 
-function buyDiscount(cost, label, percentage) {
-  if (state.points < cost) {
-    alert("Token insufficienti");
+function claimReward(threshold, label) {
+  const tier = REWARD_TIERS.find((item) => item.threshold === threshold);
+  if (!tier || state.xp < threshold) {
+    alert("XP insufficienti");
     return;
   }
-  spendPoints(cost, `Riscatto ${label}`);
-  const code = `VCH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-  state.vouchers.unshift({ code, label, percentage, status: "attivo" });
+  issueVouchersIfNeeded();
+  addLedger(`Controllo premio ${label}`, { note: "nessun consumo token" });
   render();
 }
 
@@ -77,7 +109,7 @@ function runCheckout() {
     if (voucher) {
       discount = Number((gross * (voucher.percentage / 100)).toFixed(2));
       voucher.status = "usato";
-      addLedger(`Voucher ${voucher.label} usato`, "0");
+      addLedger(`Voucher ${voucher.label} usato`, { note: "redeem" });
     }
   }
 
@@ -85,14 +117,15 @@ function runCheckout() {
   state.customerBalance = Number((state.customerBalance - net).toFixed(2));
   state.merchantBalance = Number((state.merchantBalance + net).toFixed(2));
 
-  const earnedPoints = Math.floor(net * 2);
-  addPoints(earnedPoints, "Punti da acquisto");
+  const earnedXp = Math.floor(net * 2);
+  addProgress(earnedXp, "XP e token da acquisto");
 
   state.lastReceipt = {
     gross,
     discount,
     net,
-    earnedPoints,
+    earnedXp,
+    earnedTokens: tokensForExperience(earnedXp),
     voucherCode: voucherCode || null,
     customerBalance: state.customerBalance,
     merchantBalance: state.merchantBalance,
@@ -103,25 +136,35 @@ function runCheckout() {
 }
 
 function render() {
-  document.getElementById("headerPoints").textContent = state.points;
-  document.getElementById("homePoints").textContent = state.points;
-  document.getElementById("profilePoints").textContent = state.points;
+  document.getElementById("headerTokens").textContent = state.tokens;
+  document.getElementById("headerXp").textContent = state.xp;
+  document.getElementById("homeTokens").textContent = state.tokens;
+  document.getElementById("homeXp").textContent = state.xp;
+  document.getElementById("profileTokens").textContent = state.tokens;
+  document.getElementById("profileXp").textContent = state.xp;
 
   const next = getNextThreshold();
-  document.getElementById("nextThreshold").textContent = next;
+  document.getElementById("nextThreshold").textContent = next ? next.threshold : "max";
   const progress = document.getElementById("thresholdProgress");
-  progress.max = next;
-  progress.value = state.points;
+  progress.max = next ? next.threshold : state.xp || 1;
+  progress.value = next ? state.xp : progress.max;
 
   document.getElementById("ledgerList").innerHTML = state.ledger
-    .map((entry) => `<li>[${entry.at}] ${entry.label}: <strong>${entry.delta}</strong></li>`)
+    .map((entry) => {
+      const deltas = [
+        entry.tokens ? `+${entry.tokens} token` : "",
+        entry.xp ? `+${entry.xp} XP` : "",
+        entry.note,
+      ].filter(Boolean).join(" · ") || "0";
+      return `<li>[${entry.at}] ${entry.label}: <strong>${deltas}</strong></li>`;
+    })
     .join("");
 
   document.getElementById("voucherList").innerHTML =
     state.vouchers.length === 0
       ? "<li>Nessun voucher disponibile</li>"
       : state.vouchers
-          .map((v) => `<li>${v.label} (${v.percentage}%) - Codice: <strong>${v.code}</strong> - Stato: ${v.status}</li>`)
+          .map((v) => `<li>${v.label} (${v.percentage}%) - ${v.threshold} XP - Codice: <strong>${v.code}</strong> - Stato: ${v.status}</li>`)
           .join("");
 
   document.getElementById("notifications").innerHTML =
@@ -155,8 +198,8 @@ function initTabs() {
 }
 
 document.getElementById("simulateCheckin").addEventListener("click", simulateCheckin);
-document.getElementById("buy5").addEventListener("click", () => buyDiscount(500, "Sconto 5%", 5));
-document.getElementById("buy10").addEventListener("click", () => buyDiscount(1000, "Sconto 10%", 10));
+document.getElementById("buy5").addEventListener("click", () => claimReward(500, "Sconto 5%"));
+document.getElementById("buy10").addEventListener("click", () => claimReward(1000, "Sconto 10%"));
 document.getElementById("payNow").addEventListener("click", runCheckout);
 
 initTabs();

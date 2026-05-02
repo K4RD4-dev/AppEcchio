@@ -6,7 +6,7 @@ const navCatalog = {
   media: { label: "Foto e copertina", hint: "media" },
   menu: { label: "Menu / listino", hint: "catalogo" },
   events: { label: "Eventi", hint: "visibilità" },
-  vouchers: { label: "Voucher", hint: "token" },
+  vouchers: { label: "Voucher", hint: "XP" },
   reports: { label: "Segnalazioni", hint: "coda" },
   communications: { label: "Comunicazioni", hint: "push" },
   organizations: { label: "Organizzazioni", hint: "rete" },
