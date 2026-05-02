@@ -962,28 +962,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           MenuNode(
-            id: "borgo_simboli",
-            label: "Borgo e simboli",
-            icon: Icons.location_city_rounded,
-            children: <MenuNode>[
-              MenuNode(
-                id: "borghi",
-                label: "Borghi",
-                icon: Icons.location_city_rounded,
-              ),
-              MenuNode(
-                id: "teatro_perugini",
-                label: "Teatro G. Perugini",
-                icon: Icons.theaters_rounded,
-              ),
-              MenuNode(
-                id: "globo_pace",
-                label: "Globo della Pace",
-                icon: Icons.public_rounded,
-              ),
-            ],
-          ),
-          MenuNode(
             id: "territorio",
             label: "Territorio",
             icon: Icons.map_rounded,
@@ -1016,47 +994,69 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           MenuNode(
-            id: "spiritualita",
-            label: "Spiritualita",
-            icon: Icons.church_rounded,
-            children: <MenuNode>[
-              MenuNode(
-                id: "ss_crocifisso",
-                label: "Santuario SS. Crocifisso",
-                icon: Icons.church_rounded,
-              ),
-              MenuNode(
-                id: "madonna_vita",
-                label: "Madonna della Vita",
-                icon: Icons.volunteer_activism_rounded,
-              ),
-              MenuNode(
-                id: "san_martino",
-                label: "San Martino",
-                icon: Icons.account_balance_rounded,
-              ),
-              MenuNode(
-                id: "parrocchia",
-                label: "Parrocchia",
-                icon: Icons.diversity_3_rounded,
-              ),
-              MenuNode(
-                id: "oratorio",
-                label: "Oratorio San Martino",
-                icon: Icons.child_care_rounded,
-              ),
-              MenuNode(
-                id: "avvisi_parrocchiali",
-                label: "Avvisi parrocchiali",
-                icon: Icons.campaign_rounded,
-              ),
-            ],
-          ),
-          MenuNode(
             id: "comunita",
             label: "Comunita",
             icon: Icons.people_alt_rounded,
             children: <MenuNode>[
+              MenuNode(
+                id: "spiritualita",
+                label: "Spiritualita",
+                icon: Icons.church_rounded,
+                children: <MenuNode>[
+                  MenuNode(
+                    id: "ss_crocifisso",
+                    label: "Santuario SS. Crocifisso",
+                    icon: Icons.church_rounded,
+                  ),
+                  MenuNode(
+                    id: "madonna_vita",
+                    label: "Madonna della Vita",
+                    icon: Icons.volunteer_activism_rounded,
+                  ),
+                  MenuNode(
+                    id: "san_martino",
+                    label: "San Martino",
+                    icon: Icons.account_balance_rounded,
+                  ),
+                  MenuNode(
+                    id: "parrocchia",
+                    label: "Parrocchia",
+                    icon: Icons.diversity_3_rounded,
+                  ),
+                  MenuNode(
+                    id: "oratorio",
+                    label: "Oratorio San Martino",
+                    icon: Icons.child_care_rounded,
+                  ),
+                  MenuNode(
+                    id: "avvisi_parrocchiali",
+                    label: "Avvisi parrocchiali",
+                    icon: Icons.campaign_rounded,
+                  ),
+                ],
+              ),
+              MenuNode(
+                id: "borgo_simboli",
+                label: "Borghi simbolo",
+                icon: Icons.location_city_rounded,
+                children: <MenuNode>[
+                  MenuNode(
+                    id: "borghi",
+                    label: "Borghi",
+                    icon: Icons.location_city_rounded,
+                  ),
+                  MenuNode(
+                    id: "teatro_perugini",
+                    label: "Teatro G. Perugini",
+                    icon: Icons.theaters_rounded,
+                  ),
+                  MenuNode(
+                    id: "globo_pace",
+                    label: "Globo della Pace",
+                    icon: Icons.public_rounded,
+                  ),
+                ],
+              ),
               MenuNode(
                 id: "notizie_paese",
                 label: "Notizie del paese",
