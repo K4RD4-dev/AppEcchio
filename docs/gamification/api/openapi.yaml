@@ -25,15 +25,15 @@ paths:
           description: Doppio check-in
         '401':
           description: Staff non autorizzato
-  /v1/users/me/points:
+  /v1/users/me/progress:
     get:
-      summary: Saldo punti e progressione soglia
+      summary: Saldo token, XP e progressione soglia premio
       responses:
         '200':
-          description: Stato wallet
-  /v1/users/me/points/ledger:
+          description: Stato wallet gamification
+  /v1/users/me/progress/ledger:
     get:
-      summary: Storico movimenti punti
+      summary: Storico movimenti token e XP
       responses:
         '200':
           description: Lista movimenti

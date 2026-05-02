@@ -14,12 +14,18 @@ class GamificationEngineTest(unittest.TestCase):
 
     def test_valid_checkin_awards_points_and_issues_voucher(self):
         token = self.engine.generate_qr_token(self.user, self.event, ttl_seconds=120)
-        result = self.engine.checkin_scan(event_id=self.event, staff_user_id=self.staff, qr_token=token)
+        result = self.engine.checkin_scan(
+            event_id=self.event, staff_user_id=self.staff, qr_token=token
+        )
         self.assertEqual(result.status, "valid")
         self.assertEqual(result.points_awarded, 600)
+        self.assertEqual(result.xp_awarded, 600)
+        self.assertEqual(result.tokens_awarded, 60)
 
         wallet = self.engine.get_user_points(self.user)
         self.assertEqual(wallet["balance"], 600)
+        self.assertEqual(wallet["experience_points"], 600)
+        self.assertEqual(wallet["token_balance"], 60)
 
         vouchers = self.engine.get_user_vouchers(self.user)
         self.assertEqual(len(vouchers), 1)
@@ -27,21 +33,45 @@ class GamificationEngineTest(unittest.TestCase):
 
     def test_double_checkin_is_blocked(self):
         token = self.engine.generate_qr_token(self.user, self.event, ttl_seconds=120)
-        first = self.engine.checkin_scan(event_id=self.event, staff_user_id=self.staff, qr_token=token)
-        second = self.engine.checkin_scan(event_id=self.event, staff_user_id=self.staff, qr_token=token)
+        first = self.engine.checkin_scan(
+            event_id=self.event, staff_user_id=self.staff, qr_token=token
+        )
+        second = self.engine.checkin_scan(
+            event_id=self.event, staff_user_id=self.staff, qr_token=token
+        )
 
         self.assertEqual(first.status, "valid")
         self.assertEqual(second.status, "already_checked_in")
         self.assertEqual(len(self.engine.get_user_ledger(self.user)), 1)
 
+    def test_reward_threshold_uses_xp_not_tokens(self):
+        awarded = self.engine.award_activity_points(
+            user_id=self.user,
+            points=100,
+            tokens=900,
+            source_type="booking",
+            source_id="b1",
+            idempotency_key="booking:b1",
+        )
+
+        self.assertEqual(awarded, 100)
+        wallet = self.engine.get_user_progress(self.user)
+        self.assertEqual(wallet["experience_points"], 100)
+        self.assertEqual(wallet["token_balance"], 900)
+        self.assertEqual(self.engine.get_user_vouchers(self.user), [])
+
     def test_unauthorized_staff_rejected(self):
         token = self.engine.generate_qr_token(self.user, self.event, ttl_seconds=120)
-        result = self.engine.checkin_scan(event_id=self.event, staff_user_id="s2", qr_token=token)
+        result = self.engine.checkin_scan(
+            event_id=self.event, staff_user_id="s2", qr_token=token
+        )
         self.assertEqual(result.status, "not_authorized")
 
     def test_redeem_voucher_once(self):
         token = self.engine.generate_qr_token(self.user, self.event, ttl_seconds=120)
-        self.engine.checkin_scan(event_id=self.event, staff_user_id=self.staff, qr_token=token)
+        self.engine.checkin_scan(
+            event_id=self.event, staff_user_id=self.staff, qr_token=token
+        )
         voucher = self.engine.get_user_vouchers(self.user)[0]
 
         ok1 = self.engine.redeem_voucher(code=voucher["code"], merchant_id="m1")

@@ -25,9 +25,13 @@ class GamificationSimulator:
     def add_merchant(self, merchant: Merchant) -> None:
         self.merchants[merchant.id] = merchant
 
-    def click_qr(self, *, customer_id: str, supervisor_id: str, event_id: str) -> ScanNotification:
+    def click_qr(
+        self, *, customer_id: str, supervisor_id: str, event_id: str
+    ) -> ScanNotification:
         token = self.engine.generate_qr_token(customer_id, event_id)
-        result = self.engine.checkin_scan(event_id=event_id, staff_user_id=supervisor_id, qr_token=token)
+        result = self.engine.checkin_scan(
+            event_id=event_id, staff_user_id=supervisor_id, qr_token=token
+        )
         note = ScanNotification(
             supervisor_id=supervisor_id,
             event_id=event_id,
@@ -55,8 +59,12 @@ class GamificationSimulator:
             voucher = self.engine.vouchers.get(voucher_code)
             if voucher and voucher["status"] == "issued":
                 if voucher["reward_type"] == "percentage_discount":
-                    discount = round(gross_amount * (voucher["reward_value"] / 100.0), 2)
-                if self.engine.redeem_voucher(code=voucher_code, merchant_id=merchant_id):
+                    discount = round(
+                        gross_amount * (voucher["reward_value"] / 100.0), 2
+                    )
+                if self.engine.redeem_voucher(
+                    code=voucher_code, merchant_id=merchant_id
+                ):
                     pass
                 else:
                     discount = 0.0
@@ -68,9 +76,11 @@ class GamificationSimulator:
         merchant.cash_balance = round(merchant.cash_balance + net, 2)
 
         earned_points = int(net * points_per_euro)
+        earned_tokens = self.engine.estimate_tokens(earned_points)
         self.engine.award_activity_points(
             user_id=customer_id,
             points=earned_points,
+            tokens=earned_tokens,
             source_type="booking",
             source_id=f"payment:{merchant_id}",
             idempotency_key=f"payment:{customer_id}:{merchant_id}:{gross_amount}:{voucher_code or 'none'}",
@@ -84,6 +94,8 @@ class GamificationSimulator:
             net_amount=net,
             voucher_code=voucher_code,
             points_earned=earned_points,
+            experience_earned=earned_points,
+            tokens_earned=earned_tokens,
             metadata={
                 "customer_balance": customer.cash_balance,
                 "merchant_balance": merchant.cash_balance,

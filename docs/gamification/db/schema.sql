@@ -29,36 +29,38 @@ CREATE TABLE merchants (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE point_wallets (
+CREATE TABLE gamification_wallets (
   id UUID PRIMARY KEY,
   user_id UUID NOT NULL UNIQUE REFERENCES users(id),
-  balance INT NOT NULL DEFAULT 0,
+  token_balance INT NOT NULL DEFAULT 0,
+  experience_points INT NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE point_ledger_entries (
+CREATE TABLE gamification_ledger_entries (
   id UUID PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users(id),
   source_type TEXT NOT NULL CHECK (source_type IN ('booking','event_checkin','admin_adjustment','voucher_redemption','reversal')),
   source_id UUID NOT NULL,
-  points INT NOT NULL,
+  token_delta INT NOT NULL DEFAULT 0,
+  experience_delta INT NOT NULL DEFAULT 0,
   status TEXT NOT NULL CHECK (status IN ('pending','confirmed','reversed')),
   idempotency_key TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT uq_point_idempotency UNIQUE (idempotency_key)
+  CONSTRAINT uq_gamification_idempotency UNIQUE (idempotency_key)
 );
 
-CREATE INDEX idx_point_ledger_user_created_at ON point_ledger_entries(user_id, created_at DESC);
+CREATE INDEX idx_gamification_ledger_user_created_at ON gamification_ledger_entries(user_id, created_at DESC);
 
 CREATE TABLE reward_tiers (
   id UUID PRIMARY KEY,
-  threshold_points INT NOT NULL,
+  threshold_xp INT NOT NULL,
   reward_type TEXT NOT NULL CHECK (reward_type IN ('percentage_discount','fixed_discount')),
   reward_value NUMERIC(10,2) NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT uq_reward_threshold UNIQUE (threshold_points, reward_type, reward_value)
+  CONSTRAINT uq_reward_threshold UNIQUE (threshold_xp, reward_type, reward_value)
 );
 
 CREATE TABLE reward_vouchers (
@@ -95,4 +97,4 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- trigger placeholder: in production, wallet balance should be projected from confirmed ledger entries
+-- trigger placeholder: in production, wallet balances should be projected from confirmed ledger entries
