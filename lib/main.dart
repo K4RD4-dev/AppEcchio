@@ -4868,7 +4868,219 @@ const List<TrailRoute> _trailRoutes = [
       LatLng(43.515078, 12.369435),
     ],
     color: Color(0xFF1D8A6A),
-    tags: {"apecchio", "e", "panoramici"},
+    tags: {"apecchio", "e", "gorgaccia", "panoramici"},
+  ),
+  TrailRoute(
+    id: "wikiloc_apecchio_cascata_gorgaccia",
+    name: "Apecchio cascata Gorgaccia",
+    caiNumber: "G1",
+    newNumber: "Wikiloc 77790451",
+    start: "Apecchio",
+    end: "Apecchio",
+    lengthKm: 5.0,
+    elevationGainM: 63,
+    elevationLossM: 63,
+    startAltitudeM: 490,
+    endAltitudeM: 490,
+    maxAltitudeM: 535,
+    timeLabel: "1:28 - 2:44",
+    difficulty: "T",
+    summary:
+        "Anello breve dal cimitero di Apecchio verso la Cascata della Gorgaccia, con guadi su sassi e rientro sullo stesso sistema di sentieri.",
+    safetyNote:
+        "Percorso facile ma con guadi e tratti fangosi: valutare portata dell'acqua e fondo dopo la pioggia.",
+    highlights: [
+      "Apecchio",
+      "Fonte solfurea",
+      "Guadi",
+      "Cascata della Gorgaccia",
+    ],
+    sourceLabel: "Wikiloc - Apecchio cascata gorgaccia",
+    sourceUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/apecchio-cascata-gorgaccia-77790451",
+    gpxUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/apecchio-cascata-gorgaccia-77790451",
+    geoPoints: [
+      LatLng(43.556816, 12.417131),
+      LatLng(43.555505, 12.412385),
+      LatLng(43.553386, 12.406115),
+      LatLng(43.551070, 12.402844),
+      LatLng(43.548586, 12.401380),
+      LatLng(43.546956, 12.402906),
+      LatLng(43.548842, 12.406706),
+      LatLng(43.552690, 12.411252),
+      LatLng(43.556816, 12.417131),
+    ],
+    color: Color(0xFF0F766E),
+    tags: {"apecchio", "gorgaccia", "t", "facili", "famiglie"},
+  ),
+  TrailRoute(
+    id: "wikiloc_apecchio_gorgaccia_serra",
+    name: "Apecchio - Gorgaccia - Serra - Apecchio",
+    caiNumber: "G2",
+    newNumber: "Wikiloc 127747970",
+    start: "Apecchio",
+    end: "Apecchio",
+    lengthKm: 7.9,
+    elevationGainM: 221,
+    elevationLossM: 221,
+    startAltitudeM: 470,
+    endAltitudeM: 470,
+    maxAltitudeM: 670,
+    timeLabel: "1:33 - 1:45",
+    difficulty: "E",
+    summary:
+        "Anello che unisce il borgo, la Gorgaccia e la zona della Serra, coprendo il versante alto della valle prima della discesa verso Apecchio.",
+    safetyNote:
+        "La parte alta richiede passo sicuro e orientamento: controllare sempre traccia, segnaletica e meteo prima di salire verso la Serra.",
+    highlights: [
+      "Apecchio",
+      "Cascata della Gorgaccia",
+      "La Serra",
+      "Rientro ad anello",
+    ],
+    sourceLabel: "Wikiloc - Apecchio - Gorgaccia - Serra - Apecchio",
+    sourceUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/apecchio-gorgaccia-serra-apecchio-127747970",
+    gpxUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/apecchio-gorgaccia-serra-apecchio-127747970",
+    geoPoints: [
+      LatLng(43.556816, 12.417131),
+      LatLng(43.553386, 12.406115),
+      LatLng(43.548586, 12.401380),
+      LatLng(43.544236, 12.397350),
+      LatLng(43.540228, 12.392680),
+      LatLng(43.541790, 12.388926),
+      LatLng(43.546498, 12.392608),
+      LatLng(43.551942, 12.399020),
+      LatLng(43.558105, 12.408990),
+      LatLng(43.556816, 12.417131),
+    ],
+    color: Color(0xFFB45309),
+    tags: {"apecchio", "e", "gorgaccia", "panoramici"},
+  ),
+  TrailRoute(
+    id: "wikiloc_apecchio_gorgaccia_ritorno",
+    name: "Apecchio la Gorgaccia e ritorno",
+    caiNumber: "G3",
+    newNumber: "Wikiloc 78732761",
+    start: "Apecchio",
+    end: "Apecchio",
+    lengthKm: 7.0,
+    elevationGainM: 213,
+    elevationLossM: 213,
+    startAltitudeM: 474,
+    endAltitudeM: 474,
+    maxAltitudeM: 657,
+    timeLabel: "1:52 - 2:46",
+    difficulty: "E",
+    summary:
+        "Giro di andata e ritorno da Apecchio alla Gorgaccia, pensato per attraversare il cuore della valle con un profilo escursionistico regolare.",
+    safetyNote:
+        "Portare scarpe con buona tenuta: tra guadi, foglie e fango il fondo puo diventare scivoloso anche su distanze moderate.",
+    highlights: [
+      "Apecchio",
+      "Valle della Gorgaccia",
+      "Cascata",
+      "Rientro verso il borgo",
+    ],
+    sourceLabel: "Wikiloc - Apecchio la gorgaccia e ritorno",
+    sourceUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/apecchio-la-gorgaccia-e-ritorno-78732761",
+    gpxUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/apecchio-la-gorgaccia-e-ritorno-78732761",
+    geoPoints: [
+      LatLng(43.556816, 12.417131),
+      LatLng(43.554430, 12.410212),
+      LatLng(43.551612, 12.404502),
+      LatLng(43.548586, 12.401380),
+      LatLng(43.545462, 12.398380),
+      LatLng(43.542720, 12.395110),
+      LatLng(43.544930, 12.399930),
+      LatLng(43.550730, 12.407682),
+      LatLng(43.556816, 12.417131),
+    ],
+    color: Color(0xFF7C3AED),
+    tags: {"apecchio", "e", "gorgaccia", "panoramici"},
+  ),
+  TrailRoute(
+    id: "wikiloc_cascata_gorgaccia_da_apecchio",
+    name: "Cascata della Gorgaccia da Apecchio",
+    caiNumber: "G4",
+    newNumber: "Wikiloc 169719194",
+    start: "Apecchio",
+    end: "Cascata della Gorgaccia",
+    lengthKm: 5.3,
+    elevationGainM: 78,
+    elevationLossM: 62,
+    startAltitudeM: 474,
+    endAltitudeM: 522,
+    maxAltitudeM: 522,
+    timeLabel: "1:31 - 2:09",
+    difficulty: "E",
+    summary:
+        "Traccia diretta da Apecchio alla Cascata della Gorgaccia, utile come accesso lineare alla parte bassa e piu acquatica della valle.",
+    safetyNote:
+        "Tratto indicato come solo andata: pianificare il rientro e non sottovalutare guadi o passaggi bagnati vicino alla cascata.",
+    highlights: [
+      "Apecchio",
+      "Fosso della Gorgaccia",
+      "Cascata della Gorgaccia",
+    ],
+    sourceLabel: "Wikiloc - Cascata della Gorgaccia da Apecchio",
+    sourceUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/cascata-della-gorgaccia-da-apecchio-169719194",
+    gpxUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/cascata-della-gorgaccia-da-apecchio-169719194",
+    geoPoints: [
+      LatLng(43.556816, 12.417131),
+      LatLng(43.555268, 12.412110),
+      LatLng(43.553386, 12.406115),
+      LatLng(43.551018, 12.402360),
+      LatLng(43.548586, 12.401380),
+      LatLng(43.546956, 12.402906),
+    ],
+    color: Color(0xFF2563EB),
+    tags: {"apecchio", "e", "gorgaccia"},
+  ),
+  TrailRoute(
+    id: "wikiloc_anello_gorgaccia",
+    name: "Anello Gorgaccia",
+    caiNumber: "G5",
+    newNumber: "Wikiloc 142645144",
+    start: "Apecchio",
+    end: "Apecchio",
+    lengthKm: 5.6,
+    elevationGainM: 170,
+    elevationLossM: 170,
+    startAltitudeM: 488,
+    endAltitudeM: 488,
+    maxAltitudeM: 660,
+    timeLabel: "1:58",
+    difficulty: "E",
+    summary:
+        "Anello compatto della Gorgaccia con passaggi da acqua solfurea, Piandilupino, cascata e Serra, pensato per una lettura completa della valle.",
+    safetyNote:
+        "Attenzione ai bivi e ai guadi: seguire la traccia caricata e verificare le condizioni del torrente prima di entrare nel fosso.",
+    highlights: ["Acqua solfurea", "Piandilupino", "Gorgaccia", "La Serra"],
+    sourceLabel: "Wikiloc - Anello Gorgaccia",
+    sourceUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/anello-gorgaccia-142645144",
+    gpxUrl:
+        "https://it.wikiloc.com/percorsi-escursionismo/anello-gorgaccia-142645144",
+    geoPoints: [
+      LatLng(43.556816, 12.417131),
+      LatLng(43.554876, 12.411534),
+      LatLng(43.552584, 12.406010),
+      LatLng(43.548586, 12.401380),
+      LatLng(43.545604, 12.398560),
+      LatLng(43.543226, 12.393742),
+      LatLng(43.546498, 12.392608),
+      LatLng(43.551084, 12.400982),
+      LatLng(43.556816, 12.417131),
+    ],
+    color: Color(0xFFDC2626),
+    tags: {"apecchio", "e", "gorgaccia", "panoramici"},
   ),
   TrailRoute(
     id: "sentiero_20",
@@ -5246,9 +5458,11 @@ class _TrailsScreenState extends State<TrailsScreen> {
 
   static const Map<String, String> _filters = {
     "tutti": "Tutti",
+    "t": "T",
     "e": "E",
     "ee": "EE",
     "apecchio": "Apecchio",
+    "gorgaccia": "Gorgaccia",
     "facili": "Facili",
     "famiglie": "Famiglie",
     "panoramici": "Panoramici",
@@ -5329,7 +5543,11 @@ class _TrailsScreenState extends State<TrailsScreen> {
     }
     if (_selectedFilter == "facili") {
       return _trailRoutes
-          .where((trail) => trail.difficulty == "E" && trail.lengthKm <= 5.5)
+          .where(
+            (trail) =>
+                trail.difficulty == "T" ||
+                (trail.difficulty == "E" && trail.lengthKm <= 5.5),
+          )
           .toList(growable: false);
     }
     return _trailRoutes
@@ -5761,8 +5979,12 @@ class _TrailOnlineMap extends StatelessWidget {
   }
 
   List<Marker> _buildMarkers(List<TrailMapGeometry> geometries) {
+    final ordered = [
+      ...geometries.where((geometry) => geometry.trail.id != selectedTrail.id),
+      ...geometries.where((geometry) => geometry.trail.id == selectedTrail.id),
+    ];
     return [
-      for (final geometry in geometries)
+      for (final geometry in ordered)
         Marker(
           point: geometry.midPoint,
           width: geometry.trail.id == selectedTrail.id ? 58 : 50,
