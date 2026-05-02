@@ -75,9 +75,9 @@ class AppUser {
   }
 
   bool get isBackoffice => switch (profile) {
-    UserProfile.resident || UserProfile.tourist => false,
-    _ => true,
-  };
+        UserProfile.resident || UserProfile.tourist => false,
+        _ => true,
+      };
 }
 
 class UserSettings {
@@ -231,14 +231,14 @@ class RewardLedgerEntry {
 
 class GamificationController extends ChangeNotifier {
   GamificationController.demo()
-    : rewardTiers = const [
-        RewardTier(threshold: 500, label: "Sconto 5%", discountPercentage: 5),
-        RewardTier(
-          threshold: 1000,
-          label: "Sconto 10%",
-          discountPercentage: 10,
-        ),
-      ];
+      : rewardTiers = const [
+          RewardTier(threshold: 500, label: "Sconto 5%", discountPercentage: 5),
+          RewardTier(
+            threshold: 1000,
+            label: "Sconto 10%",
+            discountPercentage: 10,
+          ),
+        ];
 
   static const List<RewardLevel> levels = [
     RewardLevel(name: "Esploratore", minPoints: 0, icon: Icons.explore_rounded),
@@ -550,8 +550,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         _selectedProfile == UserProfile.resident
                             ? "Profilo residente: include myApecchio, pratiche, preferenze e permessi comunali."
                             : _selectedProfile == UserProfile.tourist
-                            ? "Profilo turista: mostra esperienze, luoghi, eventi e servizi pubblici essenziali."
-                            : "Profilo backoffice: apre cruscotto, pagina organizzazione, eventi, voucher e strumenti operativi.",
+                                ? "Profilo turista: mostra esperienze, luoghi, eventi e servizi pubblici essenziali."
+                                : "Profilo backoffice: apre cruscotto, pagina organizzazione, eventi, voucher e strumenti operativi.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.72),
@@ -688,9 +688,8 @@ class _LoginFormCard extends StatelessWidget {
                 labelText: "Password",
                 prefixIcon: const Icon(Icons.lock_rounded),
                 suffixIcon: IconButton(
-                  tooltip: obscurePassword
-                      ? "Mostra password"
-                      : "Nascondi password",
+                  tooltip:
+                      obscurePassword ? "Mostra password" : "Nascondi password",
                   onPressed: onTogglePassword,
                   icon: Icon(
                     obscurePassword
@@ -2493,8 +2492,8 @@ class _WeatherSuggestionBubble extends StatelessWidget {
     final title = raining ? "Pioggia leggera" : "Sole pieno";
     final message = raining
         ? touristMode
-              ? "Meglio stare al coperto: questa settimana ci sono mostra fotografica e teatro nel borgo."
-              : "Campi outdoor delicati: oggi meglio palazzetto o appuntamenti al coperto."
+            ? "Meglio stare al coperto: questa settimana ci sono mostra fotografica e teatro nel borgo."
+            : "Campi outdoor delicati: oggi meglio palazzetto o appuntamenti al coperto."
         : "Giornata buona per percorsi, sport all'aperto e tavoli con vista.";
     return Container(
       padding: const EdgeInsets.all(14),
@@ -2505,14 +2504,12 @@ class _WeatherSuggestionBubble extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: raining
-                ? const Color(0xFFDCEBFF)
-                : const Color(0xFFFFE8A8),
+            backgroundColor:
+                raining ? const Color(0xFFDCEBFF) : const Color(0xFFFFE8A8),
             child: Icon(
               icon,
-              color: raining
-                  ? const Color(0xFF2A6F97)
-                  : const Color(0xFF9A6B00),
+              color:
+                  raining ? const Color(0xFF2A6F97) : const Color(0xFF9A6B00),
             ),
           ),
           const SizedBox(width: 12),
@@ -2779,9 +2776,8 @@ class _NoticeInsightTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = compactDate
-        ? _formatNoticeShortDate(notice.date)
-        : notice.dateLabel;
+    final dateLabel =
+        compactDate ? _formatNoticeShortDate(notice.date) : notice.dateLabel;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
@@ -3094,9 +3090,8 @@ class _CompactMenuStage extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isLandscape = constraints.maxWidth > constraints.maxHeight;
-            final crossAxisCount = isLandscape
-                ? 4
-                : (constraints.maxWidth < 380 ? 2 : 3);
+            final crossAxisCount =
+                isLandscape ? 4 : (constraints.maxWidth < 380 ? 2 : 3);
             final aspectRatio = isLandscape ? 1.55 : 1.08;
             return Padding(
               padding: EdgeInsets.fromLTRB(
@@ -3278,6 +3273,7 @@ class _RadialMenuStage extends StatelessWidget {
   final VoidCallback onBackTap;
 
   static const double _goldenRatio = 1.618033988749895;
+  static const double _flowerSweep = math.pi * 0.38;
 
   @override
   Widget build(BuildContext context) {
@@ -3400,6 +3396,9 @@ class _RadialMenuStage extends StatelessWidget {
                       progress: progress,
                       width: nodeWidth,
                       height: nodeHeight,
+                      animationIndex: 0,
+                      siblingCount: 1,
+                      backNode: true,
                       onTap: onBackTap,
                     ),
                   for (var i = 0; i < currentNode.children.length; i++)
@@ -3415,6 +3414,8 @@ class _RadialMenuStage extends StatelessWidget {
                       progress: progress,
                       width: nodeWidth,
                       height: nodeHeight,
+                      animationIndex: i,
+                      siblingCount: currentNode.children.length,
                       onTap: () => onNodeTap(currentNode.children[i]),
                     ),
                 ],
@@ -3447,12 +3448,11 @@ class _RadialMenuStage extends StatelessWidget {
         ? (useWideChildArc ? math.pi * 0.78 : math.pi / 2.65)
         : math.pi * 0.86;
     final shortest = math.min(size.width, size.height);
-    var baseRadius =
-        (hasParent
-                ? shortest * spec.childRadiusFactor
-                : shortest * spec.rootRadiusFactor)
-            .clamp(spec.minRadius, spec.maxRadius)
-            .toDouble();
+    var baseRadius = (hasParent
+            ? shortest * spec.childRadiusFactor
+            : shortest * spec.rootRadiusFactor)
+        .clamp(spec.minRadius, spec.maxRadius)
+        .toDouble();
 
     final horizontalPadding = spec.edgePadding;
     final bottomPadding = spec.bottomPadding;
@@ -3464,9 +3464,8 @@ class _RadialMenuStage extends StatelessWidget {
     final maxY = size.height - bottomPadding - nodeHeight / 2;
     final openOrbSize = (shortest * 0.22).clamp(76.0, 86.0).toDouble();
     final centerClearance = openOrbSize / 2 + nodeWidth / 2 + spec.nodeGap;
-    final childMinX = hasParent && !useWideChildArc
-        ? center.dx + centerClearance
-        : minX;
+    final childMinX =
+        hasParent && !useWideChildArc ? center.dx + centerClearance : minX;
 
     Offset clampToViewport(Offset point) {
       return Offset(
@@ -3487,6 +3486,9 @@ class _RadialMenuStage extends StatelessWidget {
           return false;
         }
         if (p.dy + (nodeHeight / 2) > size.height - bottomPadding) {
+          return false;
+        }
+        if ((p - center).distance < centerClearance) {
           return false;
         }
       }
@@ -3537,18 +3539,20 @@ class _RadialMenuStage extends StatelessWidget {
         final ringInset = ringIndex / (_goldenRatio * 5);
         final ringStart = start + (end - start) * ringInset;
         final ringEnd = end - (end - start) * ringInset;
-        final offsetStep = ringIndex.isOdd && take > 1
-            ? 1 / (_goldenRatio * take)
-            : 0.0;
+        final offsetStep =
+            ringIndex.isOdd && take > 1 ? 1 / (_goldenRatio * take) : 0.0;
 
         for (var i = 0; i < take; i++) {
           final t = take == 1 ? 0.5 : (i + offsetStep) / (take - 1);
-          final angle =
-              ringStart +
+          final sequenceT =
+              total == 1 ? 0.5 : points.length / math.max(total - 1, 1);
+          final angle = ringStart +
               (ringEnd - ringStart) *
                   _goldenArcProgress(t.clamp(0.0, 1.0).toDouble());
-          final dx = center.dx + math.cos(angle) * ringRadius;
-          final dy = center.dy + math.sin(angle) * ringRadius;
+          final logRadius = ringRadius *
+              (0.88 + (0.15 * _logSpiralProgress(sequenceT.toDouble())));
+          final dx = center.dx + math.cos(angle) * logRadius;
+          final dy = center.dy + math.sin(angle) * logRadius;
           points.add(clampToViewport(Offset(dx, dy)));
         }
         remaining -= take;
@@ -3561,9 +3565,13 @@ class _RadialMenuStage extends StatelessWidget {
         final extraRadius = (radius - 10).clamp(58.0, radius).toDouble();
         for (var i = 0; i < remaining; i++) {
           final t = remaining == 1 ? 0.5 : i / (remaining - 1);
+          final sequenceT =
+              total == 1 ? 0.5 : points.length / math.max(total - 1, 1);
           final angle = start + (end - start) * t;
-          final dx = center.dx + math.cos(angle) * extraRadius;
-          final dy = center.dy + math.sin(angle) * extraRadius;
+          final logRadius = extraRadius *
+              (0.88 + (0.15 * _logSpiralProgress(sequenceT.toDouble())));
+          final dx = center.dx + math.cos(angle) * logRadius;
+          final dy = center.dy + math.sin(angle) * logRadius;
           points.add(clampToViewport(Offset(dx, dy)));
         }
       }
@@ -3583,6 +3591,16 @@ class _RadialMenuStage extends StatelessWidget {
         for (var i = 0; i < total; i++) {
           deltas[i] += (ideals[i] - positions[i]) * 0.12;
 
+          final fromCenter = positions[i] - center;
+          final centerDistance = math.max(fromCenter.distance, 0.01);
+          if (centerDistance < centerClearance) {
+            deltas[i] += Offset(
+                  fromCenter.dx / centerDistance,
+                  fromCenter.dy / centerDistance,
+                ) *
+                ((centerClearance - centerDistance) * 0.35);
+          }
+
           if (hasParent) {
             final fromBack = positions[i] - backPoint;
             final distance = math.max(fromBack.distance, 0.01);
@@ -3590,7 +3608,7 @@ class _RadialMenuStage extends StatelessWidget {
             if (distance < safeDistance) {
               deltas[i] +=
                   Offset(fromBack.dx / distance, fromBack.dy / distance) *
-                  ((safeDistance - distance) * 0.14);
+                      ((safeDistance - distance) * 0.14);
             }
           }
 
@@ -3600,8 +3618,7 @@ class _RadialMenuStage extends StatelessWidget {
             if (distance >= minDistance) {
               continue;
             }
-            final push =
-                Offset(vector.dx / distance, vector.dy / distance) *
+            final push = Offset(vector.dx / distance, vector.dy / distance) *
                 ((minDistance - distance) * 0.28);
             deltas[i] += push;
             deltas[j] -= push;
@@ -3642,6 +3659,12 @@ class _RadialMenuStage extends StatelessWidget {
     return points;
   }
 
+  double _logSpiralProgress(double t) {
+    final clamped = t.clamp(0.0, 1.0).toDouble();
+    return (math.pow(_goldenRatio, clamped).toDouble() - 1) /
+        (_goldenRatio - 1);
+  }
+
   double _goldenArcProgress(double t) {
     if (t <= 0) {
       return 0;
@@ -3655,6 +3678,67 @@ class _RadialMenuStage extends StatelessWidget {
     final eased = grown.clamp(0.0, 1.0).toDouble() / 2;
     return t <= 0.5 ? eased : 1 - eased;
   }
+}
+
+class _PetalBloomFrame {
+  const _PetalBloomFrame({
+    required this.position,
+    required this.reveal,
+    required this.easedReveal,
+  });
+
+  final Offset position;
+  final double reveal;
+  final double easedReveal;
+}
+
+_PetalBloomFrame _petalBloomFrame({
+  required Offset center,
+  required Offset target,
+  required double progress,
+  required int index,
+  required int total,
+  bool backNode = false,
+}) {
+  final safeTotal = math.max(total, 1);
+  final rawProgress = progress.clamp(0.0, 1.0).toDouble();
+  final safeIndex = index.clamp(0, safeTotal - 1).toInt();
+  final indexT = safeTotal == 1 ? 0.5 : safeIndex / (safeTotal - 1);
+  final maxDelay = backNode ? 0.0 : math.min(0.24, (safeTotal - 1) * 0.045);
+  final delay = safeTotal == 1 ? 0.0 : maxDelay * indexT;
+  final reveal =
+      ((rawProgress - delay) / (1 - delay)).clamp(0.0, 1.0).toDouble();
+  final easedReveal = Curves.easeOutCubic.transform(reveal);
+  final vector = target - center;
+  final targetRadius = vector.distance;
+
+  if (targetRadius < 0.1) {
+    return _PetalBloomFrame(
+      position: target,
+      reveal: reveal,
+      easedReveal: easedReveal,
+    );
+  }
+
+  final targetAngle = math.atan2(vector.dy, vector.dx);
+  final sweep = backNode ? math.pi * 0.16 : _RadialMenuStage._flowerSweep;
+  final spiralRadius = targetRadius *
+      ((math.pow(_RadialMenuStage._goldenRatio, easedReveal).toDouble() - 1) /
+          (_RadialMenuStage._goldenRatio - 1));
+  final angle = targetAngle + (sweep * (1 - easedReveal));
+  final slide = Offset(
+    -math.min(targetRadius * 0.28, 54.0) * (1 - easedReveal),
+    (indexT - 0.5) * math.min(targetRadius * 0.22, 40.0) * (1 - easedReveal),
+  );
+  final position = center +
+      Offset(math.cos(angle) * spiralRadius, math.sin(angle) * spiralRadius) +
+      slide;
+
+  return _PetalBloomFrame(
+    position: position,
+    reveal: reveal,
+    easedReveal: easedReveal,
+  );
 }
 
 class _TreeBranchPainter extends CustomPainter {
@@ -3683,16 +3767,37 @@ class _TreeBranchPainter extends CustomPainter {
       ..color = const Color(0xFFBFE8C7).withValues(alpha: 0.58 * progress);
 
     for (var i = 0; i < targets.length; i++) {
-      final target = Offset.lerp(center, targets[i], progress) ?? targets[i];
-      canvas.drawPath(_goldenBranchPath(center, target, i), paint);
+      final frame = _petalBloomFrame(
+        center: center,
+        target: targets[i],
+        progress: progress,
+        index: i,
+        total: targets.length,
+      );
+      if (frame.reveal <= 0) {
+        continue;
+      }
+      paint.color = const Color(
+        0xFFBFE8C7,
+      ).withValues(alpha: 0.58 * frame.easedReveal);
+      canvas.drawPath(_goldenBranchPath(center, frame.position, i), paint);
     }
 
     if (hasParent && backTarget != null) {
-      final back = Offset.lerp(center, backTarget!, progress) ?? backTarget!;
+      final frame = _petalBloomFrame(
+        center: center,
+        target: backTarget!,
+        progress: progress,
+        index: 0,
+        total: 1,
+        backNode: true,
+      );
       canvas.drawPath(
-        _goldenBranchPath(center, back, targets.length),
+        _goldenBranchPath(center, frame.position, targets.length),
         paint
-          ..color = const Color(0xFFE4EFE8).withValues(alpha: 0.35 * progress),
+          ..color = const Color(
+            0xFFE4EFE8,
+          ).withValues(alpha: 0.35 * frame.easedReveal),
       );
     }
   }
@@ -3706,18 +3811,15 @@ class _TreeBranchPainter extends CustomPainter {
     }
 
     final baseAngle = math.atan2(vector.dy, vector.dx);
-    final turnSign = baseAngle.abs() < 0.08
-        ? (index.isEven ? -1.0 : 1.0)
-        : baseAngle.sign;
-    final turn =
-        turnSign *
+    final turnSign =
+        baseAngle.abs() < 0.08 ? (index.isEven ? -1.0 : 1.0) : baseAngle.sign;
+    final turn = turnSign *
         (math.pi / (5.5 * _goldenRatio)) *
         (distance / 180).clamp(0.55, 1.0).toDouble();
 
     for (var step = 1; step <= 18; step++) {
       final t = step / 18;
-      final radius =
-          distance *
+      final radius = distance *
           ((math.pow(_goldenRatio, t).toDouble() - 1) / (_goldenRatio - 1));
       final angle = baseAngle + math.sin(math.pi * t) * turn;
       path.lineTo(
@@ -3758,9 +3860,8 @@ class _ExploreOrbButton extends StatelessWidget {
     final closedSize = (shortest * 0.24).clamp(80.0, 92.0).toDouble();
     final openFont = (shortest * 0.026).clamp(9.0, 10.5).toDouble();
     final closedFont = (shortest * 0.038).clamp(12.0, 14.0).toDouble();
-    final openAlignment = spec.useCompactMenu
-        ? const Alignment(0, 0.92)
-        : Alignment.center;
+    final openAlignment =
+        spec.useCompactMenu ? const Alignment(0, 0.92) : Alignment.center;
     return Positioned.fill(
       child: IgnorePointer(
         ignoring: false,
@@ -3831,6 +3932,9 @@ class _RadialNode extends StatelessWidget {
     required this.highlighted,
     required this.progress,
     required this.onTap,
+    required this.animationIndex,
+    required this.siblingCount,
+    this.backNode = false,
     this.fixedAngle,
     this.fixedOffset,
   });
@@ -3846,6 +3950,9 @@ class _RadialNode extends StatelessWidget {
   final bool highlighted;
   final double progress;
   final VoidCallback onTap;
+  final int animationIndex;
+  final int siblingCount;
+  final bool backNode;
   final double? fixedAngle;
   final Offset? fixedOffset;
 
@@ -3857,91 +3964,114 @@ class _RadialNode extends StatelessWidget {
         fixedOffset?.dx ?? (center.dx + math.cos(fixedAngle ?? 0) * radius);
     final targetDy =
         fixedOffset?.dy ?? (center.dy + math.sin(fixedAngle ?? 0) * radius);
-    final dx = targetDx;
-    final dy = targetDy;
+    final frame = _petalBloomFrame(
+      center: center,
+      target: Offset(targetDx, targetDy),
+      progress: progress,
+      index: animationIndex,
+      total: siblingCount,
+      backNode: backNode,
+    );
+    final dx = frame.position.dx;
+    final dy = frame.position.dy;
+    final nodeOpacity = frame.easedReveal.clamp(0.0, 1.0).toDouble();
+    final rotation = (1 - frame.easedReveal) *
+        (backNode ? -0.10 : -0.28 - (animationIndex * 0.012));
     return Positioned(
       left: dx - (width / 2),
       top: dy - (height / 2),
-      child: GestureDetector(
-        key: ValueKey("menu-node-$nodeId"),
-        behavior: HitTestBehavior.translucent,
-        onTap: onTap,
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 280),
-          scale: 0.98 + (progress * 0.02),
-          child: Container(
-            width: width,
-            height: height,
-            decoration: BoxDecoration(
-              color: selected
-                  ? const Color(0xFF2E7D57)
-                  : highlighted
-                  ? const Color(0xFFFFF1C7)
-                  : Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: highlighted
-                    ? const Color(0xFFFFD46A)
-                    : Colors.white.withValues(alpha: 0.7),
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 14,
-                  offset: Offset(0, 7),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact =
-                        constraints.maxHeight < 66 || constraints.maxWidth < 86;
-                    final adaptiveIconSize = compact
-                        ? (iconSize - 3).clamp(14.0, 18.0)
-                        : iconSize;
-                    final adaptiveTextSize = compact
-                        ? (textSize - 1.4).clamp(8.8, 10.6)
-                        : textSize;
-                    final maxTextLines = compact ? 2 : 3;
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          icon,
-                          size: adaptiveIconSize,
-                          color: selected
-                              ? Colors.white
-                              : highlighted
-                              ? const Color(0xFF9A5A00)
-                              : const Color(0xFF1B2E21),
-                        ),
-                        SizedBox(height: compact ? 2 : 5),
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              label,
-                              textAlign: TextAlign.center,
-                              maxLines: maxTextLines,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                height: 1.08,
-                                fontWeight: FontWeight.w700,
-                                fontSize: adaptiveTextSize,
+      child: IgnorePointer(
+        ignoring: frame.reveal < 0.86,
+        child: Opacity(
+          opacity: nodeOpacity,
+          child: Transform.rotate(
+            angle: rotation,
+            child: GestureDetector(
+              key: ValueKey("menu-node-$nodeId"),
+              behavior: HitTestBehavior.translucent,
+              onTap: onTap,
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 280),
+                scale: 0.92 + (frame.easedReveal * 0.08),
+                child: Container(
+                  width: width,
+                  height: height,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? const Color(0xFF2E7D57)
+                        : highlighted
+                            ? const Color(0xFFFFF1C7)
+                            : Colors.white.withValues(alpha: 0.95),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: highlighted
+                          ? const Color(0xFFFFD46A)
+                          : Colors.white.withValues(alpha: 0.7),
+                    ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 14,
+                        offset: Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxHeight < 66 ||
+                              constraints.maxWidth < 86;
+                          final adaptiveIconSize = compact
+                              ? (iconSize - 3).clamp(14.0, 18.0)
+                              : iconSize;
+                          final adaptiveTextSize = compact
+                              ? (textSize - 1.4).clamp(8.8, 10.6)
+                              : textSize;
+                          final maxTextLines = compact ? 2 : 3;
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                icon,
+                                size: adaptiveIconSize,
                                 color: selected
                                     ? Colors.white
                                     : highlighted
-                                    ? const Color(0xFF5F3C00)
-                                    : const Color(0xFF1B2E21),
+                                        ? const Color(0xFF9A5A00)
+                                        : const Color(0xFF1B2E21),
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                              SizedBox(height: compact ? 2 : 5),
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    label,
+                                    textAlign: TextAlign.center,
+                                    maxLines: maxTextLines,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      height: 1.08,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: adaptiveTextSize,
+                                      color: selected
+                                          ? Colors.white
+                                          : highlighted
+                                              ? const Color(0xFF5F3C00)
+                                              : const Color(0xFF1B2E21),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -4486,9 +4616,8 @@ class _RewardTierRow extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: unlocked
-            ? const Color(0xFFDCF1E5)
-            : const Color(0xFFE8ECE4),
+        backgroundColor:
+            unlocked ? const Color(0xFFDCF1E5) : const Color(0xFFE8ECE4),
         child: Icon(
           unlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
           color: unlocked ? const Color(0xFF2E7D57) : const Color(0xFF7A847B),
@@ -4523,9 +4652,8 @@ class _RewardLevelRow extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: unlocked
-            ? const Color(0xFFDCF1E5)
-            : const Color(0xFFE8ECE4),
+        backgroundColor:
+            unlocked ? const Color(0xFFDCF1E5) : const Color(0xFFE8ECE4),
         child: Icon(
           level.icon,
           color: unlocked ? const Color(0xFF2E7D57) : const Color(0xFF7A847B),
@@ -4546,9 +4674,8 @@ class _RewardLevelRow extends StatelessWidget {
             )
           : Icon(
               unlocked ? Icons.check_circle_rounded : Icons.lock_rounded,
-              color: unlocked
-                  ? const Color(0xFF2E7D57)
-                  : const Color(0xFF7A847B),
+              color:
+                  unlocked ? const Color(0xFF2E7D57) : const Color(0xFF7A847B),
             ),
     );
   }
@@ -4565,9 +4692,8 @@ class _RewardMedalRow extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: unlocked
-            ? const Color(0xFFFFE8A8)
-            : const Color(0xFFE8ECE4),
+        backgroundColor:
+            unlocked ? const Color(0xFFFFE8A8) : const Color(0xFFE8ECE4),
         child: Icon(
           medal.icon,
           color: unlocked ? const Color(0xFF8A6400) : const Color(0xFF7A847B),
@@ -4597,9 +4723,8 @@ class _VoucherTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: active
-            ? const Color(0xFFFFE8A8)
-            : const Color(0xFFE8ECE4),
+        backgroundColor:
+            active ? const Color(0xFFFFE8A8) : const Color(0xFFE8ECE4),
         child: Icon(
           active
               ? Icons.confirmation_number_rounded
@@ -5854,9 +5979,8 @@ class _TrailOnlineMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleTrails = showOnlySelected ? [selectedTrail] : trails;
-    final fallbackGeometries = visibleTrails
-        .map(TrailGeometryRepository.fallback)
-        .toList();
+    final fallbackGeometries =
+        visibleTrails.map(TrailGeometryRepository.fallback).toList();
     return FutureBuilder<List<TrailMapGeometry>>(
       future: TrailGeometryRepository.loadAll(visibleTrails),
       builder: (context, snapshot) {
@@ -5968,9 +6092,8 @@ class _TrailOnlineMap extends StatelessWidget {
             color: geometry.trail.color.withValues(
               alpha: geometry.trail.id == selectedTrail.id ? 1 : 0.62,
             ),
-            borderStrokeWidth: geometry.trail.id == selectedTrail.id
-                ? 5.5
-                : 4.2,
+            borderStrokeWidth:
+                geometry.trail.id == selectedTrail.id ? 5.5 : 4.2,
             borderColor: Colors.white.withValues(
               alpha: geometry.trail.id == selectedTrail.id ? 0.88 : 0.58,
             ),
@@ -7048,9 +7171,8 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
               _selectedFacility = facility;
               final facilitySlots = _sportBookingSlotsForFacility(facility);
               final daySlots = _sportSlotsForDay(_selectedDay, facilitySlots);
-              _selectedSlot = daySlots.isNotEmpty
-                  ? daySlots.first
-                  : facilitySlots.first;
+              _selectedSlot =
+                  daySlots.isNotEmpty ? daySlots.first : facilitySlots.first;
               _selectedDay = _selectedSlot!.date;
               _focusedMonth = DateTime(_selectedDay.year, _selectedDay.month);
             }),
@@ -7086,8 +7208,8 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
                   _selectedSlot = preferred.isNotEmpty
                       ? preferred.first
                       : daySlots.isNotEmpty
-                      ? daySlots.first
-                      : null;
+                          ? daySlots.first
+                          : null;
                   if (_selectedSlot != null) {
                     _selectedFacility = _selectedSlot!.facility;
                   }
@@ -7131,8 +7253,8 @@ class _SportBookingScreenState extends State<SportBookingScreen> {
                         content: Text(
                           reserved
                               ? awarded
-                                    ? "Prenotazione inviata: +${GamificationController.tokensForExperience(40)} token · +40 XP accreditati."
-                                    : "Prenotazione inviata: slot gia premiato in precedenza."
+                                  ? "Prenotazione inviata: +${GamificationController.tokensForExperience(40)} token · +40 XP accreditati."
+                                  : "Prenotazione inviata: slot gia premiato in precedenza."
                               : "Prenotazione gia presente nel calendario.",
                         ),
                       ),
@@ -7194,12 +7316,12 @@ List<SportBookingSlot> _sportBookingSlots() {
     for (final facility in _sportFacilities)
       ..._sportBookingSlotsForFacility(facility),
   ]..sort((a, b) {
-    final dateCompare = a.date.compareTo(b.date);
-    if (dateCompare != 0) {
-      return dateCompare;
-    }
-    return a.timeLabel.compareTo(b.timeLabel);
-  });
+      final dateCompare = a.date.compareTo(b.date);
+      if (dateCompare != 0) {
+        return dateCompare;
+      }
+      return a.timeLabel.compareTo(b.timeLabel);
+    });
 }
 
 List<SportBookingSlot> _sportBookingSlotsForFacility(SportFacility facility) {
@@ -7401,17 +7523,17 @@ class _SportCalendarDayCell extends StatelessWidget {
     final bgColor = selected
         ? const Color(0xFFE4F2E8)
         : reserved
-        ? const Color(0xFFEAF5EA)
-        : inMonth
-        ? const Color(0xFFFAFCF7)
-        : const Color(0xFFF1F2EE);
+            ? const Color(0xFFEAF5EA)
+            : inMonth
+                ? const Color(0xFFFAFCF7)
+                : const Color(0xFFF1F2EE);
     final borderColor = selected
         ? const Color(0xFF2E7D57)
         : reserved
-        ? const Color(0xFF78A65D)
-        : slotCount > 0
-        ? const Color(0xFFCAD8C7)
-        : const Color(0xFFE7ECE2);
+            ? const Color(0xFF78A65D)
+            : slotCount > 0
+                ? const Color(0xFFCAD8C7)
+                : const Color(0xFFE7ECE2);
 
     return Material(
       color: bgColor,
@@ -9258,10 +9380,10 @@ class _NoticeCalendarDayCell extends StatelessWidget {
       color: selected
           ? const Color(0xFFE4F2E8)
           : highlighted
-          ? const Color(0xFFFFF3CF)
-          : inMonth
-          ? const Color(0xFFFAFCF7)
-          : const Color(0xFFF1F2EE),
+              ? const Color(0xFFFFF3CF)
+              : inMonth
+                  ? const Color(0xFFFAFCF7)
+                  : const Color(0xFFF1F2EE),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -9274,8 +9396,8 @@ class _NoticeCalendarDayCell extends StatelessWidget {
               color: selected
                   ? const Color(0xFF2E7D57)
                   : hasNotices
-                  ? const Color(0xFFC9A13A)
-                  : const Color(0xFFE7ECE2),
+                      ? const Color(0xFFC9A13A)
+                      : const Color(0xFFE7ECE2),
               width: selected ? 2 : 1,
             ),
           ),
@@ -9781,9 +9903,8 @@ class _NoticeReportScreenState extends State<NoticeReportScreen> {
     }
     final imageValue = _imageController.text.trim();
     final imageAsset = imageValue.startsWith("assets/") ? imageValue : null;
-    final imageUrl = imageValue.isNotEmpty && imageAsset == null
-        ? imageValue
-        : null;
+    final imageUrl =
+        imageValue.isNotEmpty && imageAsset == null ? imageValue : null;
     appNotices.addNotice(
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim(),
@@ -9871,8 +9992,8 @@ class _EventsScreenState extends State<EventsScreen> {
     final events = _selectedFilter == "tutti"
         ? _mockEvents
         : _mockEvents
-              .where((event) => event.category == _selectedFilter)
-              .toList(growable: false);
+            .where((event) => event.category == _selectedFilter)
+            .toList(growable: false);
     final selectedDayEvents = _eventsForDay(_selectedDay, events);
 
     return Scaffold(
@@ -10360,17 +10481,17 @@ class _CalendarDayCell extends StatelessWidget {
     final bgColor = selected
         ? const Color(0xFFE4F2E8)
         : joined
-        ? const Color(0xFFEAF5EA)
-        : inMonth
-        ? const Color(0xFFFAFCF7)
-        : const Color(0xFFF1F2EE);
+            ? const Color(0xFFEAF5EA)
+            : inMonth
+                ? const Color(0xFFFAFCF7)
+                : const Color(0xFFF1F2EE);
     final borderColor = selected
         ? const Color(0xFF2E7D57)
         : joined
-        ? const Color(0xFF78A65D)
-        : eventCount > 0
-        ? const Color(0xFFCAD8C7)
-        : const Color(0xFFE7ECE2);
+            ? const Color(0xFF78A65D)
+            : eventCount > 0
+                ? const Color(0xFFCAD8C7)
+                : const Color(0xFFE7ECE2);
 
     return Material(
       color: bgColor,
@@ -11054,7 +11175,7 @@ class _EventCheckinRewardCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 "Genera il QR evento e simula la scansione staff per accreditare $checkinTokens token e $checkinExperience XP una sola volta.",
-                style: TextStyle(height: 1.35),
+                style: const TextStyle(height: 1.35),
               ),
               const SizedBox(height: 12),
               Row(
@@ -12662,9 +12783,8 @@ class _DiningVenueDetailScreenState extends State<DiningVenueDetailScreen> {
                   selected: _selectedSlot == slot,
                   selectedColor: const Color(0xFF2E7D57),
                   labelStyle: TextStyle(
-                    color: _selectedSlot == slot
-                        ? Colors.white
-                        : Colors.black87,
+                    color:
+                        _selectedSlot == slot ? Colors.white : Colors.black87,
                     fontWeight: FontWeight.w800,
                   ),
                   onSelected: (_) => setState(() => _selectedSlot = slot),
@@ -12769,8 +12889,8 @@ class _DiningVoucherSelector extends StatelessWidget {
               : DropdownButtonFormField<String?>(
                   initialValue:
                       vouchers.any((voucher) => voucher.code == selectedCode)
-                      ? selectedCode
-                      : null,
+                          ? selectedCode
+                          : null,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.confirmation_number_rounded),
                     border: OutlineInputBorder(),
@@ -13431,9 +13551,8 @@ class _CultureFactGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 520;
-        final width = compact
-            ? constraints.maxWidth
-            : (constraints.maxWidth - 10) / 2;
+        final width =
+            compact ? constraints.maxWidth : (constraints.maxWidth - 10) / 2;
         return Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -15169,9 +15288,8 @@ class _FinalInfoSelector extends StatelessWidget {
                     children: [
                       Icon(
                         page.icon,
-                        color: selected
-                            ? Colors.white
-                            : const Color(0xFF2E7D57),
+                        color:
+                            selected ? Colors.white : const Color(0xFF2E7D57),
                       ),
                       const Spacer(),
                       Text(
@@ -15206,9 +15324,8 @@ class _FinalInfoFactGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 520;
-        final width = compact
-            ? constraints.maxWidth
-            : (constraints.maxWidth - 10) / 2;
+        final width =
+            compact ? constraints.maxWidth : (constraints.maxWidth - 10) / 2;
         return Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -15504,203 +15621,203 @@ class BackofficeVoucher {
 
 class BackofficeController extends ChangeNotifier {
   BackofficeController.demo()
-    : organizations = [
-        BackofficeOrganization(
-          id: "osteria",
-          name: "Osteria Monte Nerone",
-          type: "Ristorante",
-          shortDescription: "Cucina tipica, prodotti locali e serate.",
-          longDescription:
-              "Locale nel centro di Apecchio con menu stagionale, piatti del territorio, birre artigianali e piccole degustazioni.",
-          address: "Via Roma 12, Apecchio",
-          contact: "info@osteria.example · +39 0722 000000",
-          opening: "Oggi 12:00-14:30, 19:00-22:00",
-          services: ["Prenotazione", "Voucher", "Menu stagionale"],
-          coverColors: const [Color(0xFF0B7285), Color(0xFFC97824)],
-        ),
-        BackofficeOrganization(
-          id: "proloco",
-          name: "Pro Loco Apecchio",
-          type: "Associazione",
-          shortDescription: "Eventi, volontariato e territorio.",
-          longDescription:
-              "Organizzazione locale per iniziative pubbliche, supporto eventi, volontari e valorizzazione della comunita.",
-          address: "Piazza del Comune, Apecchio",
-          contact: "proloco@apecchio.example",
-          opening: "Su appuntamento",
-          services: ["Eventi", "Volontari", "Assemblee"],
-          coverColors: const [Color(0xFF2F855A), Color(0xFF6A4C93)],
-          coverFocusY: 0.45,
-        ),
-        BackofficeOrganization(
-          id: "comune",
-          name: "Comune di Apecchio",
-          type: "Ente",
-          shortDescription: "Servizi comunali e vita pubblica.",
-          longDescription:
-              "Area istituzionale per coordinare servizi, uffici, comunicazioni, sedute e segnalazioni.",
-          address: "Piazza San Martino, Apecchio",
-          contact: "segreteria@comune.apecchio.example",
-          opening: "Uffici su appuntamento",
-          services: ["Segnalazioni", "Uffici", "Sedute"],
-          coverColors: const [Color(0xFF1D3557), Color(0xFF89C2D9)],
-          coverFocusY: 0.48,
-        ),
-      ],
-      events = [
-        BackofficeEvent(
-          id: "e1",
-          orgId: "osteria",
-          title: "Cena degustazione del Monte Nerone",
-          type: "Degustazione",
-          date: "16/05",
-          time: "20:30",
-          visibility: BackofficeEventVisibility.public,
-          audience: "Tutti",
-          status: "In revisione",
-          capacity: 42,
-          rsvpCount: 34,
-          checkinCount: 0,
-          waitlistCount: 3,
-          participationTrend: "+18%",
-        ),
-        BackofficeEvent(
-          id: "e2",
-          orgId: "osteria",
-          title: "Briefing staff weekend",
-          type: "Riunione interna",
-          date: "03/05",
-          time: "10:00",
-          visibility: BackofficeEventVisibility.orgMembers,
-          audience: "Staff attività",
-          status: "Pubblicato interno",
-          capacity: 8,
-          rsvpCount: 7,
-          checkinCount: 6,
-          waitlistCount: 0,
-          participationTrend: "+2",
-        ),
-        BackofficeEvent(
-          id: "e3",
-          orgId: "proloco",
-          title: "Riunione direttivo Pro Loco",
-          type: "Consiglio",
-          date: "08/05",
-          time: "21:00",
-          visibility: BackofficeEventVisibility.group,
-          audience: "Direttivo",
-          status: "Riservato",
-          capacity: 12,
-          rsvpCount: 9,
-          checkinCount: 0,
-          waitlistCount: 0,
-          participationTrend: "stabile",
-        ),
-        BackofficeEvent(
-          id: "e4",
-          orgId: "comune",
-          title: "Consiglio comunale",
-          type: "Consiglio",
-          date: "12/05",
-          time: "18:30",
-          visibility: BackofficeEventVisibility.council,
-          audience: "Cittadini e consiglieri",
-          status: "Pubblico con allegati interni",
-          capacity: 80,
-          rsvpCount: 28,
-          checkinCount: 0,
-          waitlistCount: 0,
-          participationTrend: "+6%",
-        ),
-      ],
-      menuItems = [
-        BackofficeMenuItem(
-          id: "m1",
-          orgId: "osteria",
-          category: "Primi",
-          name: "Tagliatelle al tartufo",
-          description: "Pasta fresca e tartufo locale.",
-          price: "14",
-          active: true,
-        ),
-        BackofficeMenuItem(
-          id: "m2",
-          orgId: "osteria",
-          category: "Secondi",
-          name: "Brasato alla birra",
-          description: "Cottura lenta con birra artigianale.",
-          price: "18",
-          active: true,
-        ),
-      ],
-      members = const [
-        BackofficeMember(
-          orgId: "proloco",
-          name: "Maria Rossi",
-          group: "Direttivo",
-          role: "Proprietario organizzazione",
-        ),
-        BackofficeMember(
-          orgId: "proloco",
-          name: "Luca Bianchi",
-          group: "Eventi",
-          role: "Editor eventi",
-        ),
-        BackofficeMember(
-          orgId: "osteria",
-          name: "Giulia Ferri",
-          group: "Staff attività",
-          role: "Editor menu",
-        ),
-        BackofficeMember(
-          orgId: "osteria",
-          name: "Paolo Neri",
-          group: "Staff attività",
-          role: "Scanner voucher",
-        ),
-      ],
-      groups = const [
-        BackofficeGroup(
-          orgId: "osteria",
-          name: "Staff attività",
-          visibility: "Eventi interni e turni",
-          members: 6,
-        ),
-        BackofficeGroup(
-          orgId: "proloco",
-          name: "Direttivo",
-          visibility: "Riunioni riservate",
-          members: 7,
-        ),
-        BackofficeGroup(
-          orgId: "proloco",
-          name: "Volontari",
-          visibility: "Turni e comunicazioni",
-          members: 34,
-        ),
-        BackofficeGroup(
-          orgId: "comune",
-          name: "Giunta",
-          visibility: "Agenda istituzionale",
-          members: 6,
-        ),
-      ],
-      vouchers = const [
-        BackofficeVoucher(
-          orgId: "osteria",
-          code: "VCH-5MONTE",
-          label: "Sconto 5%",
-          status: "Validato",
-          amount: "3,40",
-        ),
-        BackofficeVoucher(
-          orgId: "osteria",
-          code: "VCH-10NERONE",
-          label: "Sconto 10%",
-          status: "Disponibile",
-          amount: "7,80",
-        ),
-      ];
+      : organizations = [
+          BackofficeOrganization(
+            id: "osteria",
+            name: "Osteria Monte Nerone",
+            type: "Ristorante",
+            shortDescription: "Cucina tipica, prodotti locali e serate.",
+            longDescription:
+                "Locale nel centro di Apecchio con menu stagionale, piatti del territorio, birre artigianali e piccole degustazioni.",
+            address: "Via Roma 12, Apecchio",
+            contact: "info@osteria.example · +39 0722 000000",
+            opening: "Oggi 12:00-14:30, 19:00-22:00",
+            services: ["Prenotazione", "Voucher", "Menu stagionale"],
+            coverColors: const [Color(0xFF0B7285), Color(0xFFC97824)],
+          ),
+          BackofficeOrganization(
+            id: "proloco",
+            name: "Pro Loco Apecchio",
+            type: "Associazione",
+            shortDescription: "Eventi, volontariato e territorio.",
+            longDescription:
+                "Organizzazione locale per iniziative pubbliche, supporto eventi, volontari e valorizzazione della comunita.",
+            address: "Piazza del Comune, Apecchio",
+            contact: "proloco@apecchio.example",
+            opening: "Su appuntamento",
+            services: ["Eventi", "Volontari", "Assemblee"],
+            coverColors: const [Color(0xFF2F855A), Color(0xFF6A4C93)],
+            coverFocusY: 0.45,
+          ),
+          BackofficeOrganization(
+            id: "comune",
+            name: "Comune di Apecchio",
+            type: "Ente",
+            shortDescription: "Servizi comunali e vita pubblica.",
+            longDescription:
+                "Area istituzionale per coordinare servizi, uffici, comunicazioni, sedute e segnalazioni.",
+            address: "Piazza San Martino, Apecchio",
+            contact: "segreteria@comune.apecchio.example",
+            opening: "Uffici su appuntamento",
+            services: ["Segnalazioni", "Uffici", "Sedute"],
+            coverColors: const [Color(0xFF1D3557), Color(0xFF89C2D9)],
+            coverFocusY: 0.48,
+          ),
+        ],
+        events = [
+          BackofficeEvent(
+            id: "e1",
+            orgId: "osteria",
+            title: "Cena degustazione del Monte Nerone",
+            type: "Degustazione",
+            date: "16/05",
+            time: "20:30",
+            visibility: BackofficeEventVisibility.public,
+            audience: "Tutti",
+            status: "In revisione",
+            capacity: 42,
+            rsvpCount: 34,
+            checkinCount: 0,
+            waitlistCount: 3,
+            participationTrend: "+18%",
+          ),
+          BackofficeEvent(
+            id: "e2",
+            orgId: "osteria",
+            title: "Briefing staff weekend",
+            type: "Riunione interna",
+            date: "03/05",
+            time: "10:00",
+            visibility: BackofficeEventVisibility.orgMembers,
+            audience: "Staff attività",
+            status: "Pubblicato interno",
+            capacity: 8,
+            rsvpCount: 7,
+            checkinCount: 6,
+            waitlistCount: 0,
+            participationTrend: "+2",
+          ),
+          BackofficeEvent(
+            id: "e3",
+            orgId: "proloco",
+            title: "Riunione direttivo Pro Loco",
+            type: "Consiglio",
+            date: "08/05",
+            time: "21:00",
+            visibility: BackofficeEventVisibility.group,
+            audience: "Direttivo",
+            status: "Riservato",
+            capacity: 12,
+            rsvpCount: 9,
+            checkinCount: 0,
+            waitlistCount: 0,
+            participationTrend: "stabile",
+          ),
+          BackofficeEvent(
+            id: "e4",
+            orgId: "comune",
+            title: "Consiglio comunale",
+            type: "Consiglio",
+            date: "12/05",
+            time: "18:30",
+            visibility: BackofficeEventVisibility.council,
+            audience: "Cittadini e consiglieri",
+            status: "Pubblico con allegati interni",
+            capacity: 80,
+            rsvpCount: 28,
+            checkinCount: 0,
+            waitlistCount: 0,
+            participationTrend: "+6%",
+          ),
+        ],
+        menuItems = [
+          BackofficeMenuItem(
+            id: "m1",
+            orgId: "osteria",
+            category: "Primi",
+            name: "Tagliatelle al tartufo",
+            description: "Pasta fresca e tartufo locale.",
+            price: "14",
+            active: true,
+          ),
+          BackofficeMenuItem(
+            id: "m2",
+            orgId: "osteria",
+            category: "Secondi",
+            name: "Brasato alla birra",
+            description: "Cottura lenta con birra artigianale.",
+            price: "18",
+            active: true,
+          ),
+        ],
+        members = const [
+          BackofficeMember(
+            orgId: "proloco",
+            name: "Maria Rossi",
+            group: "Direttivo",
+            role: "Proprietario organizzazione",
+          ),
+          BackofficeMember(
+            orgId: "proloco",
+            name: "Luca Bianchi",
+            group: "Eventi",
+            role: "Editor eventi",
+          ),
+          BackofficeMember(
+            orgId: "osteria",
+            name: "Giulia Ferri",
+            group: "Staff attività",
+            role: "Editor menu",
+          ),
+          BackofficeMember(
+            orgId: "osteria",
+            name: "Paolo Neri",
+            group: "Staff attività",
+            role: "Scanner voucher",
+          ),
+        ],
+        groups = const [
+          BackofficeGroup(
+            orgId: "osteria",
+            name: "Staff attività",
+            visibility: "Eventi interni e turni",
+            members: 6,
+          ),
+          BackofficeGroup(
+            orgId: "proloco",
+            name: "Direttivo",
+            visibility: "Riunioni riservate",
+            members: 7,
+          ),
+          BackofficeGroup(
+            orgId: "proloco",
+            name: "Volontari",
+            visibility: "Turni e comunicazioni",
+            members: 34,
+          ),
+          BackofficeGroup(
+            orgId: "comune",
+            name: "Giunta",
+            visibility: "Agenda istituzionale",
+            members: 6,
+          ),
+        ],
+        vouchers = const [
+          BackofficeVoucher(
+            orgId: "osteria",
+            code: "VCH-5MONTE",
+            label: "Sconto 5%",
+            status: "Validato",
+            amount: "3,40",
+          ),
+          BackofficeVoucher(
+            orgId: "osteria",
+            code: "VCH-10NERONE",
+            label: "Sconto 10%",
+            status: "Disponibile",
+            amount: "7,80",
+          ),
+        ];
 
   final List<BackofficeOrganization> organizations;
   final List<BackofficeEvent> events;
@@ -15991,8 +16108,8 @@ class _BackofficeScreenState extends State<BackofficeScreen> {
             final columns = constraints.maxWidth > 780
                 ? 4
                 : constraints.maxWidth > 520
-                ? 2
-                : 1;
+                    ? 2
+                    : 1;
             return GridView.count(
               crossAxisCount: columns,
               shrinkWrap: true,
@@ -16554,65 +16671,65 @@ class _BackofficeScreenState extends State<BackofficeScreen> {
   List<(String, String, String)> _roleMetrics() {
     return switch (_role) {
       UserProfile.merchant => [
-        ("Visite pagina", "1.248", "+18%"),
-        ("Aperture menu", "432", "+9%"),
-        ("Voucher riscattati", "37", "+12%"),
-        ("Eventi attivi", "3", "2 privati"),
-      ],
+          ("Visite pagina", "1.248", "+18%"),
+          ("Aperture menu", "432", "+9%"),
+          ("Voucher riscattati", "37", "+12%"),
+          ("Eventi attivi", "3", "2 privati"),
+        ],
       UserProfile.organization => [
-        ("Eventi pubblici", "8", "+3"),
-        ("Riunioni interne", "5", "mese"),
-        ("Membri attivi", "64", "+6"),
-        ("Inviti in attesa", "12", "RSVP"),
-      ],
+          ("Eventi pubblici", "8", "+3"),
+          ("Riunioni interne", "5", "mese"),
+          ("Membri attivi", "64", "+6"),
+          ("Inviti in attesa", "12", "RSVP"),
+        ],
       UserProfile.supervisor => [
-        ("Segnalazioni aperte", "23", "5 urgenti"),
-        ("Eventi in revisione", "7", "oggi"),
-        ("Notifiche pronte", "4", "2 comunali"),
-        ("Anomalie voucher", "2", "bassa"),
-      ],
+          ("Segnalazioni aperte", "23", "5 urgenti"),
+          ("Eventi in revisione", "7", "oggi"),
+          ("Notifiche pronte", "4", "2 comunali"),
+          ("Anomalie voucher", "2", "bassa"),
+        ],
       UserProfile.mayor => [
-        ("Segnalazioni risolte", "81%", "+7%"),
-        ("Tempo medio risposta", "2,4 gg", "-0,6"),
-        ("Eventi mese", "19", "+5"),
-        ("Avvisi pubblici", "6", "2 da approvare"),
-      ],
+          ("Segnalazioni risolte", "81%", "+7%"),
+          ("Tempo medio risposta", "2,4 gg", "-0,6"),
+          ("Eventi mese", "19", "+5"),
+          ("Avvisi pubblici", "6", "2 da approvare"),
+        ],
       _ => [
-        ("Utenti backoffice", "42", "+4"),
-        ("Ruoli configurati", "9", "RBAC"),
-        ("Schede pubblicate", "118", "+11"),
-        ("Azioni sensibili", "16", "audit"),
-      ],
+          ("Utenti backoffice", "42", "+4"),
+          ("Ruoli configurati", "9", "RBAC"),
+          ("Schede pubblicate", "118", "+11"),
+          ("Azioni sensibili", "16", "audit"),
+        ],
     };
   }
 
   List<String> _rolePriorities() {
     return switch (_role) {
       UserProfile.merchant => [
-        "Confermare orario speciale di domenica",
-        "Aggiornare due piatti stagionali",
-        "Evento degustazione in revisione URP",
-      ],
+          "Confermare orario speciale di domenica",
+          "Aggiornare due piatti stagionali",
+          "Evento degustazione in revisione URP",
+        ],
       UserProfile.organization => [
-        "Assemblea soci da confermare",
-        "Turni volontari festa del paese",
-        "Comunicazione Pro Loco da inviare",
-      ],
+          "Assemblea soci da confermare",
+          "Turni volontari festa del paese",
+          "Comunicazione Pro Loco da inviare",
+        ],
       UserProfile.supervisor => [
-        "Approvare calendario weekend",
-        "Smistare segnalazioni viabilità",
-        "Verificare doppia scansione voucher",
-      ],
+          "Approvare calendario weekend",
+          "Smistare segnalazioni viabilità",
+          "Verificare doppia scansione voucher",
+        ],
       UserProfile.mayor => [
-        "Comunicazione lavori viabilità",
-        "Report mensile servizi",
-        "Evento patrocinato in attesa",
-      ],
+          "Comunicazione lavori viabilità",
+          "Report mensile servizi",
+          "Evento patrocinato in attesa",
+        ],
       _ => [
-        "Rivedere permessi editor eventi",
-        "Aggiornare categorie attività",
-        "Controllare log esportazione dati",
-      ],
+          "Rivedere permessi editor eventi",
+          "Aggiornare categorie attività",
+          "Controllare log esportazione dati",
+        ],
     };
   }
 
@@ -16647,43 +16764,43 @@ const List<UserProfile> _backofficeProfiles = [
 ];
 
 String _defaultOrganizationFor(UserProfile profile) => switch (profile) {
-  UserProfile.merchant => "osteria",
-  UserProfile.organization => "proloco",
-  _ => "comune",
-};
+      UserProfile.merchant => "osteria",
+      UserProfile.organization => "proloco",
+      _ => "comune",
+    };
 
 String _profileBackofficeLabel(UserProfile profile) => switch (profile) {
-  UserProfile.merchant => "Esercente",
-  UserProfile.organization => "Organizzazione",
-  UserProfile.supervisor => "Supervisore",
-  UserProfile.mayor => "Sindaco",
-  UserProfile.admin => "Amministratore",
-  _ => "Backoffice",
-};
+      UserProfile.merchant => "Esercente",
+      UserProfile.organization => "Organizzazione",
+      UserProfile.supervisor => "Supervisore",
+      UserProfile.mayor => "Sindaco",
+      UserProfile.admin => "Amministratore",
+      _ => "Backoffice",
+    };
 
 String _sectionLabel(BackofficeSection section) => switch (section) {
-  BackofficeSection.dashboard => "Cruscotto",
-  BackofficeSection.page => "La mia pagina",
-  BackofficeSection.menu => "Menu / listino",
-  BackofficeSection.events => "Eventi",
-  BackofficeSection.vouchers => "Voucher",
-  BackofficeSection.members => "Membri",
-  BackofficeSection.stats => "Statistiche",
-  BackofficeSection.permissions => "Permessi",
-  BackofficeSection.support => "Assistenza",
-};
+      BackofficeSection.dashboard => "Cruscotto",
+      BackofficeSection.page => "La mia pagina",
+      BackofficeSection.menu => "Menu / listino",
+      BackofficeSection.events => "Eventi",
+      BackofficeSection.vouchers => "Voucher",
+      BackofficeSection.members => "Membri",
+      BackofficeSection.stats => "Statistiche",
+      BackofficeSection.permissions => "Permessi",
+      BackofficeSection.support => "Assistenza",
+    };
 
 IconData _sectionIcon(BackofficeSection section) => switch (section) {
-  BackofficeSection.dashboard => Icons.dashboard_rounded,
-  BackofficeSection.page => Icons.edit_note_rounded,
-  BackofficeSection.menu => Icons.restaurant_menu_rounded,
-  BackofficeSection.events => Icons.event_rounded,
-  BackofficeSection.vouchers => Icons.confirmation_number_rounded,
-  BackofficeSection.members => Icons.groups_rounded,
-  BackofficeSection.stats => Icons.bar_chart_rounded,
-  BackofficeSection.permissions => Icons.admin_panel_settings_rounded,
-  BackofficeSection.support => Icons.support_agent_rounded,
-};
+      BackofficeSection.dashboard => Icons.dashboard_rounded,
+      BackofficeSection.page => Icons.edit_note_rounded,
+      BackofficeSection.menu => Icons.restaurant_menu_rounded,
+      BackofficeSection.events => Icons.event_rounded,
+      BackofficeSection.vouchers => Icons.confirmation_number_rounded,
+      BackofficeSection.members => Icons.groups_rounded,
+      BackofficeSection.stats => Icons.bar_chart_rounded,
+      BackofficeSection.permissions => Icons.admin_panel_settings_rounded,
+      BackofficeSection.support => Icons.support_agent_rounded,
+    };
 
 String _visibilityLabel(BackofficeEventVisibility visibility) =>
     switch (visibility) {
@@ -16893,19 +17010,17 @@ class _ParticipationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rsvpRate = event.capacity == 0
-        ? 0.0
-        : event.rsvpCount / event.capacity;
-    final checkinRate = event.rsvpCount == 0
-        ? 0.0
-        : event.checkinCount / event.rsvpCount;
+    final rsvpRate =
+        event.capacity == 0 ? 0.0 : event.rsvpCount / event.capacity;
+    final checkinRate =
+        event.rsvpCount == 0 ? 0.0 : event.checkinCount / event.rsvpCount;
     final label = event.capacity > 0 && event.rsvpCount >= event.capacity
         ? "Sold out"
         : event.capacity > 0 && rsvpRate >= 0.85
-        ? "Quasi pieno"
-        : event.capacity > 0 && rsvpRate < 0.35
-        ? "Bassa partecipazione"
-        : "Posti disponibili";
+            ? "Quasi pieno"
+            : event.capacity > 0 && rsvpRate < 0.35
+                ? "Bassa partecipazione"
+                : "Posti disponibili";
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
