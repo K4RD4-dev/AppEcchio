@@ -210,6 +210,100 @@ class Backend {
         .eq('code', code);
   }
 
+  // -------------------------------------------------------------------------
+  // Slice 3 · event participations & sport reservations
+  // -------------------------------------------------------------------------
+
+  static Future<Set<String>> loadJoinedEventIds(String userId) async {
+    if (!isEnabled) return <String>{};
+    final rows = await _client
+        .from('event_participations')
+        .select('event_id')
+        .eq('user_id', userId);
+    return {for (final row in rows) row['event_id'] as String};
+  }
+
+  static Future<void> setEventParticipation(
+    String userId, {
+    required String eventId,
+    required bool joined,
+  }) async {
+    if (!isEnabled) return;
+    if (joined) {
+      await _client.from('event_participations').upsert({
+        'user_id': userId,
+        'event_id': eventId,
+        'status': 'joined',
+      });
+    } else {
+      await _client
+          .from('event_participations')
+          .delete()
+          .eq('user_id', userId)
+          .eq('event_id', eventId);
+    }
+  }
+
+  static Future<Set<String>> loadReservedSlotIds(String userId) async {
+    if (!isEnabled) return <String>{};
+    final rows = await _client
+        .from('sport_reservations')
+        .select('slot_id')
+        .eq('user_id', userId);
+    return {for (final row in rows) row['slot_id'] as String};
+  }
+
+  static Future<void> addReservation(
+    String userId, {
+    required String slotId,
+  }) async {
+    if (!isEnabled) return;
+    await _client.from('sport_reservations').insert({
+      'user_id': userId,
+      'slot_id': slotId,
+      'status': 'reserved',
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Realtime subscriptions (per-user rows). Channels are tracked by name so
+  // callers (main.dart) never touch Supabase types directly.
+  // -------------------------------------------------------------------------
+
+  static final Map<String, RealtimeChannel> _channels = {};
+
+  static void subscribeUserTable(
+    String name, {
+    required String table,
+    required String userId,
+    required void Function() onChange,
+  }) {
+    if (!isEnabled) return;
+    unsubscribe(name);
+    final channel = _client.channel('rt:$name');
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: table,
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) => onChange(),
+        )
+        .subscribe();
+    _channels[name] = channel;
+  }
+
+  static void unsubscribe(String name) {
+    final channel = _channels.remove(name);
+    if (channel != null) {
+      _client.removeChannel(channel);
+    }
+  }
+
   static Future<BackendProfile?> _fetchProfile(String id) async {
     final row = await _client
         .from('profiles')

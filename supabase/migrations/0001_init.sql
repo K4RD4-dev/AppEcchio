@@ -156,9 +156,11 @@ alter table public.events enable row level security;
 drop policy if exists "events read" on public.events;
 create policy "events read" on public.events for select using (auth.role() = 'authenticated');
 
+-- event_id is the app's own event identifier (a slug), not a catalog FK, so
+-- participations work without seeding the events catalog first.
 create table if not exists public.event_participations (
   user_id   uuid not null references public.profiles (id) on delete cascade,
-  event_id  uuid not null references public.events (id) on delete cascade,
+  event_id  text not null,
   status    text not null default 'joined',
   joined_at timestamptz not null default now(),
   primary key (user_id, event_id)
@@ -192,3 +194,18 @@ create table if not exists public.trails (
 alter table public.trails enable row level security;
 drop policy if exists "trails read" on public.trails;
 create policy "trails read" on public.trails for select using (true);
+
+-- ---------------------------------------------------------------------------
+-- Realtime: broadcast row changes for per-user synced tables (Slice 2 & 3).
+-- RLS still applies, so each client only receives its own rows.
+-- ---------------------------------------------------------------------------
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    execute 'alter publication supabase_realtime add table public.gamification_state';
+    execute 'alter publication supabase_realtime add table public.event_participations';
+    execute 'alter publication supabase_realtime add table public.sport_reservations';
+  end if;
+exception when duplicate_object then
+  null;
+end $$;

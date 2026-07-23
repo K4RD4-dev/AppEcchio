@@ -120,14 +120,41 @@ final NoticeController appNotices = NoticeController.demo();
 
 class SportReservationController extends ChangeNotifier {
   final Set<String> _reservedSlotIds = {};
+  String? _userId;
 
   Set<String> get reservedSlotIds => Set.unmodifiable(_reservedSlotIds);
 
   bool isReserved(SportBookingSlot slot) => _reservedSlotIds.contains(slot.id);
 
+  Future<void> hydrateFromBackend(String userId) async {
+    if (!Backend.isEnabled) return;
+    _userId = userId;
+    await _reload();
+    Backend.subscribeUserTable(
+      "sport_reservations",
+      table: "sport_reservations",
+      userId: userId,
+      onChange: _reload,
+    );
+  }
+
+  Future<void> _reload() async {
+    final userId = _userId;
+    if (userId == null) return;
+    final ids = await Backend.loadReservedSlotIds(userId);
+    _reservedSlotIds
+      ..clear()
+      ..addAll(ids);
+    notifyListeners();
+  }
+
   bool reserve(SportBookingSlot slot) {
     final changed = _reservedSlotIds.add(slot.id);
     if (changed) {
+      final userId = _userId;
+      if (userId != null) {
+        unawaited(Backend.addReservation(userId, slotId: slot.id));
+      }
       notifyListeners();
     }
     return changed;
@@ -136,16 +163,47 @@ class SportReservationController extends ChangeNotifier {
 
 class EventParticipationController extends ChangeNotifier {
   final Set<String> _joinedEventIds = {};
+  String? _userId;
 
   Set<String> get joinedEventIds => Set.unmodifiable(_joinedEventIds);
 
   bool isJoined(AppEvent event) => _joinedEventIds.contains(event.id);
+
+  Future<void> hydrateFromBackend(String userId) async {
+    if (!Backend.isEnabled) return;
+    _userId = userId;
+    await _reload();
+    Backend.subscribeUserTable(
+      "event_participations",
+      table: "event_participations",
+      userId: userId,
+      onChange: _reload,
+    );
+  }
+
+  Future<void> _reload() async {
+    final userId = _userId;
+    if (userId == null) return;
+    final ids = await Backend.loadJoinedEventIds(userId);
+    _joinedEventIds
+      ..clear()
+      ..addAll(ids);
+    notifyListeners();
+  }
 
   void setJoined(AppEvent event, bool joined) {
     final changed = joined
         ? _joinedEventIds.add(event.id)
         : _joinedEventIds.remove(event.id);
     if (changed) {
+      final userId = _userId;
+      if (userId != null) {
+        unawaited(Backend.setEventParticipation(
+          userId,
+          eventId: event.id,
+          joined: joined,
+        ));
+      }
       notifyListeners();
     }
   }
@@ -716,8 +774,11 @@ class _LoginScreenState extends State<LoginScreen> {
         fallbackRole: _selectedProfile.name,
         fallbackName: _demoNameForProfile(_selectedProfile),
       );
-      // Load this user's persisted XP / tokens / vouchers before entering.
+      // Load this user's persisted data (XP/tokens/vouchers, event
+      // participations, sport reservations) before entering the app.
       await appGamification.hydrateFromBackend(profile.id);
+      await appEventParticipation.hydrateFromBackend(profile.id);
+      await appSportReservations.hydrateFromBackend(profile.id);
       if (!mounted) return;
       _openHomeWith(_appUserFromBackend(profile));
     } catch (error) {
