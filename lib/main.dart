@@ -7,7 +7,13 @@ import "package:flutter_map/flutter_map.dart";
 import "package:latlong2/latlong.dart" show LatLng;
 import "package:xml/xml.dart";
 
-void main() {
+import "backend/backend.dart";
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Connects to Supabase only when SUPABASE_URL / SUPABASE_ANON_KEY are set at
+  // build time; otherwise the app stays in demo mode (in-memory data).
+  await Backend.init();
   runApp(const AppEcchioApp());
 }
 
@@ -40,6 +46,14 @@ enum UserProfile {
   supervisor,
   mayor,
   admin,
+}
+
+/// Maps a backend role string (`profiles.role`) to a [UserProfile].
+UserProfile _profileFromRole(String role) {
+  return UserProfile.values.firstWhere(
+    (profile) => profile.name == role,
+    orElse: () => UserProfile.resident,
+  );
 }
 
 class AppUser {
@@ -543,7 +557,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onTogglePassword: () => setState(
                           () => _obscurePassword = !_obscurePassword,
                         ),
-                        onSubmit: () => _openHome(context),
+                        onSubmit: _submit,
                       ),
                       const SizedBox(height: 14),
                       Text(
@@ -570,8 +584,44 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _openHome(BuildContext context) {
-    final user = AppUser(
+  bool _busy = false;
+
+  Future<void> _submit() async {
+    if (_busy) return;
+
+    // Demo mode (no backend configured): behave exactly as before.
+    if (!Backend.isEnabled) {
+      _openHomeWith(_demoUser());
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      _showError("Inserisci email e password.");
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      final profile = await Backend.signInOrSignUp(
+        email: email,
+        password: password,
+        fallbackRole: _selectedProfile.name,
+        fallbackName: _demoNameForProfile(_selectedProfile),
+      );
+      if (!mounted) return;
+      _openHomeWith(_appUserFromBackend(profile));
+    } catch (error) {
+      if (!mounted) return;
+      _showError("Accesso non riuscito. Riprova. ($error)");
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  AppUser _demoUser() {
+    return AppUser(
       name: _demoNameForProfile(_selectedProfile),
       profile: _selectedProfile,
       email: _emailController.text.trim().isEmpty
@@ -585,6 +635,32 @@ class _LoginScreenState extends State<LoginScreen> {
         marketingEnabled: false,
       ),
     );
+  }
+
+  AppUser _appUserFromBackend(BackendProfile profile) {
+    final settings = profile.settings;
+    return AppUser(
+      name: profile.name,
+      profile: _profileFromRole(profile.role),
+      email: profile.email.isEmpty ? _emailController.text.trim() : profile.email,
+      settings: UserSettings(
+        language: (settings["language"] as String?) ?? "Italiano",
+        notificationsEnabled:
+            (settings["notificationsEnabled"] as bool?) ?? true,
+        locationEnabled: (settings["locationEnabled"] as bool?) ?? false,
+        analyticsEnabled: (settings["analyticsEnabled"] as bool?) ?? false,
+        marketingEnabled: (settings["marketingEnabled"] as bool?) ?? false,
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _openHomeWith(AppUser user) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => user.isBackoffice
