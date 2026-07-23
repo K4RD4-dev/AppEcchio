@@ -35,9 +35,12 @@ jobs:
         run: flutter pub get
 
       - name: Build web
+        # These are Supabase *public* client keys (protected by Row Level
+        # Security). Repository Secrets, if set, take precedence over the
+        # inline fallback values.
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://llhzssyzirssnhtgbooi.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsaHpzc3l6aXJzc25odGdib29pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDY1NzAsImV4cCI6MjEwMDM4MjU3MH0.NfRfsn-UByLnk-40tArSTDipCPbUZ2HryenpD9LU8QM' }}
         run: |
           flutter build web --release \
             --base-href /AppEcchio/ \
