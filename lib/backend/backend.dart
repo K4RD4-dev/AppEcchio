@@ -105,6 +105,54 @@ class Backend {
     }
   }
 
+  /// Sign in an existing account.
+  static Future<BackendProfile> signIn({
+    required String email,
+    required String password,
+  }) async {
+    if (!isEnabled) throw StateError('Backend non configurato');
+    final res = await _client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+    final id = res.user!.id;
+    return await _fetchProfile(id) ??
+        BackendProfile(
+          id: id,
+          email: email,
+          name: email.split('@').first,
+          role: 'resident',
+          settings: const {},
+        );
+  }
+
+  /// Register a new account with the given role/name.
+  static Future<BackendProfile> signUp({
+    required String email,
+    required String password,
+    required String role,
+    required String name,
+  }) async {
+    if (!isEnabled) throw StateError('Backend non configurato');
+    final res = await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {'name': name, 'role': role},
+    );
+    final user = res.user;
+    if (user == null) {
+      throw StateError('Registrazione non riuscita');
+    }
+    return await _fetchProfile(user.id) ??
+        BackendProfile(
+          id: user.id,
+          email: email,
+          name: name,
+          role: role,
+          settings: const {},
+        );
+  }
+
   static Future<void> signOut() async {
     if (!isEnabled) return;
     await _client.auth.signOut();

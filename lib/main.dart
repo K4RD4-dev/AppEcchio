@@ -652,6 +652,17 @@ class _LoginScreenState extends State<LoginScreen> {
   );
   UserProfile _selectedProfile = UserProfile.resident;
   bool _obscurePassword = true;
+  bool _isRegister = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // With a real backend the prefilled demo credentials make no sense.
+    if (Backend.isEnabled) {
+      _emailController.clear();
+      _passwordController.clear();
+    }
+  }
 
   @override
   void dispose() {
@@ -702,7 +713,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        "Accedi al mockup con credenziali dimostrative. Nessun dato viene verificato o salvato.",
+                        Backend.isEnabled
+                            ? "Accedi o registrati con il tuo account. I tuoi dati vengono salvati e sincronizzati."
+                            : "Accedi al mockup con credenziali dimostrative. Nessun dato viene verificato o salvato.",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.84),
@@ -716,6 +729,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         emailController: _emailController,
                         passwordController: _passwordController,
                         obscurePassword: _obscurePassword,
+                        backendEnabled: Backend.isEnabled,
+                        isRegister: _isRegister,
+                        busy: _busy,
+                        onToggleMode: () =>
+                            setState(() => _isRegister = !_isRegister),
                         onProfileChanged: (profile) =>
                             setState(() => _selectedProfile = profile),
                         onTogglePassword: () => setState(
@@ -768,12 +786,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _busy = true);
     try {
-      final profile = await Backend.signInOrSignUp(
-        email: email,
-        password: password,
-        fallbackRole: _selectedProfile.name,
-        fallbackName: _demoNameForProfile(_selectedProfile),
-      );
+      final profile = _isRegister
+          ? await Backend.signUp(
+              email: email,
+              password: password,
+              role: _selectedProfile.name,
+              name: _demoNameForProfile(_selectedProfile),
+            )
+          : await Backend.signIn(email: email, password: password);
       // Load this user's persisted data (XP/tokens/vouchers, event
       // participations, sport reservations) before entering the app.
       await appGamification.hydrateFromBackend(profile.id);
@@ -783,10 +803,29 @@ class _LoginScreenState extends State<LoginScreen> {
       _openHomeWith(_appUserFromBackend(profile));
     } catch (error) {
       if (!mounted) return;
-      _showError("Accesso non riuscito. Riprova. ($error)");
+      _showError(
+        _isRegister
+            ? "Registrazione non riuscita: ${_friendlyAuthError(error)}"
+            : "Accesso non riuscito: ${_friendlyAuthError(error)}",
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  String _friendlyAuthError(Object error) {
+    final message = error.toString();
+    if (message.contains("already registered") ||
+        message.contains("already been registered")) {
+      return "email già registrata: passa ad Accedi.";
+    }
+    if (message.contains("Invalid login credentials")) {
+      return "email o password errate.";
+    }
+    if (message.contains("Password should be")) {
+      return "la password deve avere almeno 6 caratteri.";
+    }
+    return "riprova.";
   }
 
   AppUser _demoUser() {
@@ -861,6 +900,10 @@ class _LoginFormCard extends StatelessWidget {
     required this.onProfileChanged,
     required this.onTogglePassword,
     required this.onSubmit,
+    required this.backendEnabled,
+    required this.isRegister,
+    required this.busy,
+    required this.onToggleMode,
   });
 
   final UserProfile selectedProfile;
@@ -870,6 +913,14 @@ class _LoginFormCard extends StatelessWidget {
   final ValueChanged<UserProfile> onProfileChanged;
   final VoidCallback onTogglePassword;
   final VoidCallback onSubmit;
+
+  /// Whether a real backend is configured (drives the auth-mode UI).
+  final bool backendEnabled;
+
+  /// True = registration mode, false = login mode.
+  final bool isRegister;
+  final bool busy;
+  final VoidCallback onToggleMode;
 
   @override
   Widget build(BuildContext context) {
@@ -947,13 +998,45 @@ class _LoginFormCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: onSubmit,
-              icon: const Icon(Icons.login_rounded),
-              label: const Text("Accedi"),
+              onPressed: busy ? null : onSubmit,
+              icon: busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      isRegister
+                          ? Icons.person_add_alt_1_rounded
+                          : Icons.login_rounded,
+                    ),
+              label: Text(
+                backendEnabled
+                    ? (isRegister ? "Registrati" : "Accedi")
+                    : "Accedi",
+              ),
             ),
+            if (backendEnabled) ...[
+              const SizedBox(height: 6),
+              TextButton(
+                onPressed: busy ? null : onToggleMode,
+                child: Text(
+                  isRegister
+                      ? "Hai già un account? Accedi"
+                      : "Non hai un account? Registrati",
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Text(
-              "Login dimostrativa: qualsiasi valore consente di proseguire.",
+              backendEnabled
+                  ? (isRegister
+                      ? "Crea un account: scegli email e password, il ruolo qui sopra."
+                      : "Accedi con l'email e la password del tuo account.")
+                  : "Login dimostrativa: qualsiasi valore consente di proseguire.",
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: const Color(0xFF1B2E21).withValues(alpha: 0.62),
