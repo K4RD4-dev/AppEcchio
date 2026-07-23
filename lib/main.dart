@@ -1,3 +1,4 @@
+import "dart:async";
 import "dart:math" as math;
 import "dart:ui";
 
@@ -300,6 +301,67 @@ class GamificationController extends ChangeNotifier {
   int _experiencePoints = 360;
   int _voucherCounter = 1;
 
+  /// When set (after backend login) mutations are persisted to Supabase.
+  String? _userId;
+
+  /// Load this user's persisted gamification state from the backend and
+  /// replace the in-memory demo state. No-op when the backend is disabled.
+  Future<void> hydrateFromBackend(String userId) async {
+    if (!Backend.isEnabled) return;
+    _userId = userId;
+
+    final state = await Backend.loadGamification(userId);
+    if (state == null) {
+      // First login for this user: start fresh and seed the row.
+      _experiencePoints = 0;
+      _tokenBalance = 0;
+      await Backend.saveGamification(userId, xp: 0, tokens: 0);
+    } else {
+      _experiencePoints = (state['xp'] as num?)?.toInt() ?? 0;
+      _tokenBalance = (state['tokens'] as num?)?.toInt() ?? 0;
+    }
+
+    _ledger
+      ..clear()
+      ..addAll((await Backend.loadLedger(userId)).map(_ledgerFromRow));
+
+    _vouchers
+      ..clear()
+      ..addAll((await Backend.loadVouchers(userId)).map(_voucherFromRow));
+    _issuedThresholds
+      ..clear()
+      ..addAll(_vouchers.map((voucher) => voucher.threshold));
+
+    notifyListeners();
+  }
+
+  static RewardLedgerEntry _ledgerFromRow(Map<String, dynamic> row) {
+    return RewardLedgerEntry(
+      label: (row['reason'] as String?) ?? '',
+      tokens: (row['delta_tokens'] as num?)?.toInt() ?? 0,
+      experience: (row['delta_xp'] as num?)?.toInt() ?? 0,
+      status: 'confirmed',
+      createdAt:
+          DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+              DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+
+  static RewardVoucher _voucherFromRow(Map<String, dynamic> row) {
+    final status = (row['status'] as String?) ?? 'attivo';
+    return RewardVoucher(
+      code: (row['code'] as String?) ?? '',
+      label: (row['label'] as String?) ?? '',
+      discountPercentage: (row['discount_pct'] as num?)?.toInt() ?? 0,
+      threshold: 0,
+      status: status,
+      issuedAt: DateTime.tryParse(row['issued_at']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      redeemedAt: DateTime.tryParse(row['redeemed_at']?.toString() ?? ''),
+      merchantName: row['merchant_name'] as String?,
+    );
+  }
+
   int get tokenBalance => _tokenBalance;
   int get experiencePoints => _experiencePoints;
   List<RewardLedgerEntry> get ledger => List.unmodifiable(_ledger);
@@ -391,6 +453,20 @@ class GamificationController extends ChangeNotifier {
         createdAt: DateTime.now(),
       ),
     );
+    final userId = _userId;
+    if (userId != null) {
+      unawaited(Backend.saveGamification(
+        userId,
+        xp: _experiencePoints,
+        tokens: _tokenBalance,
+      ));
+      unawaited(Backend.insertLedger(
+        userId,
+        reason: label,
+        deltaXp: experience,
+        deltaTokens: earnedTokens,
+      ));
+    }
     _issueVouchersIfNeeded();
     notifyListeners();
     return true;
@@ -434,6 +510,20 @@ class GamificationController extends ChangeNotifier {
         createdAt: DateTime.now(),
       ),
     );
+    final userId = _userId;
+    if (userId != null) {
+      unawaited(Backend.markVoucherRedeemed(
+        userId,
+        code: code,
+        merchantName: merchantName,
+      ));
+      unawaited(Backend.insertLedger(
+        userId,
+        reason: "Voucher ${_vouchers[index].label} usato da $merchantName",
+        deltaXp: 0,
+        deltaTokens: 0,
+      ));
+    }
     notifyListeners();
     return true;
   }
@@ -468,6 +558,22 @@ class GamificationController extends ChangeNotifier {
           createdAt: DateTime.now(),
         ),
       );
+      final userId = _userId;
+      if (userId != null) {
+        unawaited(Backend.insertVoucher(
+          userId,
+          code: code,
+          label: tier.label,
+          discountPct: tier.discountPercentage,
+          status: "attivo",
+        ));
+        unawaited(Backend.insertLedger(
+          userId,
+          reason: "Voucher ${tier.label} sbloccato con XP",
+          deltaXp: 0,
+          deltaTokens: 0,
+        ));
+      }
     }
   }
 }
@@ -610,6 +716,8 @@ class _LoginScreenState extends State<LoginScreen> {
         fallbackRole: _selectedProfile.name,
         fallbackName: _demoNameForProfile(_selectedProfile),
       );
+      // Load this user's persisted XP / tokens / vouchers before entering.
+      await appGamification.hydrateFromBackend(profile.id);
       if (!mounted) return;
       _openHomeWith(_appUserFromBackend(profile));
     } catch (error) {

@@ -110,6 +110,106 @@ class Backend {
     await _client.auth.signOut();
   }
 
+  /// The id of the currently authenticated user, or null.
+  static String? get currentUserId =>
+      isEnabled ? _client.auth.currentUser?.id : null;
+
+  // -------------------------------------------------------------------------
+  // Slice 2 · gamification persistence (raw maps; UI maps to its own models)
+  // -------------------------------------------------------------------------
+
+  static Future<Map<String, dynamic>?> loadGamification(String userId) async {
+    if (!isEnabled) return null;
+    return _client
+        .from('gamification_state')
+        .select()
+        .eq('user_id', userId)
+        .maybeSingle();
+  }
+
+  static Future<void> saveGamification(
+    String userId, {
+    required int xp,
+    required int tokens,
+  }) async {
+    if (!isEnabled) return;
+    await _client.from('gamification_state').upsert({
+      'user_id': userId,
+      'xp': xp,
+      'tokens': tokens,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  static Future<List<Map<String, dynamic>>> loadLedger(String userId) async {
+    if (!isEnabled) return const [];
+    final rows = await _client
+        .from('reward_ledger')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  static Future<void> insertLedger(
+    String userId, {
+    required String reason,
+    required int deltaXp,
+    required int deltaTokens,
+  }) async {
+    if (!isEnabled) return;
+    await _client.from('reward_ledger').insert({
+      'user_id': userId,
+      'reason': reason,
+      'delta_xp': deltaXp,
+      'delta_tokens': deltaTokens,
+    });
+  }
+
+  static Future<List<Map<String, dynamic>>> loadVouchers(String userId) async {
+    if (!isEnabled) return const [];
+    final rows = await _client
+        .from('vouchers')
+        .select()
+        .eq('user_id', userId)
+        .order('issued_at', ascending: false);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  static Future<void> insertVoucher(
+    String userId, {
+    required String code,
+    required String label,
+    required int discountPct,
+    required String status,
+  }) async {
+    if (!isEnabled) return;
+    await _client.from('vouchers').insert({
+      'user_id': userId,
+      'code': code,
+      'label': label,
+      'discount_pct': discountPct,
+      'status': status,
+    });
+  }
+
+  static Future<void> markVoucherRedeemed(
+    String userId, {
+    required String code,
+    required String merchantName,
+  }) async {
+    if (!isEnabled) return;
+    await _client
+        .from('vouchers')
+        .update({
+          'status': 'usato',
+          'merchant_name': merchantName,
+          'redeemed_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('user_id', userId)
+        .eq('code', code);
+  }
+
   static Future<BackendProfile?> _fetchProfile(String id) async {
     final row = await _client
         .from('profiles')

@@ -1,4 +1,4 @@
-# Backend setup (Supabase) — Slice 1: auth + profili
+# Backend setup (Supabase) — Slice 1 (auth + profili) · Slice 2 (gamification)
 
 Questa guida attiva il backend reale. Finché le variabili non sono impostate,
 l'app resta in **modalità demo** (dati in memoria) e continua a funzionare come
@@ -50,8 +50,21 @@ Le chiavi vanno passate al workflow come **GitHub Secrets**:
   impostazioni) viene letto da `profiles`. Al primo accesso l'account viene
   creato con il ruolo selezionato nel menu a tendina.
 
+## Slice 2 — gamification persistente (già implementata)
+
+Dopo il login backend, l'app **idrata** XP, token, ledger e voucher dell'utente
+dalle tabelle `gamification_state`, `reward_ledger`, `vouchers`. Da quel momento:
+
+- ogni guadagno di XP/token (check-in evento, prenotazione) aggiorna
+  `gamification_state` e aggiunge una riga in `reward_ledger`;
+- i voucher sbloccati automaticamente vengono salvati in `vouchers`;
+- l'uso di un voucher aggiorna il suo stato a `usato`.
+
+Al **primo accesso** di un utente reale la gamification parte da **0 XP / 0 token**
+(i valori 360/36 sono solo dati demo). Riaprendo l'app o accedendo da un altro
+dispositivo, i progressi vengono ricaricati dal backend → **stato sincronizzato**.
+
 ## Prossime slice
 
-- **Slice 2**: XP / token / voucher persistenti.
 - **Slice 3**: eventi e prenotazioni con sincronizzazione realtime tra dispositivi.
 - **Slice 4**: operazioni backoffice e permessi per ruolo (policy RLS dedicate).
